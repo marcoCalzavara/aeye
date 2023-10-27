@@ -1,0 +1,23 @@
+.logo {
+    width: 8%; /* 8% of the container */
+    height: 50%;
+    text-align: left;
+    font-family: sans-serif;
+    container-type: size;
+    container-name: logo;
+}
+
+.logo .logo1 {
+    font-size: x-large;
+    font-weight: bold;
+    background: linear-gradient(to right, #D1B000, #FFD700);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.logo .logo2 {
+    font-size: large;
+    font-weight: bold;
+    color: #D1B000FF;
+}
+

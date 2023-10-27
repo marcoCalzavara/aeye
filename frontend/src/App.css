@@ -1,0 +1,16 @@
+.title-container {
+    z-index: 1;
+    width: 100%;
+}
+
+.title-container .image {
+    width: 100%;
+}
+
+.title-container .title {
+    color: white;
+    position: absolute;
+    font-size: xxx-large;
+    top: 50%;
+    left: 50%;
+}

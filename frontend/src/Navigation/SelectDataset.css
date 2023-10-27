@@ -1,0 +1,16 @@
+.select-dataset {
+    width: 8%;
+    height: var(--nav--bar-elements-height);
+    z-index: 3;
+    background-color: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.form-control {
+    flex: 1;
+    height: 100%;
+    min-width: 0;
+    background-color: black;
+}
