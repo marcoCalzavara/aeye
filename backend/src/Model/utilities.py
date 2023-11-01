@@ -1,14 +1,14 @@
 import warnings
 
+import matplotlib.patches as mpatches
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
 from matplotlib.patches import Ellipse
-import matplotlib.patches as mpatches
 from scipy import linalg
 from umap import UMAP
 
-from CONSTANTS import *
+from src.CONSTANTS import *
 
 
 def project_embeddings_UMAP(embeddings: torch.Tensor | np.ndarray, n_neighbors=DEFAULT_N_NEIGHBORS, dim=DEFAULT_DIM,
@@ -37,7 +37,7 @@ def plot_low_dimensional_embeddings(low_dim_embeddings, labels, means, covarianc
     handles = []
     for (i, mean, covar, color) in zip(torch.unique(labels), means, covariances, COLORS):
         ax.scatter(low_dim_embeddings[labels == i, 0], low_dim_embeddings[labels == i, 1], 2.,
-                             color=color, label=f'{LABELS_MAPPING[i.item()]}')
+                   color=color, label=f'{LABELS_MAPPING[i.item()]}')
         # Plot an ellipse to show the Gaussian component
         v, w = linalg.eigh(covar)
         v = 2.0 * np.sqrt(2.0) * np.sqrt(v)
@@ -110,6 +110,3 @@ def collate_fn(batch):
     except Exception as e:
         print(e.__str__())
         return
-
-
-

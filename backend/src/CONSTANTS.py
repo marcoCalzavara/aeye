@@ -10,7 +10,7 @@ BATCH_SIZE = 32
 NUM_WORKERS = 0
 WIKIART = 'hub://activeloop/wiki-art'
 WIKIART_ATTRIBUTES = ['images', 'labels']
-MAX_IMAGE_PIXELS = 100000000
+MAX_IMAGE_PIXELS = 110000000
 LABELS_MAPPING = {0: 'abstract_expressionism', 1: 'action_painting', 2: 'analytical_cubism', 3: 'art_nouveau_modern',
                   4: 'baroque', 5: 'color_field_painting', 6: 'contemporary_realism', 7: 'cubism',
                   8: 'early_renaissance', 9: 'expressionism', 10: 'fauvism', 11: 'high_renaissance',
@@ -21,8 +21,12 @@ LABELS_MAPPING = {0: 'abstract_expressionism', 1: 'action_painting', 2: 'analyti
 COLORS = ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'cyan', 'magenta', 'lime', 'teal', 'lavender',
           'brown', 'beige', 'maroon', 'olive', 'navy', 'indigo', 'azure', 'coral', 'crimson', 'darkgreen', 'dodgerblue',
           'gold', 'orangered', 'fuchsia', 'darkviolet']
-PINECONE_API_KEY = "3cf6bf81-fe7b-4a4f-b6df-1281ed97a1d9"
-PINECONE_ENV = "gcp-starter"
-PINECONE_INDEX_NAME = "aiplusart"
 FILE_MISSING_INDECES = "missing_indeces.txt"
-UPSERT_SIZE = 500
+INSERT_SIZE = 500
+SEARCH_LIMIT = 16384
+ROOT_USER = "root"
+HOST = 'localhost'
+PORT = 19530
+DATABASE_NAME = "aiplusart"
+METRIC = "COSINE"
+INDEX_TYPE = "FLAT"

@@ -1,20 +1,22 @@
+import contextlib
 import getopt
+import getpass
+import io
 import os
 import sys
-
-import deeplake
 import warnings
-import contextlib
-import io
-import pinecone
 
-import torch
 import PIL.Image
+import deeplake
+import numpy as np
+import torch
+from pymilvus import utility, connections, Collection, db
 
-from CLIPEmbeddings import ClipEmbeddings
-from DatasetPreprocessor import DatasetPreprocessor
-from CONSTANTS import *
-from utilities import collate_fn
+from src.Model.CLIPEmbeddings import ClipEmbeddings
+from src.Model.DatasetPreprocessor import DatasetPreprocessor
+from src.CONSTANTS import *
+from src.Vectordb.create_collection import create_collection
+from src.Model.utilities import collate_fn
 
 # Increase pixel limit
 PIL.Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
@@ -68,10 +70,10 @@ def parsing():
     return flags
 
 
-def upsert_vectors(index: pinecone.Index, data: dict):
+def insert_vectors(collection: Collection, data: dict):
     """
 
-    :param index:
+    :param collection:
     :param data: A dictionary with the embeddings and any other attribute of the samples. All values are tensors and
     all tensors must have the same length. Data must contain keys 'embeddings' and 'index'.
     :return:
@@ -117,19 +119,26 @@ def upsert_vectors(index: pinecone.Index, data: dict):
         missing_indeces = []
         start = 0
 
-    for i in range(0, data["embeddings"].shape[0], UPSERT_SIZE):
+    for i in range(0, data["embeddings"].shape[0], INSERT_SIZE):
         try:
-            index.upsert(vectors=[
-                (
-                    str(data["index"][j].item()),
-                    data["embeddings"][j].tolist(),
-                    {key: data[key][j].item() for key in keys}
-
-                ) for j in range(i, i + UPSERT_SIZE) if j < data["embeddings"].shape[0]])
+            collection.insert(
+                data=
+                [
+                    {
+                        "index": data["index"][j].item(),
+                        "embedding": data["embeddings"][j].tolist(),
+                        "low_dimensional_embedding_x": np.nan,
+                        "low_dimensional_embedding_y": np.nan,
+                        **{key: data[key][j].item() for key in keys}
+                    }
+                    for j in range(i, i + INSERT_SIZE) if j < data["embeddings"].shape[0]
+                ]
+            )
+            collection.flush()
         except Exception as e:
             print(e.__str__())
             # Update file with missing indeces
-            missing_indeces = list(set(missing_indeces + [data["index"][j].item() for j in range(i, i + UPSERT_SIZE)
+            missing_indeces = list(set(missing_indeces + [data["index"][j].item() for j in range(i, i + INSERT_SIZE)
                                                           if j < data["embeddings"].shape[0]]))
             continue
 
@@ -140,18 +149,31 @@ def upsert_vectors(index: pinecone.Index, data: dict):
     print("Upsert completed!")
 
 
-def update_metadata(index: pinecone.Index, dp: DatasetPreprocessor, upper_value_index_range: int):
+def update_metadata(collection: Collection, dp: DatasetPreprocessor, upper_value_index_range: int):
     print("Adding low dimensional embeddings...")
+    # Load collection in memory
+    collection.load()
+
     # Fetch vectors
-    fetch_res = index.fetch(ids=list(range(upper_value_index_range)))
+    entities = []
+    try:
+        for i in range(0, upper_value_index_range, SEARCH_LIMIT):
+            if collection.num_entities > 0:
+                # Get SEARCH_LIMIT entities
+                query_result = collection.query(
+                    expr=f"index in {list(range(i, i + SEARCH_LIMIT))}",
+                    output_fields=["*"]
+                )
+                # Add entities to the list of entities
+                entities += query_result
+
+    except Exception as e:
+        print(e.__str__())
+        print("Update failed!")
+        return
+
     # Process records
-    embeddings = None
-    for key in fetch_res["vectors"].keys():
-        if embeddings is None:
-            embeddings = torch.tensor(fetch_res["vectors"][key]["values"]).detach()
-        else:
-            embeddings = torch.stack((embeddings,
-                                      torch.tensor(fetch_res["vectors"][key]["values"])), dim=0).detach()
+    embeddings = torch.tensor([entities[i]["embedding"] for i in range(len(entities))]).detach()
 
     # Set embeddings
     dp.setEmbeddings(embeddings)
@@ -159,13 +181,30 @@ def update_metadata(index: pinecone.Index, dp: DatasetPreprocessor, upper_value_
     data = dp.generateRecordsMetadata(plot=True)
 
     # Update vectors
-    for key in fetch_res["vectors"].keys():
-        new_metadata = {"cluster_id": data["cluster_ids"][int(key)]}
-        for i in range(data["low_dim_embeddings"].shape[1]):
-            new_metadata[f"low_dim_{i}"] = data["low_dim_embeddings"][int(key)][i]
+    coordinates = ["x", "y", "z"]
+    for i in range(len(entities)):
+        entities[i]["cluster_id"] = data["cluster_ids"][i]
+        for j in range(data["low_dim_embeddings"].shape[1]):
+            entities[i][f"low_dimensional_embedding_{coordinates[j]}"] = data["low_dim_embeddings"][i][j]
 
-        index.update(id=key, set_metadata=new_metadata)
+    # Insert entities in a new collection
+    new_collection, _ = create_collection(connection=True, collection_name="temp")
+    try:
+        new_collection.insert(data=entities)
+        new_collection.flush()
+    except Exception as e:
+        print(e.__str__())
+        print("Update failed!")
+        utility.drop_collection("temp")
+        return
 
+    # Drop the previous collection, but save its name before drop operation
+    collection_name = collection.name
+    utility.drop_collection(collection_name)
+    # Rename the newly created collection
+    utility.rename_collection("temp", collection_name)
+    # Release collection
+    new_collection.release()
     print("Update completed!")
 
 
@@ -173,9 +212,28 @@ if __name__ == "__main__":
     # Get arguments
     flags = parsing()
 
-    # Create reference to pinecone index
-    pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
-    index = pinecone.Index(PINECONE_INDEX_NAME)
+    # Create connection to Milvus server using root user
+    passwd = getpass.getpass("Root password: ")
+    connection = connections.connect(
+        user=ROOT_USER,
+        password=passwd,
+        host=HOST,
+        port=PORT
+    )
+
+    # Get collection
+    db.using_database(DATABASE_NAME)
+    collection_name = input("Collection name: ")
+    if collection_name not in utility.list_collections():
+        choice = input("The collection does not exist. Create collection? (y/n) ")
+        if choice == "y":
+            collection, collection_name = create_collection(connection=True, collection_name=collection_name)
+        elif choice == "n":
+            sys.exit(0)
+        else:
+            sys.exit(1)
+    else:
+        collection = Collection(collection_name)
 
     # Get dataset
     with contextlib.redirect_stdout(io.StringIO()):
@@ -195,9 +253,9 @@ if __name__ == "__main__":
 
     # Evaluate flags["repopulate"]
     if flags["repopulate"]:
-        # Delete all vectors in the index and define start point for dataloader
-        # TODO change this part, as deleteAll is not supported by the free tier
-        index.delete(deleteAll=True)
+        # Delete all vectors in the collection and define start point for dataloader
+        collection.drop()
+        collection, _ = create_collection(passwd, collection_name)
         missing_indeces = []
         start = 0
     else:
@@ -205,10 +263,10 @@ if __name__ == "__main__":
         if ds.min_len - start < flags["batch_size"]:
             # We don't have enough remaining samples for a batch.
             # Set get_missing_indeces to true.
-            missing_indeces.append((range(start, ds.min_len)))
+            missing_indeces + list(range(start, ds.min_len))
 
     # Define device
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cpu"  # "cuda" if torch.cuda.is_available() else "cpu"
     # Create an embedding object
     embeddings = ClipEmbeddings(device=device)
     # Create dataset preprocessor
@@ -217,7 +275,7 @@ if __name__ == "__main__":
     # If there are no missing_indeces and the start is equal to the size of the dataset, then update the metadata by
     # adding low dimensional embeddings.
     if len(missing_indeces) == 0 and start == ds.min_len:
-        update_metadata(index, dp, ds.min_len)
+        update_metadata(collection, dp, ds.min_len)
 
     else:
         # Get data and populate database
@@ -231,7 +289,7 @@ if __name__ == "__main__":
                 dataloader = ds[start:].pytorch(num_workers=NUM_WORKERS,
                                                 transform={'images': embeddings.processData, 'labels': None,
                                                            'index': None},
-                                                batch_size=BATCH_SIZE,
+                                                batch_size=flags["batch_size"],
                                                 decode_method={'images': 'pil'},
                                                 collate_fn=collate_fn)
 
@@ -242,13 +300,13 @@ if __name__ == "__main__":
                 dataloader = ds[missing_indeces].pytorch(num_workers=NUM_WORKERS,
                                                          transform={'images': embeddings.processData, 'labels': None,
                                                                     'index': None},
-                                                         batch_size=BATCH_SIZE,
+                                                         batch_size=flags["batch_size"],
                                                          decode_method={'images': 'pil'},
                                                          collate_fn=collate_fn)
                 data = dp.generateDatabaseEmbeddings(dataloader, True, ds.min_len)
 
             # Add data to vector store
-            upsert_vectors(index, data)
+            insert_vectors(collection, data)
 
     print("Process finished!")
     sys.exit(0)

@@ -8,7 +8,7 @@ import torch
 class EmbeddingsModel(ABC):
 
     @abstractmethod
-    def getSimilarityScore(self, emb1: torch.Tensor | np.ndarray, emb2: torch.Tensor | np.ndarray)\
+    def getSimilarityScore(self, emb1: torch.Tensor | np.ndarray, emb2: torch.Tensor | np.ndarray) \
             -> torch.Tensor | np.ndarray:
         """
         Return the similarity score between the two _embeddings of the same dimension.

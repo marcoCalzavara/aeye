@@ -1,12 +1,12 @@
+from typing import Dict
+
 import numpy as np
 import torch
 from sklearn.mixture import BayesianGaussianMixture
 from tqdm import tqdm
 
-from typing import Dict
-
-from CONSTANTS import *
 from EmbeddingsModel import EmbeddingsModel
+from src.CONSTANTS import *
 from utilities import project_embeddings_UMAP, plot_low_dimensional_embeddings
 
 
@@ -119,7 +119,7 @@ class DatasetPreprocessor:
         try:
             for i, data in enumerate(tqdm(dataloader, desc="Processing", ncols=100,
                                           bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]")):
-                if data is not None and data.keys():
+                if data is not None:
                     attributes = list(data.keys())
                     # Check if "index" is in attribute
                     if "index" not in attributes:
