@@ -34,9 +34,16 @@ def delete_collection(connection=False, passwd=None, collection_name=None) -> ty
         if collection_name not in utility.list_collections():
             print("Collection does not exist.")
         else:
-            print("Dropping collection...")
-            utility.drop_collection(collection_name)
-            print("Collection dropped.")
+            choice = input(f"The collection has {Collection(collection_name).num_entities} entities. "
+                           f"Are you sure you want to delete it? (y/n)")
+            if choice == "y":
+                print("Dropping collection...")
+                utility.drop_collection(collection_name)
+                print("Collection dropped.")
+            elif choice == "n":
+                print("Operation aborted.")
+            else:
+                print("Invalid choice.")
 
     except Exception as e:
         print(e.__str__())
