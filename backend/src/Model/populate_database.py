@@ -178,7 +178,9 @@ def update_metadata(collection: Collection, dp: DatasetPreprocessor, upper_value
     # Set embeddings
     dp.setEmbeddings(embeddings)
     # Get metadata
-    data = dp.generateRecordsMetadata(plot=True)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        data = dp.generateRecordsMetadata(plot=True)
 
     # Update vectors
     coordinates = ["x", "y", "z"]
@@ -193,7 +195,7 @@ def update_metadata(collection: Collection, dp: DatasetPreprocessor, upper_value
     try:
         # Do for loop to avoid resource exhaustion
         for i in range(0, len(entities), INSERT_SIZE):
-            new_collection.insert(data=[entities[j] for j in range(i, i + INSERT_SIZE) if i < len(entities)])
+            new_collection.insert(data=[entities[j] for j in range(i, i + INSERT_SIZE) if j < len(entities)])
             new_collection.flush()
     except Exception as e:
         print(e.__str__())
