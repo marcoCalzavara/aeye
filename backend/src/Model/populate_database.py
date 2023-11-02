@@ -183,26 +183,27 @@ def update_metadata(collection: Collection, dp: DatasetPreprocessor, upper_value
     # Update vectors
     coordinates = ["x", "y", "z"]
     for i in range(len(entities)):
-        entities[i]["cluster_id"] = data["cluster_ids"][i]
+        # Cast cluster id for compatibility with Milvus int data type
+        entities[i]["cluster_id"] = int(data["cluster_ids"][i])
         for j in range(data["low_dim_embeddings"].shape[1]):
             entities[i][f"low_dimensional_embedding_{coordinates[j]}"] = data["low_dim_embeddings"][i][j]
 
     # Insert entities in a new collection
-    new_collection, _ = create_collection(connection=True, collection_name="temp")
+    new_collection, _ = create_collection(connection=True, collection_name="dataset1")
     try:
-        new_collection.insert(data=entities)
-        new_collection.flush()
+        # Do for loop to avoid resource exhaustion
+        for i in range(0, len(entities), INSERT_SIZE):
+            new_collection.insert(data=[entities[j] for j in range(i, i + INSERT_SIZE) if i < len(entities)])
+            new_collection.flush()
     except Exception as e:
         print(e.__str__())
         print("Update failed!")
         utility.drop_collection("temp")
         return
 
-    # Drop the previous collection, but save its name before drop operation
+    # Drop the previous collection
     collection_name = collection.name
     utility.drop_collection(collection_name)
-    # Rename the newly created collection
-    utility.rename_collection("temp", collection_name)
     # Release collection
     new_collection.release()
     print("Update completed!")
@@ -266,7 +267,7 @@ if __name__ == "__main__":
             missing_indeces + list(range(start, ds.min_len))
 
     # Define device
-    device = "cpu"  # "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     # Create an embedding object
     embeddings = ClipEmbeddings(device=device)
     # Create dataset preprocessor

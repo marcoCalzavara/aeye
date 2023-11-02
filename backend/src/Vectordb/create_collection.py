@@ -13,7 +13,7 @@ from src.CONSTANTS import *
 def create_collection(connection=False, passwd=None, collection_name=None) -> typing.Tuple[Collection, str]:
     try:
         if not connection and passwd is None:
-            print("Function requires either a password or a connection.")
+            raise Exception("Function requires either a password or a connection.")
         # Create connection to Milvus server
         if not connection:
             connections.connect(

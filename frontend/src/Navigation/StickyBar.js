@@ -3,7 +3,7 @@ import {SearchBar} from "./SearchBar";
 import Link from '@mui/material/Link';
 import SelectDataset from "./SelectDataset";
 import {Logo} from "./Logo";
-import "StickyBar.css"
+import "./StickyBar.css"
 
 
 const StickyBar = (props) => {
