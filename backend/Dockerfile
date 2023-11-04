@@ -1,4 +1,4 @@
-FROM python
+FROM python:3
 
 # Set the working directory
 WORKDIR /code
