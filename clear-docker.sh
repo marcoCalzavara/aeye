@@ -9,23 +9,23 @@
 echo '####################################################'
 echo 'Stopping running containers (if available)...'
 echo '####################################################'
-docker stop "$(docker ps -aq)"
+sudo docker stop "$(sudo docker ps -aq)"
 
 # remove all stopped containers
 echo '####################################################'
 echo 'Removing containers ..'
 echo '####################################################'
-docker rm "$(docker ps -aq)"
+sudo docker rm "$(sudo docker ps -aq)"
 
 
 # remove all images
 echo '####################################################'
 echo 'Removing images ...'
 echo '####################################################'
-docker rmi "$(docker images -q)"
+sudo docker rmi "$(sudo docker images -q)"
 
 # remove all stray volumes if any
 echo '####################################################'
 echo 'Revoming docker container volumes (if any)'
 echo '####################################################'
-docker volume rm "$(docker volume ls -q)"
+sudo docker volume rm "$(sudo docker volume ls -q)"
