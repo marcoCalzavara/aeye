@@ -3,29 +3,24 @@
 #  - remove containers
 #  - remove images
 #  - remove volumes
-#
 
-# stop all running containers
-echo '####################################################'
+# Stop all running containers
 echo 'Stopping running containers (if available)...'
-echo '####################################################'
-sudo docker stop "$(sudo docker ps -aq)"
+# shellcheck disable=SC2046
+docker stop $(docker ps -a -q)
 
-# remove all stopped containers
-echo '####################################################'
+# Remove all stopped containers
 echo 'Removing containers ..'
-echo '####################################################'
-sudo docker rm "$(sudo docker ps -aq)"
+# shellcheck disable=SC2046
+docker rm $(docker ps -a -q)
 
 
-# remove all images
-echo '####################################################'
+# Remove all images
 echo 'Removing images ...'
-echo '####################################################'
-sudo docker rmi "$(sudo docker images -q)"
+# shellcheck disable=SC2046
+docker rmi $(docker images -a -q)
 
-# remove all stray volumes if any
-echo '####################################################'
+# Remove all stray volumes if any
 echo 'Revoming docker container volumes (if any)'
-echo '####################################################'
-sudo docker volume rm "$(sudo docker volume ls -q)"
+# shellcheck disable=SC2046
+docker volume rm $(docker volume ls -q)

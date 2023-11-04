@@ -4,11 +4,12 @@ FROM python
 WORKDIR /code
 
 # Copy files
-COPY backend/requirements.txt requirements.txt
-COPY backend/start.sh start.sh
+COPY ./requirements.txt requirements.txt
+COPY ./start.sh start.sh
 
 # Run pip install to install all dependencies
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
 # Export BACKEND_PORT. All other variables are exported in start.sh, but this variable must be exported here as its
 # values comes from the environment file.

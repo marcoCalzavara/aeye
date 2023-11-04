@@ -6,4 +6,4 @@ npm run build
 # Navigate back to image-viz directory
 cd ..
 
-sudo docker compose up -d
+docker compose up -d
