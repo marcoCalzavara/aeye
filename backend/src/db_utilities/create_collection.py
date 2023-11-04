@@ -7,7 +7,7 @@ from pymilvus import Collection
 from pymilvus import CollectionSchema, FieldSchema, DataType
 from pymilvus import utility, connections, db
 
-from src.CONSTANTS import *
+from ..CONSTANTS import *
 
 
 def create_collection(connection=False, passwd=None, collection_name=None) -> typing.Tuple[Collection, str]:

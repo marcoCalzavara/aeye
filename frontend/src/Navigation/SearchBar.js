@@ -37,8 +37,30 @@ export class SearchBar extends React.Component {
         });
     };
 
-    sendText = () => {
-        // Send text to web server
+    sendText = (text) => {
+        const url = `https://example.com/endpoint?text=${encodeURIComponent(text)}`;
+
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                // Add any other headers if required
+            },
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json(); // Assuming the response is in JSON format
+            })
+            .then(data => {
+                // Process the data returned from the server
+                console.log(data);
+            })
+            .catch(error => {
+                // Handle any errors that occur during the fetch operation
+                console.error('Error:', error);
+            });
     };
 
     // Handle changes in input to the search bar.

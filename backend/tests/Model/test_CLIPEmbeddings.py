@@ -2,8 +2,8 @@ import unittest
 
 import torch
 
-from src.Model.CLIPEmbeddings import ClipEmbeddings
-from src.Model.EmbeddingsModel import EmbeddingsModel
+from backend.src.model.CLIPEmbeddings import ClipEmbeddings
+from backend.src.model.EmbeddingsModel import EmbeddingsModel
 import cv2
 
 

@@ -8,7 +8,7 @@ from matplotlib.patches import Ellipse
 from scipy import linalg
 from umap import UMAP
 
-from src.CONSTANTS import *
+from ..CONSTANTS import *
 
 
 def project_embeddings_UMAP(embeddings: torch.Tensor | np.ndarray, n_neighbors=DEFAULT_N_NEIGHBORS, dim=DEFAULT_DIM,

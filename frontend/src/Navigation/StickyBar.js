@@ -30,7 +30,7 @@ const StickyBar = (props) => {
             <SearchBar/>
             <Link href="https://disco.ethz.ch/"
                   underline={"none"}
-                  sx={{color: "#D1B000FF", fontSize: "large", fontWeight: "bold"}}
+                  sx={{color: "#D1B000FF", fontSize: "x-large", fontWeight: "bold"}}
             >
                 DISCOLab
             </Link>

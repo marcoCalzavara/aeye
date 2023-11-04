@@ -1,6 +1,5 @@
 import contextlib
 import getopt
-import getpass
 import io
 import os
 import sys
@@ -12,11 +11,11 @@ import numpy as np
 import torch
 from pymilvus import utility, connections, Collection, db
 
-from src.Model.CLIPEmbeddings import ClipEmbeddings
-from src.Model.DatasetPreprocessor import DatasetPreprocessor
-from src.CONSTANTS import *
-from src.Vectordb.create_collection import create_collection
-from src.Model.utilities import collate_fn
+from ..model.CLIPEmbeddings import ClipEmbeddings
+from ..model.DatasetPreprocessor import DatasetPreprocessor
+from ..CONSTANTS import *
+from ..db_utilities.create_collection import create_collection
+from ..model.utilities import collate_fn
 
 # Increase pixel limit
 PIL.Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
@@ -216,13 +215,16 @@ if __name__ == "__main__":
     flags = parsing()
 
     # Create connection to Milvus server using root user
-    passwd = getpass.getpass("Root password: ")
-    connection = connections.connect(
-        user=ROOT_USER,
-        password=passwd,
-        host=HOST,
-        port=PORT
-    )
+    try:
+        connection = connections.connect(
+            user=ROOT_USER,
+            password=os.environ[ROOT_PASSWD],
+            host=os.environ[MILVUS_IP],
+            port=os.environ[MILVUS_PORT]
+        )
+    except Exception as e:
+        print(e.__str__())
+        sys.exit(1)
 
     # Get collection
     db.using_database(DATABASE_NAME)
@@ -258,7 +260,7 @@ if __name__ == "__main__":
     if flags["repopulate"]:
         # Delete all vectors in the collection and define start point for dataloader
         collection.drop()
-        collection, _ = create_collection(passwd, collection_name)
+        collection, _ = create_collection(os.environ[ROOT_PASSWD], collection_name)
         missing_indeces = []
         start = 0
     else:

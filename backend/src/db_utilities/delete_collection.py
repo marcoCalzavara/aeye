@@ -1,11 +1,12 @@
 import getpass
+import os
 import sys
 import typing
 
 from pymilvus import Collection
 from pymilvus import utility, connections, db
 
-from src.CONSTANTS import *
+from ..CONSTANTS import *
 
 
 def delete_collection(connection=False, passwd=None, collection_name=None) -> typing.Tuple[Collection, str]:
@@ -15,10 +16,10 @@ def delete_collection(connection=False, passwd=None, collection_name=None) -> ty
         # Create connection to Milvus server
         if not connection:
             connections.connect(
+                host=os.environ[MILVUS_IP],
+                port=os.environ[MILVUS_PORT],
                 user=ROOT_USER,
-                password=passwd,
-                host=HOST,
-                port=PORT
+                password=os.environ[ROOT_PASSWD]
             )
 
         # Create a database and switch to the newly created database

@@ -22,11 +22,18 @@ COLORS = ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'cyan', 
           'brown', 'beige', 'maroon', 'olive', 'navy', 'indigo', 'azure', 'coral', 'crimson', 'darkgreen', 'dodgerblue',
           'gold', 'orangered', 'fuchsia', 'darkviolet']
 FILE_MISSING_INDECES = "missing_indeces.txt"
+
+# Database constants
 INSERT_SIZE = 500
 SEARCH_LIMIT = 16384
 ROOT_USER = "root"
-HOST = 'localhost'
-PORT = 19530
+OLD_ROOT_PASSWD = "Milvus"
 DATABASE_NAME = "aiplusart"
 METRIC = "COSINE"
 INDEX_TYPE = "FLAT"
+
+# Environment variables names
+CHANGE_ROOT_USER = "CHANGE_ROOT_USER"
+ROOT_PASSWD = "PASSWD"
+MILVUS_IP = "MILVUS_IP"
+MILVUS_PORT = "MILVUS_PORT"

@@ -1,6 +1,6 @@
 .select-dataset {
     width: 8%;
-    height: var(--nav--bar-elements-height);
+    height: 60%;
     z-index: 3;
     background-color: black;
     display: flex;

@@ -1,6 +1,6 @@
 .logo {
-    width: 8%; /* 8% of the container */
-    height: 50%;
+    width: 10%; /* 8% of the container */
+    height: 60%;
     text-align: left;
     font-family: sans-serif;
     container-type: size;
@@ -8,7 +8,7 @@
 }
 
 .logo .logo1 {
-    font-size: x-large;
+    font-size: 120%;
     font-weight: bold;
     background: linear-gradient(to right, #D1B000, #FFD700);
     -webkit-background-clip: text;
@@ -16,7 +16,7 @@
 }
 
 .logo .logo2 {
-    font-size: large;
+    font-size: 100%;
     font-weight: bold;
     color: #D1B000FF;
 }

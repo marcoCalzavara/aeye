@@ -1,1 +1,0 @@
-setx PYTHONPATH %PYTHONPATH%;%cd%

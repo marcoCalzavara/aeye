@@ -3,8 +3,8 @@ from abc import ABC
 import torch
 from transformers import CLIPProcessor, CLIPModel
 
-from src.Model.EmbeddingsModel import EmbeddingsModel
-from src.CONSTANTS import *
+from ..model.EmbeddingsModel import EmbeddingsModel
+from ..CONSTANTS import *
 
 
 class ClipEmbeddings(EmbeddingsModel, ABC):

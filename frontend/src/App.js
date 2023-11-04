@@ -7,12 +7,6 @@ function App() {
     return (
         <div className="App">
             <StickyBar/>
-            <div className="title-container">
-                <img src={image} alt="Image" className="image"/>
-                <h1 className="title">
-                    AI Plus Art: A Visualization Tool
-                </h1>
-            </div>
         </div>
     );
 }
