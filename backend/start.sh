@@ -9,7 +9,7 @@ export MILVUS_PORT=19530
 
 # Install netcat
 apt-get update
-apt-get install -y netcat
+apt-get install -y netcat-openbsd
 
 # Loop until milvus service is available. It should be available as the backend depends on it
 max_retries=10
@@ -31,11 +31,9 @@ fi
 export PYTHONPATH="$PYTHONPATH:$PWD"
 
 # Change password for root to connect to Milvus database
-python ./src/db_utilities/manage_user.py
+python -m src.db_utilities.manage_user
 
 # Unset CHANGE_ROOT_USER to redefine normal behavior of manage_user.py
 unset CHANGE_ROOT_USER
 
-cd src || exit
-
-uvicorn app.main::app --host 0.0.0.0 --port "$BACKEND_PORT"
+uvicorn src.app.main::app --host 0.0.0.0 --port "$BACKEND_PORT"

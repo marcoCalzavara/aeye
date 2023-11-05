@@ -1,17 +1,20 @@
-from fastapi import FastAPI
-
-from pymilvus import connections, db
 import os
+
+from fastapi import FastAPI
+from pymilvus import connections, db
+
+from ..CONSTANTS import MILVUS_IP, MILVUS_PORT, ROOT_USER, ROOT_PASSWD, DATABASE_NAME
 from ..model.CLIPEmbeddings import ClipEmbeddings
 
 # Create a connection to database and set database.
 connections.connect(
-    user=os.environ["DB_USERNAME"],
-    password=os.environ["DB_PASSWD"],
-    host=os.environ["LOCALHOST"],
-    port=os.environ["DB_PORT"]
+    host=os.environ[MILVUS_IP],
+    port=os.environ[MILVUS_PORT],
+    user=ROOT_USER,
+    password=os.environ[ROOT_PASSWD],
 )
-db.using_database(os.environ["DATABASE"])
+
+db.using_database(DATABASE_NAME)
 
 # Create embeddins object
 device = "cpu"

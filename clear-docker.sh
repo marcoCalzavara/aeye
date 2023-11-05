@@ -24,3 +24,8 @@ docker rmi $(docker images -a -q)
 echo 'Revoming docker container volumes (if any)'
 # shellcheck disable=SC2046
 docker volume rm $(docker volume ls -q)
+
+# Remove volumes directory in milvus
+cd milvus || exit
+rm -r volumes
+cd ..
