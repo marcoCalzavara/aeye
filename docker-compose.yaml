@@ -86,10 +86,10 @@ services:
   nginx:
     container_name: nginx
     image: nginx
-    command: /bin/bash -c "envsubst < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
+    command: /bin/bash -c "mkdir logs && envsubst < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
     environment:
       - BACKEND_PORT=${BACKEND_PORT}
-      - DOLLAR="$"
+      - DOLLAR=$
     volumes:
       - ./frontend/build:/usr/share/nginx/html
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template

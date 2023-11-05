@@ -11,6 +11,11 @@
 worker_processes  auto;
 error_log  /logs/error.log warn;
 
+# The events section specifies parameters that affect how Nginx handles connections
+events {
+    worker_connections 1024;
+}
+
 http {
     resolver 127.0.0.11 ipv6=off;
     resolver_timeout 10s;
