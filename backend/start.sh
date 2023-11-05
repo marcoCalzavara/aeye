@@ -31,9 +31,11 @@ fi
 export PYTHONPATH="$PYTHONPATH:$PWD"
 
 # Change password for root to connect to Milvus database
+echo "Changing password of Milvus root user..."
 python -m src.db_utilities.manage_user
+echo "Password changed."
 
-# Unset CHANGE_ROOT_USER to redefine normal behavior of manage_user.py
+# Set CHANGE_ROOT_USER=0 to redefine normal behavior of manage_user.py
 export CHANGE_ROOT_USER=0
 
 uvicorn src.app.main::app --reload --host 0.0.0.0 --port "$BACKEND_PORT"
