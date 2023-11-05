@@ -12,18 +12,20 @@ worker_processes  auto;
 error_log  /logs/error.log warn;
 
 http {
+    resolver 127.0.0.11 ipv6=off;
+    resolver_timeout 10s;
     sendfile on;
     tcp_nopush on;
-    log_format time '$remote_addr - $remote_user [$time_local] '
-                             '"$request" $status $body_bytes_sent '
-                             '"$http_referer" "$http_user_agent"'
-                             'rt=$request_time uct="$upstream_connect_time" uht="$upstream_header_time"'
-                              'urt="$upstream_response_time"';
+    log_format time '${DOLLAR}remote_addr - ${DOLLAR}remote_user [${DOLLAR}time_local] '
+                             '"${DOLLAR}request" ${DOLLAR}status ${DOLLAR}body_bytes_sent '
+                             '"${DOLLAR}http_referer" "${DOLLAR}http_user_agent"'
+                             'rt=${DOLLAR}request_time uct="${DOLLAR}upstream_connect_time" uht="${DOLLAR}upstream_header_time"'
+                              'urt="${DOLLAR}upstream_response_time"';
     access_log /logs/access.log time; # Log for every connection to nginx
 
     upstream backend_upstream {
     # Other servers can be added for load balancing. See https://nginx.org/en/docs/http/load_balancing.html
-        server backend:${BACKEND_PORT}/api/ max_fails=3;
+        server backend:${BACKEND_PORT} max_fails=3;
     }
 
     server { # reverse-proxy
@@ -36,10 +38,10 @@ http {
         location /api {
         #  if a request is made to http://${proxy-server}/api/some/path, Nginx will forward the request
         # to http://${back-end}/api/some/path (see upstream above) on the backend server.
-            proxy_pass http://backend_upstream;
-            proxy_set_header Host $host;
-            proxy_set_header X-real-ip $remote_addr;
-            proxy_set_header X-forwarded-for $proxy_add_x_forwarded_for;
+            proxy_pass http://backend_upstream/api/;
+            proxy_set_header Host ${DOLLAR}host;
+            proxy_set_header X-Real-IP ${DOLLAR}remote_addr;
+            proxy_set_header X-Forwarded-For ${DOLLAR}proxy_add_x_forwarded_for;
             proxy_buffers 32 4k;
         }
     }
