@@ -39,6 +39,7 @@ http {
         location / {
             root /usr/share/nginx/html;
             index index.html;
+            # try_files ${DOLLAR}uri ${DOLLAR}uri/ /index.html;
         }
         location /api {
         #  if a request is made to http://${proxy-server}/api/some/path, Nginx will forward the request

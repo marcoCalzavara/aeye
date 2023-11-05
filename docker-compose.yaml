@@ -86,7 +86,8 @@ services:
   nginx:
     container_name: nginx
     image: nginx
-    command: /bin/bash -c "mkdir logs && envsubst < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
+    command: /bin/bash -c "mkdir logs && envsubst < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf &&
+      chmod 755 usr/share/nginx/html && chmod 644 usr/share/nginx/html/index.html && nginx -g 'daemon off;'"
     environment:
       - BACKEND_PORT=${BACKEND_PORT}
       - DOLLAR=$
