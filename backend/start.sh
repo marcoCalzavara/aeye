@@ -1,9 +1,15 @@
+#!/bin/bash
+
 # Generate password for milvus database and other environment variables
 PASSWD=$(tr -dc 'A-Za-z0-9!"#$%&'\''()*+,-./:;<=>?@[\]^_`{|}~' </dev/urandom | head -c 13)
 export PASSWD
 export CHANGE_ROOT_USER=1
 export MILVUS_IP=milvus-standalone
 export MILVUS_PORT=19530
+
+# Install netcat
+apt-get update
+apt-get install -y netcat
 
 # Loop until milvus service is available. It should be available as the backend depends on it
 max_retries=10
