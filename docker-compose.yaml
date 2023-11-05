@@ -17,6 +17,8 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+    networks:
+      - default
 
   minio:
     container_name: milvus-minio
@@ -35,6 +37,8 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+    networks:
+      - default
 
   standalone:
     container_name: milvus-standalone
@@ -60,6 +64,8 @@ services:
     depends_on:
       - "etcd"
       - "minio"
+    networks:
+      - default
 
   backend:
     container_name: backend
@@ -74,6 +80,8 @@ services:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
       - "standalone"
+    networks:
+      - default
 
   nginx:
     container_name: nginx
@@ -89,6 +97,8 @@ services:
       - "80:80"
     depends_on:
       - "backend"
+    networks:
+      - default
 
 networks:
   default:

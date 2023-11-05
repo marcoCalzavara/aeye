@@ -17,8 +17,10 @@ def check_user(username, resp):
 
 
 # Support option for changing password of root user on startup of Milvus server
-if CHANGE_ROOT_USER in os.environ:
+if CHANGE_ROOT_USER in os.environ and os.environ[CHANGE_ROOT_USER] == 1:
     try:
+        print(f"Connecting to {os.environ[MILVUS_IP]}:{os.environ[MILVUS_PORT]} with user {ROOT_USER} and "
+              f"password {OLD_ROOT_PASSWD}...")
         connections.connect(
             host=os.environ[MILVUS_IP],
             port=os.environ[MILVUS_PORT],
@@ -30,7 +32,7 @@ if CHANGE_ROOT_USER in os.environ:
         utility.reset_password(ROOT_USER, OLD_ROOT_PASSWD, os.environ[ROOT_PASSWD])
     except Exception as e:
         print(e.__str__())
-else:
+elif CHANGE_ROOT_USER not in os.environ:
     resp = input("Create new user (0) or change password (1)? ")
 
     if resp == '0':

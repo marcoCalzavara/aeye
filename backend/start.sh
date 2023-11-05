@@ -34,6 +34,6 @@ export PYTHONPATH="$PYTHONPATH:$PWD"
 python -m src.db_utilities.manage_user
 
 # Unset CHANGE_ROOT_USER to redefine normal behavior of manage_user.py
-unset CHANGE_ROOT_USER
+export CHANGE_ROOT_USER=0
 
-uvicorn src.app.main::app --host 0.0.0.0 --port "$BACKEND_PORT"
+uvicorn src.app.main::app --reload --host 0.0.0.0 --port "$BACKEND_PORT"
