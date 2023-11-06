@@ -1,4 +1,4 @@
-echo -n "Do you want to build the app? (y/n)"
+echo -n "Do you want to build the app? (y/n) "
 read -r answer
 
 if [ "$answer" = "y" ]; then

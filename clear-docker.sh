@@ -26,10 +26,14 @@ echo 'Revoming docker container volumes (if any)'
 docker volume rm $(docker volume ls -q)
 
 # Remove all other unused entities
-echo -n "Do you want to prune unused entities? (y/n)"
+echo -n "Do you want to prune unused entities? (y/n) "
 read -r answer
 
 if [ "$answer" = "y" ]; then
   echo "Pruning unused entities..."
   docker system prune -a
+else
+  cd milvus || exit
+  rm -r volumes
+  cd ..
 fi
