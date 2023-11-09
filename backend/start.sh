@@ -6,6 +6,7 @@ export PASSWD
 export CHANGE_ROOT_USER=1
 export MILVUS_IP=milvus-standalone
 export MILVUS_PORT=19530
+export START=1
 
 # Install netcat
 apt-get update
@@ -36,4 +37,8 @@ echo "Password changed."
 # Set CHANGE_ROOT_USER=0 to redefine normal behavior of manage_user.py
 export CHANGE_ROOT_USER=0
 
-uvicorn src.app.main:app --reload --host 0.0.0.0 --port "$BACKEND_PORT"
+echo "Creating database and collection..."
+pyhton -m src.db_utilities.create_collection
+echo "Database and collection created."
+
+python -m src.app

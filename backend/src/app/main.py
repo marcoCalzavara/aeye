@@ -1,35 +1,70 @@
 import os
 
-from fastapi import FastAPI
-from pymilvus import connections, db
+import uvicorn
+from fastapi import FastAPI, Depends, HTTPException
+from pymilvus import connections, db, Collection
+from pymilvus.orm import utility
 
-from ..CONSTANTS import ROOT_PASSWD, OLD_ROOT_PASSWD, MILVUS_IP, MILVUS_PORT, ROOT_USER, DATABASE_NAME
+from request_bodies import *
+from .database import gets
+from ..CONSTANTS import *
+from ..app.dependencies import CollectionNameGetter
 from ..model.CLIPEmbeddings import ClipEmbeddings
 
-# Create a connection to database and set database.
-passwd = os.environ[ROOT_PASSWD] if ROOT_PASSWD in os.environ.keys() else OLD_ROOT_PASSWD
-connections.connect(
-    host=os.environ[MILVUS_IP],
-    port=os.environ[MILVUS_PORT],
-    user=ROOT_USER,
-    password=passwd,
-)
-
-# db.using_database(DATABASE_NAME)
-
-# Create embeddins object
-device = "cpu"
-embeddings = ClipEmbeddings(device)
+embeddings = None
+collections = {}
+collection_name_getter = None
 
 # Create app
 app = FastAPI()
 
 
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
+# Define routes
+@app.get("/api/collection_names")
+def get_collection_names():
+    # Return collection names as a list
+    return {"collection_names": list(collections.keys())}
 
 
-@app.get("/hello/{name}")
-async def say_hello(name: str):
-    return {"message": f"Hello {name}"}
+@app.get("/api/image-text")
+def say_hello(text: Text, collection: Collection = Depends(collection_name_getter)):
+    if collection is None:
+        # Collection not found, return 404
+        raise HTTPException(status_code=404, detail="Collection not found")
+    else:
+        # Collection found, return image index
+        index = gets.get_image_embeddings_from_text(embeddings, text.text, collection)
+        return {"image_index": index}
+
+
+def main():
+    # Create a connection to database.
+    passwd = os.environ[ROOT_PASSWD] if ROOT_PASSWD in os.environ.keys() else OLD_ROOT_PASSWD
+    connections.connect(
+        host=os.environ[MILVUS_IP],
+        port=os.environ[MILVUS_PORT],
+        user=ROOT_USER,
+        password=passwd,
+    )
+
+    # Set database
+    db.using_database(os.environ[DATABASE])
+
+    # Get collections and create collection objects
+    global collections
+    for name in utility.list_collections():
+        collections[name] = Collection(name)
+
+    # Create collection name getter
+    global collection_name_getter
+    collection_name_getter = CollectionNameGetter(collections)
+
+    # Create embeddins object
+    global embeddings
+    embeddings = ClipEmbeddings(DEVICE)
+
+    uvicorn.run(app, host="0.0.0.0", port=os.environ["PORT"], reload=True)
+
+
+if __name__ == "__main__":
+    main()

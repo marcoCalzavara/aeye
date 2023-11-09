@@ -2,7 +2,6 @@ import * as React from 'react';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
-import "./SelectDataset.css"
 
 
 export default function SelectDataset() {
@@ -14,18 +13,16 @@ export default function SelectDataset() {
     };
 
     return (
-        <div className="select-dataset">
-            <FormControl className="form-control">
-                <Select
-                    value={dataset}
-                    onChange={handleChange}
-                    sx={{height: "100%", backgroundColor: "white"}}
-                >
-                    <MenuItem value={"Dataset1"}>Dataset1</MenuItem>
-                    <MenuItem value={"Dataset2"}>Dataset2</MenuItem>
-                    <MenuItem value={"Dataset3"}>Dataset3</MenuItem>
-                </Select>
-            </FormControl>
-        </div>
+        <FormControl sx={{"width": "100%", "height": "100%"}}>
+            <Select
+                value={dataset}
+                onChange={handleChange}
+                sx={{height: "100%", backgroundColor: "white"}}
+            >
+                <MenuItem value={"Dataset1"}>Dataset1</MenuItem>
+                <MenuItem value={"Dataset2"}>Dataset2</MenuItem>
+                <MenuItem value={"Dataset3"}>Dataset3</MenuItem>
+            </Select>
+        </FormControl>
     );
 }

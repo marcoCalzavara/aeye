@@ -55,7 +55,7 @@ def plot_low_dimensional_embeddings(low_dim_embeddings, labels, means, covarianc
     plt.show()
 
 
-def collate_fn(batch):
+def wikiart_collate_fn(batch):
     # Find first non-None values in the batch. Each sample has a field "pixel_values" inside "images", but we
     # use a general for loop for the keys in case the field changes in the future.
     try:

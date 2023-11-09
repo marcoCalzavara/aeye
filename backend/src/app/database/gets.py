@@ -1,12 +1,10 @@
-from pymilvus import Collection
-from src.model.CLIPEmbeddings import ClipEmbeddings
-from src.CONSTANTS import *
+from ...CONSTANTS import *
+from ...model.CLIPEmbeddings import ClipEmbeddings
 
 
-def get_image_embeddings(embeddings: ClipEmbeddings, text, collection_name):
+def get_image_embeddings_from_text(embeddings: ClipEmbeddings, text, collection):
     # Generate text embeddings
     text_embeddings = embeddings.getTextEmbeddings(text)
-    collection = Collection(collection_name)
     # Define search parameters
     search_params = {
         "metric_type": METRIC,

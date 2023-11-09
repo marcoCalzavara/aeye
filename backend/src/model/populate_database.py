@@ -1,5 +1,6 @@
 import contextlib
 import getopt
+import getpass
 import io
 import os
 import sys
@@ -9,13 +10,14 @@ import PIL.Image
 import deeplake
 import numpy as np
 import torch
-from pymilvus import utility, connections, Collection, db
+from pymilvus import utility, db, Collection
 
+from ..CONSTANTS import *
+from ..db_utilities.common_utils import create_connection
+from ..db_utilities.create_collection import create_collection
 from ..model.CLIPEmbeddings import ClipEmbeddings
 from ..model.DatasetPreprocessor import DatasetPreprocessor
-from ..CONSTANTS import *
-from ..db_utilities.create_collection import create_collection
-from ..model.utilities import collate_fn
+from ..model.Datasets import DatasetOptions, Dataset
 
 # Increase pixel limit
 PIL.Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
@@ -26,19 +28,22 @@ def parsing():
     arguments = sys.argv[1:]
 
     # Options
-    options = "hb:r:s:"
+    options = "hd:c:b:r:s:"
 
     # Long options
-    long_options = ["help", "batch_size", "repopulate", "early_stop"]
+    long_options = ["help", "database", "dataset", "batch_size", "repopulate", "early_stop"]
 
     # Prepare flags
-    flags = {"batch_size": BATCH_SIZE, "repopulate": False, "early_stop": -1}
+    flags = {"database": DEFAULT_DATABASE_NAME, "dataset": DatasetOptions.WIKIART.value["name"],
+             "batch_size": BATCH_SIZE, "repopulate": False, "early_stop": -1}
 
     # Parsing argument
     arguments, values = getopt.getopt(arguments, options, long_options)
 
     if len(arguments) > 0 and arguments[0][0] in ("-h", "--help"):
         print(f'This script populates a vector store with embeddings.\n\
+        -d or --database: database name (default={flags["database"]}).\n\
+        -c or --dataset: dataset (default={flags["dataset"]}).\n\
         -b or --batch_size: batch size used for loading the dataset (default={BATCH_SIZE}).\n\
         -r or --repopulate: whether to empty the database and repopulate. Type y for repopulating the store, '
               f'n otherwise (default={"n" if not flags["repopulate"] else "y"}).\n\
@@ -48,7 +53,14 @@ def parsing():
 
     # Checking each argument
     for arg, val in arguments:
-        if arg in ("-b", "--batch_size"):
+        if arg in ("-d", "--database"):
+            flags["database"] = val
+        elif arg in ("-c", "--dataset"):
+            if val in [dataset.value for dataset in DatasetOptions]:
+                flags["dataset"] = val
+            else:
+                raise ValueError("Dataset not supported.")
+        elif arg in ("-b", "--batch_size"):
             if int(val) >= 1:
                 flags["batch_size"] = int(val)
             else:
@@ -67,6 +79,18 @@ def parsing():
                 flags["early_stop"] = int(val)
 
     return flags
+
+
+def get_dataset_object(dataset_name):
+    if dataset_name == DatasetOptions.WIKIART.value["name"]:
+        # Get dataset
+        with contextlib.redirect_stdout(io.StringIO()):
+            ds = deeplake.load(WIKIART)
+            # Create and return dataset object
+            return Dataset(ds, DatasetOptions.WIKIART.value["collate_fn"])
+    else:
+        # TODO add support for other datasets
+        pass
 
 
 def insert_vectors(collection: Collection, data: dict):
@@ -121,8 +145,7 @@ def insert_vectors(collection: Collection, data: dict):
     for i in range(0, data["embeddings"].shape[0], INSERT_SIZE):
         try:
             collection.insert(
-                data=
-                [
+                data=[
                     {
                         "index": data["index"][j].item(),
                         "embedding": data["embeddings"][j].tolist(),
@@ -130,8 +153,7 @@ def insert_vectors(collection: Collection, data: dict):
                         "low_dimensional_embedding_y": np.nan,
                         **{key: data[key][j].item() for key in keys}
                     }
-                    for j in range(i, i + INSERT_SIZE) if j < data["embeddings"].shape[0]
-                ]
+                    for j in range(i, i + INSERT_SIZE) if j < data["embeddings"].shape[0]]
             )
             collection.flush()
         except Exception as e:
@@ -190,7 +212,7 @@ def update_metadata(collection: Collection, dp: DatasetPreprocessor, upper_value
             entities[i][f"low_dimensional_embedding_{coordinates[j]}"] = data["low_dim_embeddings"][i][j]
 
     # Insert entities in a new collection
-    new_collection, _ = create_collection(connection=True, collection_name="dataset1")
+    new_collection, _ = create_collection(collection_name=os.environ[DEFAULT_COLLECTION], choose_database=False)
     try:
         # Do for loop to avoid resource exhaustion
         for i in range(0, len(entities), INSERT_SIZE):
@@ -214,35 +236,38 @@ if __name__ == "__main__":
     # Get arguments
     flags = parsing()
 
-    # Create connection to Milvus server using root user
+    choice = input("Use root user? (y/n) ")
+    if choice == "y":
+        user = ROOT_USER
+        passwd = os.environ[ROOT_PASSWD]
+    elif choice.lower() == "n":
+        user = input("Username: ")
+        passwd = getpass.getpass("Password: ")
+    else:
+        print("Wrong choice.")
+        sys.exit(1)
+
+    # Try creating a connection and selecting a database. If it fails, exit.
     try:
-        connection = connections.connect(
-            user=ROOT_USER,
-            password=os.environ[ROOT_PASSWD],
-            host=os.environ[MILVUS_IP],
-            port=os.environ[MILVUS_PORT]
-        )
+        create_connection(user, passwd)
+        db.using_database(flags["database"])
     except Exception as e:
         print(e.__str__())
         sys.exit(1)
 
-    # Get collection
-    db.using_database(DATABASE_NAME)
+    # Choose a collection. If the collection does not exist, create it.
     collection_name = input("Collection name: ")
     if collection_name not in utility.list_collections():
         choice = input("The collection does not exist. Create collection? (y/n) ")
-        if choice == "y":
-            collection, collection_name = create_collection(connection=True, collection_name=collection_name)
-        elif choice == "n":
+        if choice.lower() == "y":
+            collection, collection_name = create_collection(collection_name=collection_name, choose_database=False)
+        elif choice.lower() == "n":
             sys.exit(0)
         else:
+            print("Wrong choice.")
             sys.exit(1)
     else:
         collection = Collection(collection_name)
-
-    # Get dataset
-    with contextlib.redirect_stdout(io.StringIO()):
-        ds = deeplake.load(WIKIART)
 
     missing_indeces = []
     start = 0
@@ -256,6 +281,9 @@ if __name__ == "__main__":
     # The else condition is not important, as the abscence of a file means that either this is the first iteration of
     # the processing procedure, or an error message has been displayed in the previous iteration.
 
+    # Get dataset object
+    dataset = get_dataset_object(flags["dataset"])
+
     # Evaluate flags["repopulate"]
     if flags["repopulate"]:
         # Delete all vectors in the collection and define start point for dataloader
@@ -265,50 +293,41 @@ if __name__ == "__main__":
         start = 0
     else:
         # Check the number of remaining data points
-        if ds.min_len - start < flags["batch_size"]:
+        if dataset.get_size() - start < flags["batch_size"]:
             # We don't have enough remaining samples for a batch.
             # Set get_missing_indeces to true.
-            missing_indeces + list(range(start, ds.min_len))
+            missing_indeces + list(range(start, dataset.get_size()))
 
-    # Define device
-    device = "cuda" if torch.cuda.is_available() else "cpu"
     # Create an embedding object
-    embeddings = ClipEmbeddings(device=device)
+    embeddings = ClipEmbeddings(device=DEVICE)
     # Create dataset preprocessor
     dp = DatasetPreprocessor(embeddings, missing_indeces)
 
     # If there are no missing_indeces and the start is equal to the size of the dataset, then update the metadata by
     # adding low dimensional embeddings.
-    if len(missing_indeces) == 0 and start == ds.min_len:
-        update_metadata(collection, dp, ds.min_len)
+    if len(missing_indeces) == 0 and start == dataset.get_size():
+        update_metadata(collection, dp, dataset.get_size())
 
     else:
         # Get data and populate database
-        with warnings.catch_warnings():
+        with (warnings.catch_warnings()):
             warnings.filterwarnings("ignore", category=UserWarning)
 
             print("Starting processing data...")
 
-            if ds.min_len - start >= flags["batch_size"]:
+            if dataset.get_size() - start >= flags["batch_size"]:
                 # Create dataloader
-                dataloader = ds[start:].pytorch(num_workers=NUM_WORKERS,
-                                                transform={'images': embeddings.processData, 'labels': None,
-                                                           'index': None},
-                                                batch_size=flags["batch_size"],
-                                                decode_method={'images': 'pil'},
-                                                collate_fn=collate_fn)
+                dataloader = dataset.get_dataloader(flags["batch_size"], NUM_WORKERS, embeddings.processData,
+                                                    is_missing_indeces=False, start=start, end=dataset.get_size())
 
                 data = dp.generateDatabaseEmbeddings(dataloader, False, start, flags["early_stop"])
 
             else:
                 # Create dataloader from missing indeces
-                dataloader = ds[missing_indeces].pytorch(num_workers=NUM_WORKERS,
-                                                         transform={'images': embeddings.processData, 'labels': None,
-                                                                    'index': None},
-                                                         batch_size=flags["batch_size"],
-                                                         decode_method={'images': 'pil'},
-                                                         collate_fn=collate_fn)
-                data = dp.generateDatabaseEmbeddings(dataloader, True, ds.min_len)
+                dataloader = dataset.get_dataloader(flags["batch_size"], NUM_WORKERS, embeddings.processData,
+                                                    is_missing_indeces=True, missing_indeces=missing_indeces)
+
+                data = dp.generateDatabaseEmbeddings(dataloader, True, dataset.get_size())
 
             # Add data to vector store
             insert_vectors(collection, data)

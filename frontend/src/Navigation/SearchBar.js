@@ -1,7 +1,6 @@
 import React from "react";
 import IconButton from '@mui/material/IconButton';
 import SearchIcon from '@mui/icons-material/Search';
-import "./SearchBar.css"
 import {InputBase} from "@mui/material";
 
 
@@ -111,10 +110,11 @@ export class SearchBar extends React.Component {
 
     searchBar = () => {
         return (
-            <div className="search-bar">
+            /* Take */
+            <div className="w-full h-full flex justify-between items-center z-10 bg-white rounded-lg">
                 {/*98% for input, 2% for search icon */}
                 <InputBase
-                    className="input"
+                    className="w-98 h-full pl-1% text-sm md:text-xl lg:text-4xl"
                     label={"Search Images by Text"}
                     placeholder={"\"A painting of a dog\""}
                     value={this.state.inputValue}
@@ -122,7 +122,7 @@ export class SearchBar extends React.Component {
                     onKeyDown={this.handleEnter}
                     onClick={this.handleClick}
                 />
-                <IconButton type="button" className="search" aria-label="search" onClick={this.handleClickSearch}>
+                <IconButton type="button" onClick={this.handleClickSearch}>
                     <SearchIcon/>
                 </IconButton>
             </div>

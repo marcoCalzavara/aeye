@@ -2,9 +2,10 @@ import getpass
 import os
 import sys
 
-from pymilvus import utility, connections
+from pymilvus import utility
 
 from ..CONSTANTS import *
+from .common_utils import create_connection
 
 
 def check_user(username, resp):
@@ -21,13 +22,7 @@ if CHANGE_ROOT_USER in os.environ and int(os.environ[CHANGE_ROOT_USER]) == 1:
     try:
         print(f"Connecting to {os.environ[MILVUS_IP]}:{os.environ[MILVUS_PORT]} with user {ROOT_USER} and "
               f"password {OLD_ROOT_PASSWD}...")
-        connections.connect(
-            host=os.environ[MILVUS_IP],
-            port=os.environ[MILVUS_PORT],
-            user=ROOT_USER,
-            password=OLD_ROOT_PASSWD
-        )
-
+        create_connection(ROOT_USER, OLD_ROOT_PASSWD)
         # Change password
         utility.reset_password(ROOT_USER, OLD_ROOT_PASSWD, os.environ[ROOT_PASSWD])
     except Exception as e:
@@ -47,12 +42,7 @@ elif CHANGE_ROOT_USER not in os.environ:
         passwd_root = getpass.getpass("Root password: ")
         # Create user
         try:
-            connections.connect(
-                host=os.environ[MILVUS_IP],
-                port=os.environ[MILVUS_PORT],
-                user=ROOT_USER,
-                password=os.environ[ROOT_PASSWD],
-            )
+            create_connection(ROOT_USER, os.environ[ROOT_PASSWD])
             utility.create_user(user, passwd)
         except Exception as e:
             print(e.__str__())
@@ -68,13 +58,7 @@ elif CHANGE_ROOT_USER not in os.environ:
             new_passwd_check = getpass.getpass("Repeat new password: ")
         # Create connection
         try:
-            connections.connect(
-                host=os.environ[MILVUS_IP],
-                port=os.environ[MILVUS_PORT],
-                user=ROOT_USER,
-                password=os.environ[ROOT_PASSWD],
-            )
-
+            create_connection(ROOT_USER, os.environ[ROOT_PASSWD])
             # Change password
             utility.reset_password(user, old_passwd, new_passwd)
         except Exception as e:

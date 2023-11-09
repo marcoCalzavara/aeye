@@ -1,11 +1,9 @@
 import React from "react";
-import './App.css';
 import StickyBar from "./Navigation/StickyBar";
-import image from "./assets/clip.webp"
 
 function App() {
     return (
-        <div className="App">
+        <div className="w-screen h-screen overflow-x-auto flex">
             <StickyBar/>
         </div>
     );
