@@ -2,8 +2,6 @@ import contextlib
 import io
 from enum import Enum
 
-import cv2
-
 from ...CONSTANTS import *
 from ...model.CLIPEmbeddings import ClipEmbeddings
 import deeplake
@@ -36,4 +34,4 @@ def get_image_embeddings_from_text(embeddings: ClipEmbeddings, text, collection,
     )
     # TODO: return only the index
     # return results[0]["index"]
-    return cv2.cvtColor(get_dataset(collection_name)[results[0]["index"]]["images"].data()["value"], cv2.COLOR_BGR2RGB)
+    return get_dataset(collection_name)[results[0]["index"]]["images"].data()["value"]
