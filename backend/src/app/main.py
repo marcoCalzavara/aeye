@@ -5,8 +5,8 @@ from fastapi import FastAPI, Depends, HTTPException
 from pymilvus import connections, db, Collection
 from pymilvus.orm import utility
 
-from request_bodies import *
-from .database import gets
+from ..app.request_bodies import *
+from ..app.database import gets
 from ..CONSTANTS import *
 from ..app.dependencies import CollectionNameGetter
 from ..model.CLIPEmbeddings import ClipEmbeddings
@@ -27,14 +27,16 @@ def get_collection_names():
 
 
 @app.get("/api/image-text")
-def say_hello(text: Text, collection: Collection = Depends(collection_name_getter)):
-    if collection is None:
+def say_hello(text: Text, collection_info=Depends(collection_name_getter)):
+    if collection_info[0] is None:
         # Collection not found, return 404
         raise HTTPException(status_code=404, detail="Collection not found")
     else:
         # Collection found, return image index
-        index = gets.get_image_embeddings_from_text(embeddings, text.text, collection)
-        return {"image_index": index}
+        # index = gets.get_image_embeddings_from_text(embeddings, text.text, collection_info[0], collection_info[1])
+        # return {"image_index": index}
+        image = gets.get_image_embeddings_from_text(embeddings, text.text, collection_info[0], collection_info[1])
+        return {"image_index": image}
 
 
 def main():

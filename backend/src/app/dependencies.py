@@ -9,6 +9,6 @@ class CollectionNameGetter:
 
     def __call__(self, text: Text):
         if text.collection_name in self.collections.keys():
-            return self.collections[text.collection_name]
+            return self.collections[text.collection_name], text.collection_name
         else:
             return None

@@ -3,7 +3,7 @@ import {SearchBar} from "./SearchBar";
 import SelectDataset from "./SelectDataset";
 
 
-const StickyBar = (props) => {
+const StickyBar = ({onImageFetched}) => {
     // Define height in pixels
     const heightNavBar = 100
 
@@ -31,7 +31,7 @@ const StickyBar = (props) => {
                 </a>
             </div>
             <div className="w-2/3 h-2/3">
-                <SearchBar/>
+                <SearchBar onImageFetched={onImageFetched}/>
             </div>
             <div className="w-2/19 h-2/3">
                 <SelectDataset/>

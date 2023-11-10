@@ -2,11 +2,12 @@ import React from "react";
 import IconButton from '@mui/material/IconButton';
 import SearchIcon from '@mui/icons-material/Search';
 import {InputBase} from "@mui/material";
+import {BACKEND_URL} from "../CONSTANTS"
 
 
 export class SearchBar extends React.Component {
     // Props are objects used by components to communicate with each other
-    constructor(props) {
+    constructor({onImageFetched, ...props}) {
         super(props);
         this.state = {
             searchHistory: [],
@@ -15,6 +16,7 @@ export class SearchBar extends React.Component {
             anchorEl: null,
             open: false
         };
+        this.onImageFetched = onImageFetched;
         this.max_state_length = 20;
         this.max_history_shown = 5
     }
@@ -37,24 +39,24 @@ export class SearchBar extends React.Component {
     };
 
     sendText = (text) => {
-        const url = `https://example.com/endpoint?text=${encodeURIComponent(text)}`;
+        const url = BACKEND_URL + '/api/image-text';
 
         fetch(url, {
             method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                // Add any other headers if required
-            },
+            body: JSON.stringify({text: text}),
         })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                    throw new Error('Image from text could not be retrieved from the server.' +
+                        ' Please try again later. Status: ' + response.status + ' ' + response.statusText);
                 }
-                return response.json(); // Assuming the response is in JSON format
+                return response.json();
             })
             .then(data => {
-                // Process the data returned from the server
-                console.log(data);
+                // Get the corresponding image
+
+
+                this.onImageFetched()
             })
             .catch(error => {
                 // Handle any errors that occur during the fetch operation

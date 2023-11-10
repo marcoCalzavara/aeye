@@ -41,4 +41,4 @@ echo "Creating database and collection..."
 pyhton -m src.db_utilities.create_collection
 echo "Database and collection created."
 
-python -m src.app
+python -m src.app.main

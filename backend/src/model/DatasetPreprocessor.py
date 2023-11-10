@@ -5,8 +5,8 @@ import torch
 from sklearn.mixture import BayesianGaussianMixture
 from tqdm import tqdm
 
-from EmbeddingsModel import EmbeddingsModel
-from utilities import project_embeddings_UMAP, plot_low_dimensional_embeddings
+from ..model.EmbeddingsModel import EmbeddingsModel
+from ..model.utilities import project_embeddings_UMAP, plot_low_dimensional_embeddings
 from ..CONSTANTS import *
 
 
