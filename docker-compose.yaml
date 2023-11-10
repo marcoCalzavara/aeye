@@ -74,7 +74,6 @@ services:
       dockerfile: Dockerfile
       args:
         - BACKEND_PORT=${BACKEND_PORT}
-        - DATABASE=${DATABASE}
         - DEFAULT_COLLECTION=${DEFAULT_COLLECTION}
     volumes:
       - ./backend/src:/code/src

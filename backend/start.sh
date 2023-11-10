@@ -38,7 +38,7 @@ echo "Password changed."
 export CHANGE_ROOT_USER=0
 
 echo "Creating database and collection..."
-pyhton -m src.db_utilities.create_collection
+python -m src.db_utilities.create_collection
 echo "Database and collection created."
 
 python -m src.app.main

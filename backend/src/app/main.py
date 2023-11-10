@@ -50,7 +50,7 @@ def main():
     )
 
     # Set database
-    db.using_database(os.environ[DATABASE])
+    db.using_database(DEFAULT_DATABASE_NAME)
 
     # Get collections and create collection objects
     global collections

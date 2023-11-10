@@ -125,7 +125,7 @@ if __name__ == "__main__":
             print("Wrong choice.")
             sys.exit(1)
     else:
-        os.environ[START] = 0
+        os.environ[START] = "0"
         create_connection(ROOT_USER, os.environ[ROOT_PASSWD])
         # Create a collection with a temporary name
         create_collection(collection_name=TEMP_COLLECTION_NAME, on_start=True, choose_database=False)
