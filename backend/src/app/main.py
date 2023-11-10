@@ -65,7 +65,7 @@ def main():
     global embeddings
     embeddings = ClipEmbeddings(DEVICE)
 
-    uvicorn.run(app, host="0.0.0.0", port=os.environ["PORT"], reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=os.environ[BACKEND_PORT], reload=True)
 
 
 if __name__ == "__main__":
