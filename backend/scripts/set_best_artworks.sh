@@ -38,14 +38,14 @@ for file_path in ~/best-artworks/*; do
     # Extract the filename without the extension
     filename_no_extension="${file_name%.*}"
 
-    # Remove the final number from the filename
-    filename_no_number=$(echo "$filename_no_extension" | sed 's/[0-9]*$//')
+    # Remove the final number from the filename and the underscore
+    filename_no_number="${filename_no_extension%_*}"
 
     # Construct the new filename with the index
-    new_filename="${index}_${filename_no_number}${file_name##*_}"
+    new_filename="$index-$filename_no_number.${file_name##*.}"
 
     # Rename the file
-    mv "$file_path" "best-artworks/$new_filename"
+    mv "$file_path" ~/best-artworks/"$new_filename"
 
     # Increment the index for the next file
     ((index++))
