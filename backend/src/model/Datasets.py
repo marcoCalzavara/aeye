@@ -1,14 +1,108 @@
+import contextlib
+import io
+import os
 from abc import ABC, abstractmethod
 from enum import Enum
 
 import deeplake
+import torch
+from torch.utils.data import Dataset as TorchDataset
+from torch.utils.data import DataLoader
+from PIL import Image
 
-from ..model.utilities import wikiart_collate_fn
+from ..CONSTANTS import *
 
+
+# COLLATE FUNCTIONS
+
+def wikiart_collate_fn(batch):
+    # Find first non-None values in the batch. Each sample has a field "pixel_values" inside "images", but we
+    # use a general for loop for the keys in case the field changes in the future.
+    try:
+        index = None
+        for i, sample in enumerate(batch):
+            if sample is not None and sample["images"].keys():
+                index = i
+                break
+
+        # Return if no such index has been found
+        if index is None:
+            return
+
+        # Select all samples for which there is complete data
+        select_sample = True
+        batch_data = []
+        for i in range(len(batch)):
+            image_data = {}
+            for key in batch[index]["images"].keys():
+                if batch[i]["images"] is not None and batch[i]["images"][key] is not None:
+                    image_data[key] = batch[i]["images"][key]
+                else:
+                    select_sample = False
+                    break
+
+            # Add label
+            label = -1
+            if select_sample and batch[i]["labels"] is not None and len(batch[i]["labels"]) == 1:
+                label = batch[i]["labels"][0]
+            else:
+                select_sample = False
+
+            # Add index
+            sample_id = -1
+            if select_sample and batch[i]["index"] is not None and len(batch[i]["index"]) == 1:
+                sample_id = batch[i]["index"][0]
+            else:
+                select_sample = False
+
+            # If all the data for the sample is available, add it to the return value
+            if select_sample:
+                batch_data.append({"images": image_data, "label": label, "index": sample_id})
+
+        # Return batch
+        return {
+            "images": {key: torch.cat([x["images"][key] for x in batch_data], dim=0).detach()
+                       for key in batch[index]["images"].keys()},
+            "labels": torch.tensor([x["label"] for x in batch_data]).detach(),
+            "index": torch.tensor([x["index"] for x in batch_data]).detach()
+        }
+
+    except Exception as e:
+        print(e.__str__())
+        return
+
+
+# SUPPORT DATASET FOR IMAGES
+class SupportDatasetForImages(TorchDataset):
+    def __init__(self, root_dir):
+        self.root_dir = root_dir
+        self.file_list = os.listdir(root_dir)
+        # Check that filenames start with a number, and that the indexes go from 0 to len(file_list) - 1
+        for file in self.file_list:
+            if not file.split("_")[0].isdigit():
+                raise Exception("Filenames must start with a number.")
+            elif int(file.split("_")[0]) >= len(self.file_list) or int(file.split("_")[0]) < 0:
+                raise Exception("Indexes must go from 0 to len(file_list) - 1.")
+        # Sort file list by index
+        self.file_list.sort(key=lambda x: int(x.split("_")[0]))
+
+    def __len__(self):
+        return len(self.file_list)
+
+    def __getitem__(self, idx):
+        img_name = os.path.join(self.root_dir, self.file_list[idx])
+        image = Image.open(img_name)
+        return {'images': image, 'index': idx, 'author': self.file_list[idx].split("_")[1]}
+
+
+# DATASET OPTIONS
 
 class DatasetOptions(Enum):
     WIKIART = {"name": "wikiart", "collate_fn": wikiart_collate_fn}
+    BEST_ARTWORKS = {"name": "best_artworks", "collate_fn": None}
 
+
+# DATASET ABSTRACT CLASS
 
 class Dataset(ABC):
     def __init__(self, dataset, collate_fn):
@@ -24,6 +118,8 @@ class Dataset(ABC):
                        start=None, end=None, missing_indeces=None):
         pass
 
+
+# DATASET CLASSES
 
 class WikiArt(Dataset):
     def __init__(self, dataset: deeplake.Dataset, collate_fn):
@@ -54,3 +150,45 @@ class WikiArt(Dataset):
                                                              collate_fn=self.collate_fn)
             else:
                 raise Exception("Missing missing_indeces parameter.")
+
+
+class BestArtworks(Dataset):
+    def __init__(self, dataset: TorchDataset, collate_fn):
+        super().__init__(dataset, collate_fn)
+
+    def get_size(self):
+        return len(self.dataset)
+
+    def get_dataloader(self, batch_size, num_workers, data_processor, is_missing_indeces=False,
+                       start=None, end=None, missing_indeces=None):
+        if not is_missing_indeces:
+            if start is not None and end is not None:
+                return DataLoader(self.dataset[start:end], batch_size=batch_size,
+                                  num_workers=num_workers)
+            else:
+                raise Exception("Missing start and end parameters.")
+        else:
+            if missing_indeces is not None:
+                return DataLoader(self.dataset[missing_indeces], batch_size=batch_size,
+                                  num_workers=num_workers)
+            else:
+                raise Exception("Missing missing_indeces parameter.")
+
+
+# FUNCTION FOR GETTING DATASET OBJECT
+def get_dataset_object(dataset_name):
+    if dataset_name == DatasetOptions.WIKIART.value["name"]:
+        # Get dataset
+        with contextlib.redirect_stdout(io.StringIO()):
+            ds = deeplake.load(WIKIART)
+            # Create and return dataset object
+            return Dataset(ds, DatasetOptions.WIKIART.value["collate_fn"])
+    elif dataset_name == DatasetOptions.BEST_ARTWORKS.value["name"]:
+        # Create SupportDatasetForImages object
+        ds = SupportDatasetForImages(PATH_TO_BEST_ARTWORKS)
+        # Create and return dataset object
+        return Dataset(ds, DatasetOptions.BEST_ARTWORKS.value["collate_fn"])
+
+    else:
+        # TODO add support for other datasets
+        pass

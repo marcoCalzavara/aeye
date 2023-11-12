@@ -24,6 +24,9 @@ COLORS = ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'cyan', 
           'gold', 'orangered', 'fuchsia', 'darkviolet']
 FILE_MISSING_INDECES = "missing_indeces.txt"
 
+# Best artworks constants
+PATH_TO_BEST_ARTWORKS = "~/best_artworks/images/"
+
 # Database constants
 INSERT_SIZE = 500
 SEARCH_LIMIT = 16384

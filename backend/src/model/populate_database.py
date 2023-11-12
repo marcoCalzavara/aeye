@@ -1,13 +1,10 @@
-import contextlib
 import getopt
 import getpass
-import io
 import os
 import sys
 import warnings
 
 import PIL.Image
-import deeplake
 import numpy as np
 import torch
 from pymilvus import utility, db, Collection
@@ -17,7 +14,7 @@ from ..db_utilities.common_utils import create_connection
 from ..db_utilities.create_collection import create_collection
 from ..model.CLIPEmbeddings import ClipEmbeddings
 from ..model.DatasetPreprocessor import DatasetPreprocessor
-from ..model.Datasets import DatasetOptions, Dataset
+from ..model.Datasets import DatasetOptions, get_dataset_object
 
 # Increase pixel limit
 PIL.Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
@@ -34,7 +31,7 @@ def parsing():
     long_options = ["help", "database", "dataset", "batch_size", "repopulate", "early_stop"]
 
     # Prepare flags
-    flags = {"database": DEFAULT_DATABASE_NAME, "dataset": DatasetOptions.WIKIART.value["name"],
+    flags = {"database": DEFAULT_DATABASE_NAME, "dataset": DatasetOptions.BEST_ARTWORKS.value["name"],
              "batch_size": BATCH_SIZE, "repopulate": False, "early_stop": -1}
 
     # Parsing argument
@@ -79,18 +76,6 @@ def parsing():
                 flags["early_stop"] = int(val)
 
     return flags
-
-
-def get_dataset_object(dataset_name):
-    if dataset_name == DatasetOptions.WIKIART.value["name"]:
-        # Get dataset
-        with contextlib.redirect_stdout(io.StringIO()):
-            ds = deeplake.load(WIKIART)
-            # Create and return dataset object
-            return Dataset(ds, DatasetOptions.WIKIART.value["collate_fn"])
-    else:
-        # TODO add support for other datasets
-        pass
 
 
 def insert_vectors(collection: Collection, data: dict):
