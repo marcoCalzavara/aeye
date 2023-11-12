@@ -79,12 +79,12 @@ class SupportDatasetForImages(TorchDataset):
         self.file_list = os.listdir(root_dir)
         # Check that filenames start with a number, and that the indexes go from 0 to len(file_list) - 1
         for file in self.file_list:
-            if not file.split("_")[0].isdigit():
+            if not file.split("-")[0].isdigit():
                 raise Exception("Filenames must start with a number.")
-            elif int(file.split("_")[0]) >= len(self.file_list) or int(file.split("_")[0]) < 0:
+            elif int(file.split("-")[0]) >= len(self.file_list) or int(file.split("-")[0]) < 0:
                 raise Exception("Indexes must go from 0 to len(file_list) - 1.")
         # Sort file list by index
-        self.file_list.sort(key=lambda x: int(x.split("_")[0]))
+        self.file_list.sort(key=lambda x: int(x.split("-")[0]))
 
     def __len__(self):
         return len(self.file_list)
@@ -92,7 +92,7 @@ class SupportDatasetForImages(TorchDataset):
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir, self.file_list[idx])
         image = Image.open(img_name)
-        return {'images': image, 'index': idx, 'author': self.file_list[idx].split("_")[1]}
+        return {'images': image, 'index': idx, 'author': " ".join(self.file_list[idx].split("-")[1].split("_"))}
 
 
 # DATASET OPTIONS
@@ -176,18 +176,18 @@ class BestArtworks(Dataset):
 
 
 # FUNCTION FOR GETTING DATASET OBJECT
-def get_dataset_object(dataset_name):
+def get_dataset_object(dataset_name) -> Dataset:
     if dataset_name == DatasetOptions.WIKIART.value["name"]:
         # Get dataset
         with contextlib.redirect_stdout(io.StringIO()):
             ds = deeplake.load(WIKIART)
             # Create and return dataset object
-            return Dataset(ds, DatasetOptions.WIKIART.value["collate_fn"])
+            return WikiArt(ds, DatasetOptions.WIKIART.value["collate_fn"])
     elif dataset_name == DatasetOptions.BEST_ARTWORKS.value["name"]:
         # Create SupportDatasetForImages object
         ds = SupportDatasetForImages(PATH_TO_BEST_ARTWORKS)
         # Create and return dataset object
-        return Dataset(ds, DatasetOptions.BEST_ARTWORKS.value["collate_fn"])
+        return BestArtworks(ds, DatasetOptions.BEST_ARTWORKS.value["collate_fn"])
 
     else:
         # TODO add support for other datasets

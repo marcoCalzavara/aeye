@@ -25,7 +25,7 @@ COLORS = ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'cyan', 
 FILE_MISSING_INDECES = "missing_indeces.txt"
 
 # Best artworks constants
-PATH_TO_BEST_ARTWORKS = "~/best_artworks/images/"
+PATH_TO_BEST_ARTWORKS = "~/best_artworks/"
 
 # Database constants
 INSERT_SIZE = 500
