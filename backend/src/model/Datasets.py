@@ -92,7 +92,8 @@ class SupportDatasetForImages(TorchDataset):
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir, self.file_list[idx])
         image = Image.open(img_name)
-        return {'images': image, 'index': idx, 'author': " ".join(self.file_list[idx].split("-")[1].split("_"))}
+        return {'images': image, 'index': idx, 'author': " ".join(self.file_list[idx].split("-")[1].split("_")),
+                'path': self.file_list[idx]}
 
 
 # DATASET OPTIONS

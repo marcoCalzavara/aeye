@@ -95,6 +95,7 @@ services:
     volumes:
       - ./frontend/build:/usr/share/nginx/html
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template
+      - $HOME/best_artworks:/usr/share/nginx/best_artworks
     ports:
       - "80:80"
     depends_on:
