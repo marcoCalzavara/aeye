@@ -4,9 +4,6 @@
 docker stop backend
 docker rm -f backend
 
-# Build the backend container
-docker compose build backend
-
 # Recreate the backend container
 docker compose up -d --no-deps backend
 
@@ -15,5 +12,3 @@ sleep 5
 
 # Check the logs of the backend container
 docker logs -f backend
-
-

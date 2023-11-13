@@ -32,14 +32,19 @@ else
 fi
 
 echo "Creating database and collections..."
-for var in $(compgen -e | grep "COLLECTION"); do
-  # Create a temporary collection name
-  export TEMP_COLLECTION_NAME="temp_{$var}"
-  # Write the temporary collection name to .env file
-  echo "TEMP_COLLECTION_NAME=$TEMP_COLLECTION_NAME" >> /.env
-  python -m src.db_utilities.create_embeddings_collection
-  # Remove "TEMP_COLLECTION_NAME=$TEMP_COLLECTION_NAME" from /.env file
-  sed -i '/TEMP_COLLECTION_NAME/d' /.env
+for var in $(compgen -e); do
+  # Check if the variable ends with "COLLECTION"
+  if [[ "$var" == *COLLECTION ]]; then
+    # Get value of the variable
+    value="${!var}"
+    # Create a temporary collection name
+    export TEMP_COLLECTION_NAME="temp_$value"
+    # Write the temporary collection name to .env file
+    echo "TEMP_COLLECTION_NAME=$TEMP_COLLECTION_NAME" >> /.env
+    python -m src.db_utilities.create_embeddings_collection
+    # Remove "TEMP_COLLECTION_NAME=$TEMP_COLLECTION_NAME" from /.env file
+    sed -i '/TEMP_COLLECTION_NAME/d' /.env
+  fi
 done
 
 # Remove "START=$START" from /.env
