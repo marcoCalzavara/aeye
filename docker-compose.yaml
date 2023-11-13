@@ -75,7 +75,6 @@ services:
       args:
         - BACKEND_PORT_ARG=${BACKEND_PORT}
         - DEFAULT_COLLECTION=${DEFAULT_COLLECTION}
-        - PASSWD=${PASSWD}
     volumes:
       - ./backend/src:/code/src
     ports:

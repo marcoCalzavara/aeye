@@ -41,12 +41,11 @@ def say_hello(text: Text, collection_info=Depends(collection_name_getter)):
 
 def main():
     # Create a connection to database.
-    passwd = os.environ[ROOT_PASSWD] if ROOT_PASSWD in os.environ.keys() else OLD_ROOT_PASSWD
     connections.connect(
         host=os.environ[MILVUS_IP],
         port=os.environ[MILVUS_PORT],
         user=ROOT_USER,
-        password=passwd,
+        password=ROOT_PASSWD,
     )
 
     # Set database

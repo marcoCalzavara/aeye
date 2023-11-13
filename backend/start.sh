@@ -1,6 +1,5 @@
 #!/bin/bash
 
-export CHANGE_ROOT_USER=1
 export MILVUS_IP=milvus-standalone
 export MILVUS_PORT=19530
 export START=1
@@ -25,14 +24,6 @@ if [ "$retry_count" -eq "$max_retries" ]; then
 else
   echo "Milvus service is available at $MILVUS_IP:$MILVUS_PORT."
 fi
-
-# Change password for root to connect to Milvus database
-echo "Changing password of Milvus root user..."
-python -m src.db_utilities.manage_user
-echo "Password changed."
-
-# Set CHANGE_ROOT_USER=0 to redefine normal behavior of manage_user.py
-export CHANGE_ROOT_USER=0
 
 echo "Creating database and collection..."
 python -m src.db_utilities.create_collection

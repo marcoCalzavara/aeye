@@ -223,7 +223,7 @@ if __name__ == "__main__":
     choice = input("Use root user? (y/n) ")
     if choice == "y":
         user = ROOT_USER
-        passwd = os.environ[ROOT_PASSWD]
+        passwd = ROOT_PASSWD
     elif choice.lower() == "n":
         user = input("Username: ")
         passwd = getpass.getpass("Password: ")
@@ -273,7 +273,7 @@ if __name__ == "__main__":
     if flags["repopulate"]:
         # Delete all vectors in the collection and define start point for dataloader
         collection.drop()
-        collection, _ = create_embeddings_collection(os.environ[ROOT_PASSWD], collection_name)
+        collection, _ = create_embeddings_collection(ROOT_PASSWD, collection_name)
         missing_indeces = []
         start = 0
     else:
