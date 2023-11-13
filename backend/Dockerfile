@@ -19,4 +19,4 @@ RUN pip3 install -r requirements.txt
 ARG BACKEND_PORT_ARG
 ENV BACKEND_PORT=$BACKEND_PORT_ARG
 
-CMD [". ./start.sh"]
+CMD ["bash", "-c", "source ./start.sh"]
