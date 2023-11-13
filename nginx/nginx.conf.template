@@ -51,7 +51,7 @@ http {
             proxy_buffers 32 4k;
         }
         location /best-artworks/ {
-            root /usr/share/nginx/best-artworks;
+            alias /usr/share/nginx/best-artworks/;
         }
     }
 }

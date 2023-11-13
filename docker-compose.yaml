@@ -73,8 +73,9 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       args:
-        - BACKEND_PORT=${BACKEND_PORT}
+        - BACKEND_PORT_ARG=${BACKEND_PORT}
         - DEFAULT_COLLECTION=${DEFAULT_COLLECTION}
+        - PASSWD=${PASSWD}
     volumes:
       - ./backend/src:/code/src
     ports:
@@ -95,7 +96,7 @@ services:
     volumes:
       - ./frontend/build:/usr/share/nginx/html
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template
-      - ${BEST_ARTWORKS_DIR}:/usr/share/nginx/best-artworks
+      - ../best-artworks:/usr/share/nginx/best-artworks
     ports:
       - "80:80"
     depends_on:

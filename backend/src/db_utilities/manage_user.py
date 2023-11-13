@@ -5,7 +5,7 @@ import sys
 from pymilvus import utility
 
 from ..CONSTANTS import *
-from .common_utils import create_connection
+from .utils import create_connection
 
 
 def check_user(username, resp):

@@ -7,7 +7,7 @@ from pymilvus import Collection
 from pymilvus import utility, db
 
 from ..CONSTANTS import *
-from .common_utils import create_connection
+from .utils import create_connection
 
 
 def delete_collection(connection=False, collection_name=None) -> typing.Tuple[Collection, str]:

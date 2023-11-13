@@ -10,8 +10,8 @@ import torch
 from pymilvus import utility, db, Collection
 
 from ..CONSTANTS import *
-from ..db_utilities.common_utils import create_connection
-from ..db_utilities.create_collection import create_collection
+from ..db_utilities.utils import create_connection
+from ..db_utilities.create_embeddings_collection import create_embeddings_collection
 from ..model.CLIPEmbeddings import ClipEmbeddings
 from ..model.DatasetPreprocessor import DatasetPreprocessor
 from ..model.Datasets import DatasetOptions, get_dataset_object
@@ -191,13 +191,12 @@ def update_metadata(collection: Collection, dp: DatasetPreprocessor, upper_value
     # Update vectors
     coordinates = ["x", "y", "z"]
     for i in range(len(entities)):
-        # Cast cluster id for compatibility with Milvus int data type
-        entities[i]["cluster_id"] = int(data["cluster_ids"][i])
         for j in range(data["low_dim_embeddings"].shape[1]):
             entities[i][f"low_dimensional_embedding_{coordinates[j]}"] = data["low_dim_embeddings"][i][j]
 
     # Insert entities in a new collection
-    new_collection, _ = create_collection(collection_name=os.environ[DEFAULT_COLLECTION], choose_database=False)
+    new_collection, _ = create_embeddings_collection(collection_name=os.environ[DEFAULT_COLLECTION],
+                                                     choose_database=False)
     try:
         # Do for loop to avoid resource exhaustion
         for i in range(0, len(entities), INSERT_SIZE):
@@ -245,7 +244,8 @@ if __name__ == "__main__":
     if collection_name not in utility.list_collections():
         choice = input("The collection does not exist. Create collection? (y/n) ")
         if choice.lower() == "y":
-            collection, collection_name = create_collection(collection_name=collection_name, choose_database=False)
+            collection, collection_name = create_embeddings_collection(collection_name=collection_name,
+                                                                       choose_database=False)
         elif choice.lower() == "n":
             sys.exit(0)
         else:
@@ -273,7 +273,7 @@ if __name__ == "__main__":
     if flags["repopulate"]:
         # Delete all vectors in the collection and define start point for dataloader
         collection.drop()
-        collection, _ = create_collection(os.environ[ROOT_PASSWD], collection_name)
+        collection, _ = create_embeddings_collection(os.environ[ROOT_PASSWD], collection_name)
         missing_indeces = []
         start = 0
     else:

@@ -2,11 +2,10 @@ from typing import Dict
 
 import numpy as np
 import torch
-from sklearn.mixture import BayesianGaussianMixture
 from tqdm import tqdm
 
 from ..model.EmbeddingsModel import EmbeddingsModel
-from ..model.utilities import project_embeddings_UMAP, plot_low_dimensional_embeddings
+from ..model.utils import project_embeddings_UMAP
 from ..CONSTANTS import *
 
 
@@ -55,18 +54,6 @@ class DatasetPreprocessor:
         if projection_method == UMAP_PROJ:
             self._low_dim_embeddings = project_embeddings_UMAP(self._embeddings)
 
-    def _generateClusterIds(self, n_clusters=DEFAULT_N_CLUSTERS, plot=False):
-        assert self._low_dim_embeddings is not None
-
-        gmm = BayesianGaussianMixture(random_state=RANDOM_STATE, n_components=n_clusters,
-                                      weight_concentration_prior=10)
-        self._cluster_ids = gmm.fit_predict(self._low_dim_embeddings)
-
-        # Plot.
-        if plot and "labels" in self._attributes:
-            plot_low_dimensional_embeddings(self._low_dim_embeddings, self._attributes["labels"],
-                                            gmm.means_, gmm.covariances_)
-
     def _save_missing_indeces(self, start, is_missing_indeces_call=False):
         if "index" not in self._attributes.keys():
             return
@@ -95,14 +82,8 @@ class DatasetPreprocessor:
     def generateRecordsMetadata(self, projection_method=DEFAULT_PROJECTION_METHOD, plot=False) -> Dict[str, np.ndarray]:
         # Generate low dimensional embeddings
         self._generateLowDimensionalEmbeddings(projection_method)
-        # Cluster data
-        n_clusters = DEFAULT_N_CLUSTERS
-        if "labels" in self._attributes:
-            n_clusters = torch.unique(self._attributes["labels"]).shape[0]
 
-        self._generateClusterIds(n_clusters, plot)
-
-        return {"low_dim_embeddings": self._low_dim_embeddings, "cluster_ids": self._cluster_ids}
+        return {"low_dim_embeddings": self._low_dim_embeddings}
 
     def generateDatabaseEmbeddings(self, dataloader, is_missing_indeces=False, start=-1, early_stop=-1):
         """
