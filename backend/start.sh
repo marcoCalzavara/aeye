@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Write variables to a .env file
-{
-  echo "MILVUS_IP=$MILVUS_IP"
-  echo "MILVUS_PORT=$MILVUS_PORT"
-  echo "BACKEND_PORT=$BACKEND_PORT"
-  echo "START=1"
-  echo "WIKIART_COLLECTION=$WIKIART_COLLECTION"
-  echo "BEST_ARTWORKS_COLLECTION=$BEST_ARTWORKS_COLLECTION"
-} > /.env
+echo "MILVUS_IP=$MILVUS_IP" > /.env
+# shellcheck disable=SC2129
+echo "MILVUS_PORT=$MILVUS_PORT" >> /.env
+echo "BACKEND_PORT=$BACKEND_PORT" >> /.env
+echo "START=1" >> /.env
+echo "WIKIART_COLLECTION=$WIKIART_COLLECTION" >> /.env
+echo "BEST_ARTWORKS_COLLECTION=$BEST_ARTWORKS_COLLECTION" >> /.env
+
 
 # Install netcat
 apt-get update
@@ -37,6 +37,7 @@ for var in $(compgen -e); do
   if [[ "$var" == *COLLECTION ]]; then
     # Get value of the variable
     value="${!var}"
+    echo "$value"
     # Create a temporary collection name
     export TEMP_COLLECTION_NAME="temp_$value"
     # Write the temporary collection name to .env file
