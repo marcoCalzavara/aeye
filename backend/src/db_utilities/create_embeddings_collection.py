@@ -2,6 +2,7 @@ import getpass
 import os
 import sys
 import typing
+from dotenv import dotenv_values
 
 from pymilvus import Collection
 from pymilvus import utility, db
@@ -11,7 +12,8 @@ from .utils import create_connection
 from ..CONSTANTS import *
 
 
-def create_embeddings_collection(collection_name=None, on_start=False, choose_database=True) -> typing.Tuple[Collection, str]:
+def create_embeddings_collection(collection_name=None, on_start=False, choose_database=True)\
+        -> typing.Tuple[Collection, str]:
     try:
         # Create a database and switch to the newly created database
         if on_start and DEFAULT_DATABASE_NAME not in db.list_database():
@@ -50,7 +52,9 @@ def create_embeddings_collection(collection_name=None, on_start=False, choose_da
             print("Collection already exists.")
             sys.exit(0)
 
-        return embeddings_collection(collection_name), collection_name
+        collection = embeddings_collection(collection_name)
+        print(f"Collection {collection_name} created.")
+        return collection, collection_name
 
     except Exception as e:
         print(e.__str__())
@@ -58,7 +62,10 @@ def create_embeddings_collection(collection_name=None, on_start=False, choose_da
 
 
 if __name__ == "__main__":
-    if START not in os.environ or int(os.environ[START]) == 0:
+    # Load environment variables
+    env_variables = dotenv_values(dotenv_path=DOTENV_PATH)
+
+    if START not in env_variables.keys() or int(env_variables[START]) == 0:
         choice = input("Use root user? (y/n) ")
         if choice.lower() == "y":
             create_connection(ROOT_USER, ROOT_PASSWD)
@@ -72,7 +79,8 @@ if __name__ == "__main__":
             print("Wrong choice.")
             sys.exit(1)
     else:
-        os.environ[START] = "0"
         create_connection(ROOT_USER, ROOT_PASSWD)
         # Create a collection with a temporary name
-        create_embeddings_collection(collection_name=TEMP_COLLECTION_NAME, on_start=True, choose_database=False)
+        create_embeddings_collection(collection_name=env_variables[TEMP_COLLECTION_NAME],
+                                     on_start=True,
+                                     choose_database=False)

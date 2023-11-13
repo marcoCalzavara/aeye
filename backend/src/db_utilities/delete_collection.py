@@ -2,6 +2,7 @@ import getpass
 import os
 import sys
 import typing
+from dotenv import load_dotenv
 
 from pymilvus import Collection
 from pymilvus import utility, db
@@ -15,7 +16,7 @@ def delete_collection(connection=False, collection_name=None) -> typing.Tuple[Co
         if not connection:
             choice = input("Use root user? (y/n) ")
             if choice.lower() == "y":
-                create_connection(ROOT_USER, os.environ[ROOT_PASSWD])
+                create_connection(ROOT_USER, os.getenv(ROOT_PASSWD))
             elif choice.lower() == "n":
                 user = input("Username: ")
                 passwd = getpass.getpass("Password: ")
@@ -59,4 +60,6 @@ def delete_collection(connection=False, collection_name=None) -> typing.Tuple[Co
 
 
 if __name__ == "__main__":
+    # Load environment variables
+    load_dotenv(dotenv_path=DOTENV_PATH)
     delete_collection()

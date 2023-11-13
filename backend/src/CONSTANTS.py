@@ -23,9 +23,10 @@ COLORS = ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'cyan', 
           'brown', 'beige', 'maroon', 'olive', 'navy', 'indigo', 'azure', 'coral', 'crimson', 'darkgreen', 'dodgerblue',
           'gold', 'orangered', 'fuchsia', 'darkviolet']
 FILE_MISSING_INDECES = "missing_indeces.txt"
+DOTENV_PATH = "/.env"
 
 # Best artworks constants
-PATH_TO_BEST_ARTWORKS = "~/best_artworks/"
+PATH_TO_BEST_ARTWORKS = "/best_artworks"
 
 # Database constants
 INSERT_SIZE = 500
@@ -33,7 +34,6 @@ SEARCH_LIMIT = 16384
 ROOT_USER = "root"
 ROOT_PASSWD = "Milvus"
 DEFAULT_DATABASE_NAME = "aiplusart"
-TEMP_COLLECTION_NAME = "temp_collection"
 METRIC = "COSINE"
 INDEX_TYPE = "FLAT"
 
@@ -44,3 +44,4 @@ DATABASE = "DATABASE"
 DEFAULT_COLLECTION = "DEFAULT_COLLECTION"
 START = "START"
 BACKEND_PORT = "BACKEND_PORT"
+TEMP_COLLECTION_NAME = "TEMP_COLLECTION_NAME"

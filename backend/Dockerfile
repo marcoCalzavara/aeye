@@ -14,9 +14,4 @@ RUN chmod +x ./start.sh
 RUN pip3 install --upgrade pip
 RUN pip3 install -r requirements.txt
 
-# Export BACKEND_PORT. All other variables are exported in start.sh, but this variable must be exported here as its
-# values comes from the environment file.
-ARG BACKEND_PORT_ARG
-ENV BACKEND_PORT=$BACKEND_PORT_ARG
-
 CMD ["bash", "-c", "source ./start.sh"]

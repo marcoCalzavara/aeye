@@ -59,7 +59,7 @@ services:
       timeout: 20s
       retries: 3
     ports:
-      - "19530:19530"
+      - "${MILVUS_PORT}:${MILVUS_PORT}"
       - "9091:9091"
     depends_on:
       - "etcd"
@@ -72,11 +72,15 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      args:
-        - BACKEND_PORT_ARG=${BACKEND_PORT}
-        - DEFAULT_COLLECTION=${DEFAULT_COLLECTION}
+    environment:
+      - BACKEND_PORT=${BACKEND_PORT}
+      - WIKIART_COLLECTION=${WIKIART_COLLECTION}
+        BEST_ARTWORKS_COLLECTION=${BEST_ARTWORKS_COLLECTION}
+      - MILVUS_IP=milvus-standalone
+      - MILVUS_PORT=${MILVUS_PORT}
     volumes:
       - ./backend/src:/code/src
+      - ../best-artworks:/best-artworks
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:

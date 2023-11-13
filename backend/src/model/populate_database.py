@@ -3,6 +3,7 @@ import getpass
 import os
 import sys
 import warnings
+from dotenv import load_dotenv
 
 import PIL.Image
 import numpy as np
@@ -195,7 +196,7 @@ def update_metadata(collection: Collection, dp: DatasetPreprocessor, upper_value
             entities[i][f"low_dimensional_embedding_{coordinates[j]}"] = data["low_dim_embeddings"][i][j]
 
     # Insert entities in a new collection
-    new_collection, _ = create_embeddings_collection(collection_name=os.environ[DEFAULT_COLLECTION],
+    new_collection, _ = create_embeddings_collection(collection_name=collection.name.removeprefix("temp_"),
                                                      choose_database=False)
     try:
         # Do for loop to avoid resource exhaustion
@@ -217,6 +218,8 @@ def update_metadata(collection: Collection, dp: DatasetPreprocessor, upper_value
 
 
 if __name__ == "__main__":
+    # Load environment variables
+    load_dotenv(DOTENV_PATH)
     # Get arguments
     flags = parsing()
 

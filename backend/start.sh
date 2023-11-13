@@ -1,8 +1,14 @@
 #!/bin/bash
 
-export MILVUS_IP=milvus-standalone
-export MILVUS_PORT=19530
-export START=1
+# Write variables to a .env file
+{
+  echo "MILVUS_IP=$MILVUS_IP"
+  echo "MILVUS_PORT=$MILVUS_PORT"
+  echo "BACKEND_PORT=$BACKEND_PORT"
+  echo "START=1"
+  echo "WIKIART_COLLECTION=$WIKIART_COLLECTION"
+  echo "BEST_ARTWORKS_COLLECTION=$BEST_ARTWORKS_COLLECTION"
+} > /.env
 
 # Install netcat
 apt-get update
@@ -25,8 +31,20 @@ else
   echo "Milvus service is available at $MILVUS_IP:$MILVUS_PORT."
 fi
 
-echo "Creating database and collection..."
-python -m src.db_utilities.create_embeddings_collection
-echo "Database and collection created."
+echo "Creating database and collections..."
+for var in $(compgen -e | grep "COLLECTION"); do
+  # Create a temporary collection name
+  export TEMP_COLLECTION_NAME="temp_{$var}"
+  # Write the temporary collection name to .env file
+  echo "TEMP_COLLECTION_NAME=$TEMP_COLLECTION_NAME" >> /.env
+  python -m src.db_utilities.create_embeddings_collection
+  # Remove "TEMP_COLLECTION_NAME=$TEMP_COLLECTION_NAME" from /.env file
+  sed -i '/TEMP_COLLECTION_NAME/d' /.env
+done
+
+# Remove "START=$START" from /.env
+sed -i '/START/d' /.env
+
+echo "Database and collections created."
 
 python -m src.app.main
