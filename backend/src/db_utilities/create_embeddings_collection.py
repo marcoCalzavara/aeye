@@ -61,7 +61,7 @@ if __name__ == "__main__":
     if START not in os.environ or int(os.environ[START]) == 0:
         choice = input("Use root user? (y/n) ")
         if choice.lower() == "y":
-            create_connection(ROOT_USER, os.environ[ROOT_PASSWD])
+            create_connection(ROOT_USER, ROOT_PASSWD)
             create_embeddings_collection()
         elif choice.lower() == "n":
             user = input("Username: ")
@@ -73,6 +73,6 @@ if __name__ == "__main__":
             sys.exit(1)
     else:
         os.environ[START] = "0"
-        create_connection(ROOT_USER, os.environ[ROOT_PASSWD])
+        create_connection(ROOT_USER, ROOT_PASSWD)
         # Create a collection with a temporary name
         create_embeddings_collection(collection_name=TEMP_COLLECTION_NAME, on_start=True, choose_database=False)

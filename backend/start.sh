@@ -26,7 +26,7 @@ else
 fi
 
 echo "Creating database and collection..."
-python -m src.db_utilities.create_collection
+python -m src.db_utilities.create_embeddings_collection
 echo "Database and collection created."
 
 python -m src.app.main

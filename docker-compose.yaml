@@ -91,7 +91,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - BACKEND_PORT=${BACKEND_PORT}
-      - DOLLAR="\$"
+      - DOLLAR=$
     volumes:
       - ./frontend/build:/usr/share/nginx/html
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template
