@@ -7,8 +7,9 @@ from enum import Enum
 import deeplake
 import torch
 from torch.utils.data import Dataset as TorchDataset
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Sampler
 from PIL import Image
+from torchvision import transforms
 
 from ..CONSTANTS import *
 
@@ -63,12 +64,28 @@ def wikiart_collate_fn(batch):
         return {
             "images": {key: torch.cat([x["images"][key] for x in batch_data], dim=0).detach()
                        for key in batch[index]["images"].keys()},
-            "labels": torch.tensor([x["label"] for x in batch_data]).detach(),
-            "index": torch.tensor([x["index"] for x in batch_data]).detach()
+            "labels": [x["label"] for x in batch_data],
+            "index": [x["index"] for x in batch_data]
         }
 
     except Exception as e:
         print(e.__str__())
+        print("Error in collate_fn of wikiart.")
+        return
+
+
+def best_artworks_collate_fn(batch):
+    try:
+        return {
+            "images": {key: torch.cat([x["images"][key] for x in batch], dim=0).detach()
+                       for key in batch[0]["images"].keys()},
+            "index": [x["index"] for x in batch],
+            "author": [x["author"] for x in batch],
+            "path": [x["path"] for x in batch]
+        }
+    except Exception as e:
+        print(e.__str__())
+        print("Error in collate_fn of best_artworks.")
         return
 
 
@@ -85,22 +102,41 @@ class SupportDatasetForImages(TorchDataset):
                 raise Exception("Indexes must go from 0 to len(file_list) - 1.")
         # Sort file list by index
         self.file_list.sort(key=lambda x: int(x.split("-")[0]))
+        self.transform = transforms.Compose([
+            transforms.ToTensor()
+        ])
+
+    def append_transform(self, transform):
+        self.transform.transforms.append(transform)
 
     def __len__(self):
         return len(self.file_list)
 
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir, self.file_list[idx])
-        image = Image.open(img_name)
+        image = self.transform(Image.open(img_name))
+
         return {'images': image, 'index': idx, 'author': " ".join(self.file_list[idx].split("-")[1].split("_")),
                 'path': self.file_list[idx]}
+
+
+class SupportSamplerForImages(Sampler):
+    def __init__(self, data_source, indices):
+        self.data_source = data_source
+        self.indices = indices
+
+    def __iter__(self):
+        return iter(self.indices)
+
+    def __len__(self):
+        return len(self.indices)
 
 
 # DATASET OPTIONS
 
 class DatasetOptions(Enum):
     WIKIART = {"name": "wikiart", "collate_fn": wikiart_collate_fn}
-    BEST_ARTWORKS = {"name": "best_artworks", "collate_fn": None}
+    BEST_ARTWORKS = {"name": "best_artworks", "collate_fn": best_artworks_collate_fn}
 
 
 # DATASET ABSTRACT CLASS
@@ -162,18 +198,29 @@ class BestArtworks(Dataset):
 
     def get_dataloader(self, batch_size, num_workers, data_processor, is_missing_indeces=False,
                        start=None, end=None, missing_indeces=None):
+        # Define collate_fn with data_processor
         if not is_missing_indeces:
             if start is not None and end is not None:
-                return DataLoader(self.dataset[start:end], batch_size=batch_size,
-                                  num_workers=num_workers)
+                sampler = SupportSamplerForImages(self.dataset, list(range(start, end)))
+                self.dataset.append_transform(data_processor)
+                return DataLoader(self.dataset,
+                                  batch_size=batch_size,
+                                  num_workers=1,
+                                  collate_fn=self.collate_fn,
+                                  sampler=sampler)
             else:
-                raise Exception("Missing start and end parameters.")
+                raise Exception("In BestArtworks, missing start and end parameters.")
         else:
             if missing_indeces is not None:
-                return DataLoader(self.dataset[missing_indeces], batch_size=batch_size,
-                                  num_workers=num_workers)
+                sampler = SupportSamplerForImages(self.dataset, missing_indeces)
+                self.dataset.append_transform(data_processor)
+                return DataLoader(self.dataset,
+                                  batch_size=batch_size,
+                                  num_workers=1,
+                                  collate_fn=self.collate_fn,
+                                  sampler=sampler)
             else:
-                raise Exception("Missing missing_indeces parameter.")
+                raise Exception("In BestArtworks, missing missing_indeces parameter.")
 
 
 # FUNCTION FOR GETTING DATASET OBJECT

@@ -103,14 +103,8 @@ def insert_vectors(collection: Collection, data: dict):
         print("'embeddings' should form a matrix.")
         return
     for key in keys:
-        if type(data[key]) is not torch.Tensor:
-            print(f"{key} should be a tensor.")
-            return
         if key != "embeddings":
-            if len(data[key].shape) > 1:
-                print(f"Attributes should be one dimensional, but {key} is not.")
-                return
-            if data[key].shape[0] != data["embeddings"].shape[0]:
+            if len(data[key]) != data["embeddings"].shape[0]:
                 print(f"Attributes should match the number of embeddings, but this is not true for {key}.")
                 return
 
@@ -125,6 +119,7 @@ def insert_vectors(collection: Collection, data: dict):
             start = f.readline()
     except Exception as e:
         print(e.__str__())
+        print("Error in insert_vectors.")
         missing_indeces = []
         start = 0
 
@@ -133,19 +128,20 @@ def insert_vectors(collection: Collection, data: dict):
             collection.insert(
                 data=[
                     {
-                        "index": data["index"][j].item(),
+                        "index": data["index"][j],
                         "embedding": data["embeddings"][j].tolist(),
                         "low_dimensional_embedding_x": np.nan,
                         "low_dimensional_embedding_y": np.nan,
-                        **{key: data[key][j].item() for key in keys}
+                        **{key: data[key][j] for key in keys}
                     }
                     for j in range(i, i + INSERT_SIZE) if j < data["embeddings"].shape[0]]
             )
             collection.flush()
         except Exception as e:
             print(e.__str__())
+            print("Error in insert_vectors.")
             # Update file with missing indeces
-            missing_indeces = list(set(missing_indeces + [data["index"][j].item() for j in range(i, i + INSERT_SIZE)
+            missing_indeces = list(set(missing_indeces + [data["index"][j] for j in range(i, i + INSERT_SIZE)
                                                           if j < data["embeddings"].shape[0]]))
             continue
 
@@ -176,7 +172,7 @@ def update_metadata(collection: Collection, dp: DatasetPreprocessor, upper_value
 
     except Exception as e:
         print(e.__str__())
-        print("Update failed!")
+        print("Error in update_metadata. Update failed!")
         return
 
     # Process records
@@ -205,7 +201,7 @@ def update_metadata(collection: Collection, dp: DatasetPreprocessor, upper_value
             new_collection.flush()
     except Exception as e:
         print(e.__str__())
-        print("Update failed!")
+        print("Error in update_metadata. Update failed!")
         utility.drop_collection("temp")
         return
 
@@ -240,6 +236,7 @@ if __name__ == "__main__":
         db.using_database(flags["database"])
     except Exception as e:
         print(e.__str__())
+        print("Error in main. Connection failed!")
         sys.exit(1)
 
     # Choose a collection. If the collection does not exist, create it.

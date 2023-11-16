@@ -4,6 +4,8 @@
 docker stop backend
 docker rm -f backend
 
+docker compose build backend
+
 # Recreate the backend container
 docker compose up -d --no-deps backend
 

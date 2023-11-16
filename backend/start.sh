@@ -9,6 +9,7 @@ echo "START=1" >> /.env
 echo "WIKIART_COLLECTION=$WIKIART_COLLECTION" >> /.env
 echo "BEST_ARTWORKS_COLLECTION=$BEST_ARTWORKS_COLLECTION" >> /.env
 
+cat /.env
 
 # Install netcat
 apt-get update

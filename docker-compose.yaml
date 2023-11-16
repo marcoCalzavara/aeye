@@ -75,12 +75,12 @@ services:
     environment:
       - BACKEND_PORT=${BACKEND_PORT}
       - WIKIART_COLLECTION=${WIKIART_COLLECTION}
-        BEST_ARTWORKS_COLLECTION=${BEST_ARTWORKS_COLLECTION}
+      - BEST_ARTWORKS_COLLECTION=${BEST_ARTWORKS_COLLECTION}
       - MILVUS_IP=milvus-standalone
       - MILVUS_PORT=${MILVUS_PORT}
     volumes:
       - ./backend/src:/code/src
-      - ../best-artworks:/best-artworks
+      - ../best-artworks:/best_artworks
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:

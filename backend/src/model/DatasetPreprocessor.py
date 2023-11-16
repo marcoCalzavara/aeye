@@ -43,10 +43,9 @@ class DatasetPreprocessor:
 
     def _storeAttributes(self, data, attribute):
         if attribute not in self._attributes:
-            self._attributes[attribute] = data[attribute].detach()
+            self._attributes[attribute] = data[attribute]
         else:
-            self._attributes[attribute] = torch.cat((self._attributes[attribute],
-                                                     data[attribute]), dim=0).detach()
+            self._attributes[attribute] = self._attributes[attribute] + data[attribute]
 
     def _generateLowDimensionalEmbeddings(self, projection_method):
         assert self._embeddings is not None
@@ -60,15 +59,23 @@ class DatasetPreprocessor:
         else:
             # Compute missing values from current processing step
             if not is_missing_indeces_call:
-                upper_value = torch.max(self._attributes["index"]).item()
-                complete_tensor_of_indeces = torch.arange(start, upper_value + 1).detach()
-                self._missing_indeces = list(
-                    set(self._missing_indeces + np.setdiff1d(complete_tensor_of_indeces.cpu().numpy(),
-                                                             self._attributes["index"].cpu().numpy()).tolist()))
+                upper_value = max(self._attributes["index"])
+                complete_tensor_of_indeces = list(range(start, upper_value + 1))
+                self._missing_indeces = list
+                (
+                    set
+                    (
+                        self._missing_indeces + np.setdiff1d
+                        (
+                            np.array(complete_tensor_of_indeces),
+                            np.array(self._attributes["index"])
+                        ).tolist()
+                    )
+                )
             else:
                 upper_value = start - 1
                 self._missing_indeces = np.setdiff1d(np.array(self._missing_indeces),
-                                                     self._attributes["index"].cpu().numpy()).tolist()
+                                                     np.array(self._attributes["index"])).tolist()
 
             # Dump information in file for future use. The information consists of two lines:
             # 1. Indeces of samples that have been skipped.
@@ -130,6 +137,7 @@ class DatasetPreprocessor:
         except Exception as e:
             # Print exception information
             print(e.__str__())
+            print("Error in generateDatabaseEmbeddings.")
 
             # Save info on missing indeces
             self._save_missing_indeces(start, is_missing_indeces)
