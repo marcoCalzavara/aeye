@@ -3,16 +3,16 @@ import getpass
 import os
 import sys
 import warnings
-from dotenv import load_dotenv
 
 import PIL.Image
 import numpy as np
 import torch
+from dotenv import load_dotenv
 from pymilvus import utility, db, Collection
 
 from ..CONSTANTS import *
-from ..db_utilities.utils import create_connection
 from ..db_utilities.create_embeddings_collection import create_embeddings_collection
+from ..db_utilities.utils import create_connection
 from ..model.CLIPEmbeddings import ClipEmbeddings
 from ..model.DatasetPreprocessor import DatasetPreprocessor
 from ..model.Datasets import DatasetOptions, get_dataset_object
@@ -97,7 +97,7 @@ def insert_vectors(collection: Collection, data: dict):
         print("Embeddings are not in data, impossible to upsert vectors.")
         return
     if "index" not in keys:
-        print("Indeces are not in data, impossible to upsert vectors.")
+        print("Indexes are not in data, impossible to upsert vectors.")
         return
     if len(data["embeddings"].shape) != 2:
         print("'embeddings' should form a matrix.")
@@ -115,12 +115,12 @@ def insert_vectors(collection: Collection, data: dict):
     try:
         with open(FILE_MISSING_INDECES, "r") as f:
             first_line = f.readline()
-            missing_indeces = list(map(int, first_line.strip().split(", "))) if first_line.strip() else []
+            missing_indexes = list(map(int, first_line.strip().split(", "))) if first_line.strip() else []
             start = f.readline()
     except Exception as e:
         print(e.__str__())
         print("Error in insert_vectors.")
-        missing_indeces = []
+        missing_indexes = []
         start = 0
 
     for i in range(0, data["embeddings"].shape[0], INSERT_SIZE):
@@ -140,13 +140,13 @@ def insert_vectors(collection: Collection, data: dict):
         except Exception as e:
             print(e.__str__())
             print("Error in insert_vectors.")
-            # Update file with missing indeces
-            missing_indeces = list(set(missing_indeces + [data["index"][j] for j in range(i, i + INSERT_SIZE)
+            # Update file with missing indexes
+            missing_indexes = list(set(missing_indexes + [data["index"][j] for j in range(i, i + INSERT_SIZE)
                                                           if j < data["embeddings"].shape[0]]))
             continue
 
     with open(FILE_MISSING_INDECES, "w") as f:
-        f.write(', '.join(map(str, missing_indeces)) + "\n")
+        f.write(', '.join(map(str, missing_indexes)) + "\n")
         f.write(start)
 
     print("Upsert completed!")
@@ -183,7 +183,7 @@ def update_metadata(collection: Collection, dp: DatasetPreprocessor, upper_value
     # Get metadata
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
-        data = dp.generateRecordsMetadata(plot=True)
+        data = dp.generateRecordsMetadata()
 
     # Update vectors
     coordinates = ["x", "y", "z"]
@@ -191,10 +191,10 @@ def update_metadata(collection: Collection, dp: DatasetPreprocessor, upper_value
         for j in range(data["low_dim_embeddings"].shape[1]):
             entities[i][f"low_dimensional_embedding_{coordinates[j]}"] = data["low_dim_embeddings"][i][j]
 
-    # Insert entities in a new collection
-    new_collection, _ = create_embeddings_collection(collection_name=collection.name.removeprefix("temp_"),
-                                                     choose_database=False)
     try:
+        # Insert entities in a new collection
+        new_collection, _ = create_embeddings_collection(collection_name=collection.name.removeprefix("temp_"),
+                                                         choose_database=False)
         # Do for loop to avoid resource exhaustion
         for i in range(0, len(entities), INSERT_SIZE):
             new_collection.insert(data=[entities[j] for j in range(i, i + INSERT_SIZE) if j < len(entities)])
@@ -202,7 +202,7 @@ def update_metadata(collection: Collection, dp: DatasetPreprocessor, upper_value
     except Exception as e:
         print(e.__str__())
         print("Error in update_metadata. Update failed!")
-        utility.drop_collection("temp")
+        utility.drop_collection(collection.name.removeprefix("temp_"))
         return
 
     # Drop the previous collection
@@ -214,8 +214,12 @@ def update_metadata(collection: Collection, dp: DatasetPreprocessor, upper_value
 
 
 if __name__ == "__main__":
+    if ENV_FILE_LOCATION not in os.environ:
+        print("export .env file location as ENV_FILE_LOCATION. Export $HOME/image-viz/.env if running outside of docker"
+              " container, export /.env if running inside docker container backend.")
+        sys.exit(1)
     # Load environment variables
-    load_dotenv(DOTENV_PATH)
+    load_dotenv(os.getenv(ENV_FILE_LOCATION))
     # Get arguments
     flags = parsing()
 
@@ -254,16 +258,17 @@ if __name__ == "__main__":
     else:
         collection = Collection(collection_name)
 
-    missing_indeces = []
+    print(f"Using collection {collection_name}. The collection contains {collection.num_entities} entities.")
+    missing_indexes = []
     start = 0
     if os.path.exists(FILE_MISSING_INDECES):
         # Get information from file
         with open(FILE_MISSING_INDECES, "r") as f:
             first_line = f.readline()
-            missing_indeces = list(map(int, first_line.strip().split(", "))) if first_line.strip() else []
+            missing_indexes = list(map(int, first_line.strip().split(", "))) if first_line.strip() else []
             start = int(f.readline())
 
-    # The else condition is not important, as the abscence of a file means that either this is the first iteration of
+    # The else condition is not important, as the absence of a file means that either this is the first iteration of
     # the processing procedure, or an error message has been displayed in the previous iteration.
 
     # Get dataset object
@@ -274,23 +279,23 @@ if __name__ == "__main__":
         # Delete all vectors in the collection and define start point for dataloader
         collection.drop()
         collection, _ = create_embeddings_collection(ROOT_PASSWD, collection_name)
-        missing_indeces = []
+        missing_indexes = []
         start = 0
     else:
         # Check the number of remaining data points
         if dataset.get_size() - start < flags["batch_size"]:
             # We don't have enough remaining samples for a batch.
-            # Set get_missing_indeces to true.
-            missing_indeces + list(range(start, dataset.get_size()))
+            # Set get_missing_indexes to true.
+            missing_indexes + list(range(start, dataset.get_size()))
 
     # Create an embedding object
     embeddings = ClipEmbeddings(device=DEVICE)
     # Create dataset preprocessor
-    dp = DatasetPreprocessor(embeddings, missing_indeces)
+    dp = DatasetPreprocessor(embeddings, missing_indexes)
 
-    # If there are no missing_indeces and the start is equal to the size of the dataset, then update the metadata by
+    # If there are no missing_indexes and the start is equal to the size of the dataset, then update the metadata by
     # adding low dimensional embeddings.
-    if len(missing_indeces) == 0 and start == dataset.get_size():
+    if len(missing_indexes) == 0 and start == dataset.get_size():
         update_metadata(collection, dp, dataset.get_size())
 
     else:
@@ -303,14 +308,14 @@ if __name__ == "__main__":
             if dataset.get_size() - start >= flags["batch_size"]:
                 # Create dataloader
                 dataloader = dataset.get_dataloader(flags["batch_size"], NUM_WORKERS, embeddings.processData,
-                                                    is_missing_indeces=False, start=start, end=dataset.get_size())
+                                                    is_missing_indexes=False, start=start, end=dataset.get_size())
 
                 data = dp.generateDatabaseEmbeddings(dataloader, False, start, flags["early_stop"])
 
             else:
-                # Create dataloader from missing indeces
+                # Create dataloader from missing indexes
                 dataloader = dataset.get_dataloader(flags["batch_size"], NUM_WORKERS, embeddings.processData,
-                                                    is_missing_indeces=True, missing_indeces=missing_indeces)
+                                                    is_missing_indexes=True, missing_indexes=missing_indexes)
 
                 data = dp.generateDatabaseEmbeddings(dataloader, True, dataset.get_size())
 

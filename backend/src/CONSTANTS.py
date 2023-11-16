@@ -23,10 +23,6 @@ COLORS = ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'cyan', 
           'brown', 'beige', 'maroon', 'olive', 'navy', 'indigo', 'azure', 'coral', 'crimson', 'darkgreen', 'dodgerblue',
           'gold', 'orangered', 'fuchsia', 'darkviolet']
 FILE_MISSING_INDECES = "missing_indeces.txt"
-DOTENV_PATH = "/.env"
-
-# Best artworks constants
-PATH_TO_BEST_ARTWORKS = "/best_artworks"
 
 # Database constants
 INSERT_SIZE = 500
@@ -45,3 +41,5 @@ DEFAULT_COLLECTION = "DEFAULT_COLLECTION"
 START = "START"
 BACKEND_PORT = "BACKEND_PORT"
 TEMP_COLLECTION_NAME = "TEMP_COLLECTION_NAME"
+ENV_FILE_LOCATION = "ENV_FILE_LOCATION"
+BEST_ARTWORKS_DIR = "BEST_ARTWORKS_DIR"

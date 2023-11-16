@@ -1,17 +1,16 @@
 import getpass
 import os
 import sys
-import typing
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
 from pymilvus import Collection
 from pymilvus import utility, db
 
-from ..CONSTANTS import *
 from .utils import create_connection
+from ..CONSTANTS import *
 
 
-def delete_collection(connection=False, collection_name=None) -> typing.Tuple[Collection, str]:
+def delete_collection(connection=False, collection_name=None):
     try:
         if not connection:
             choice = input("Use root user? (y/n) ")
@@ -60,6 +59,10 @@ def delete_collection(connection=False, collection_name=None) -> typing.Tuple[Co
 
 
 if __name__ == "__main__":
+    if ENV_FILE_LOCATION not in os.environ:
+        print("export .env file location as ENV_FILE_LOCATION. Export $HOME/image-viz/.env if running outside of docker"
+              " container, export /.env if running inside docker container backend.")
+        sys.exit(1)
     # Load environment variables
-    load_dotenv(dotenv_path=DOTENV_PATH)
+    load_dotenv(os.environ[ENV_FILE_LOCATION])
     delete_collection()

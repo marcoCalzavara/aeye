@@ -2,8 +2,8 @@ import getpass
 import os
 import sys
 import typing
-from dotenv import dotenv_values
 
+from dotenv import dotenv_values
 from pymilvus import Collection
 from pymilvus import utility, db
 
@@ -12,7 +12,7 @@ from .utils import create_connection
 from ..CONSTANTS import *
 
 
-def create_embeddings_collection(collection_name=None, on_start=False, choose_database=True)\
+def create_embeddings_collection(collection_name=None, on_start=False, choose_database=True) \
         -> typing.Tuple[Collection, str]:
     try:
         # Create a database and switch to the newly created database
@@ -63,7 +63,12 @@ def create_embeddings_collection(collection_name=None, on_start=False, choose_da
 
 if __name__ == "__main__":
     # Load environment variables
-    env_variables = dotenv_values(dotenv_path=DOTENV_PATH)
+    if ENV_FILE_LOCATION not in os.environ:
+        print("export .env file location as ENV_FILE_LOCATION. Export $HOME/image-viz/.env if running outside of docker"
+              " container, export /.env if running inside docker container backend.")
+        sys.exit(1)
+
+    env_variables = dotenv_values(os.environ[ENV_FILE_LOCATION])
 
     if START not in env_variables.keys() or int(env_variables[START]) == 0:
         choice = input("Use root user? (y/n) ")

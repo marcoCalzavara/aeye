@@ -4,9 +4,9 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
+from ..CONSTANTS import *
 from ..model.EmbeddingsModel import EmbeddingsModel
 from ..model.utils import project_embeddings_UMAP
-from ..CONSTANTS import *
 
 
 class DatasetPreprocessor:
@@ -14,17 +14,16 @@ class DatasetPreprocessor:
     Module for generating the data which is stored in the database.
     """
 
-    def __init__(self, embeddings_model: EmbeddingsModel, missing_indeces):
+    def __init__(self, embeddings_model: EmbeddingsModel, missing_indexes):
         """
         :param embeddings_model:
         """
         self.embeddings_model = embeddings_model
-        self._missing_indeces = missing_indeces
+        self._missing_indexes = missing_indexes
         self._embeddings = None
         self._attributes = {}
         self._low_dim_embeddings = None
         self._cluster_ids = None
-        self._skipped_indeces = []
 
     def setEmbeddings(self, embeddings):
         self._embeddings = embeddings
@@ -53,55 +52,47 @@ class DatasetPreprocessor:
         if projection_method == UMAP_PROJ:
             self._low_dim_embeddings = project_embeddings_UMAP(self._embeddings)
 
-    def _save_missing_indeces(self, start, is_missing_indeces_call=False):
+    def _save_missing_indexes(self, start, is_missing_indexes_call=False):
         if "index" not in self._attributes.keys():
             return
         else:
             # Compute missing values from current processing step
-            if not is_missing_indeces_call:
+            if not is_missing_indexes_call:
                 upper_value = max(self._attributes["index"])
-                complete_tensor_of_indeces = list(range(start, upper_value + 1))
-                self._missing_indeces = list
-                (
-                    set
-                    (
-                        self._missing_indeces + np.setdiff1d
-                        (
-                            np.array(complete_tensor_of_indeces),
-                            np.array(self._attributes["index"])
-                        ).tolist()
-                    )
-                )
+                complete_tensor_of_indexes = list(range(start, upper_value + 1))
+                self._missing_indexes = list(
+                    set(self._missing_indexes + np.setdiff1d(np.array(complete_tensor_of_indexes),
+                                                             np.array(self._attributes["index"])).tolist()))
             else:
                 upper_value = start - 1
-                self._missing_indeces = np.setdiff1d(np.array(self._missing_indeces),
+                self._missing_indexes = np.setdiff1d(np.array(self._missing_indexes),
                                                      np.array(self._attributes["index"])).tolist()
 
             # Dump information in file for future use. The information consists of two lines:
-            # 1. Indeces of samples that have been skipped.
+            # 1. Indexes of samples that have been skipped.
             # 2. Index of the last sample that has been processed plus 1.
             with open(FILE_MISSING_INDECES, "w") as f:
-                f.write(', '.join(map(str, self._missing_indeces)) + "\n")
+                f.write(', '.join(map(str, self._missing_indexes)) + "\n")
                 f.write(str(upper_value + 1))
 
             print("Saved information for next iteration!")
 
-    def generateRecordsMetadata(self, projection_method=DEFAULT_PROJECTION_METHOD, plot=False) -> Dict[str, np.ndarray]:
+    def generateRecordsMetadata(self, projection_method=DEFAULT_PROJECTION_METHOD) -> Dict[str, np.ndarray]:
         # Generate low dimensional embeddings
         self._generateLowDimensionalEmbeddings(projection_method)
 
         return {"low_dim_embeddings": self._low_dim_embeddings}
 
-    def generateDatabaseEmbeddings(self, dataloader, is_missing_indeces=False, start=-1, early_stop=-1):
+    def generateDatabaseEmbeddings(self, dataloader, is_missing_indexes=False, start=-1, early_stop=-1):
         """
         Generate dataset embeddings from the dataloader specified when creating the object. The method saves the
-        indeces of the samples that could not be fetched in a file, with the index of the next sample after the last
+        indexes of the samples that could not be fetched in a file, with the index of the next sample after the last
         one that has been correctly fetched and processed.
         :param dataloader:
         :param start:
         :param early_stop: The index for early stopping. If early stopping is not -1, then the processing stops after
         early_stopping batches have been fetched and processed.
-        :param is_missing_indeces:
+        :param is_missing_indexes:
         :return: A dictionary with the embeddings and any other attribute of the samples. All values are tensors.
         """
         try:
@@ -128,8 +119,8 @@ class DatasetPreprocessor:
 
             print("Processing finished!")
 
-            # Find skipped indeces, as those images will be retrieved later. Dump the missing indeces into a file.
-            self._save_missing_indeces(start, is_missing_indeces)
+            # Find skipped indexes, as those images will be retrieved later. Dump the missing indexes into a file.
+            self._save_missing_indexes(start, is_missing_indexes)
 
             # Pack results in dictionary and return it to caller
             return {'embeddings': self._embeddings, **self._attributes}
@@ -139,8 +130,8 @@ class DatasetPreprocessor:
             print(e.__str__())
             print("Error in generateDatabaseEmbeddings.")
 
-            # Save info on missing indeces
-            self._save_missing_indeces(start, is_missing_indeces)
+            # Save info on missing indexes
+            self._save_missing_indexes(start, is_missing_indexes)
 
             # Pack partial results in dictionary and return it to caller
             return {'embeddings': self._embeddings, **self._attributes}

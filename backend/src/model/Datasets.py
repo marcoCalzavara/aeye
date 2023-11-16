@@ -6,10 +6,9 @@ from enum import Enum
 
 import deeplake
 import torch
-from torch.utils.data import Dataset as TorchDataset
-from torch.utils.data import DataLoader, Sampler
 from PIL import Image
-from torchvision import transforms
+from torch.utils.data import DataLoader, Sampler
+from torch.utils.data import Dataset as TorchDataset
 
 from ..CONSTANTS import *
 
@@ -102,12 +101,10 @@ class SupportDatasetForImages(TorchDataset):
                 raise Exception("Indexes must go from 0 to len(file_list) - 1.")
         # Sort file list by index
         self.file_list.sort(key=lambda x: int(x.split("-")[0]))
-        self.transform = transforms.Compose([
-            transforms.ToTensor()
-        ])
+        self.transform = None
 
     def append_transform(self, transform):
-        self.transform.transforms.append(transform)
+        self.transform = transform
 
     def __len__(self):
         return len(self.file_list)
@@ -116,13 +113,15 @@ class SupportDatasetForImages(TorchDataset):
         img_name = os.path.join(self.root_dir, self.file_list[idx])
         image = self.transform(Image.open(img_name))
 
-        return {'images': image, 'index': idx, 'author': " ".join(self.file_list[idx].split("-")[1].split("_")),
+        return {'images': image,
+                'index': idx,
+                'author': " ".join(self.file_list[idx].split("-")[1].removesuffix(".jpg").split("_")),
                 'path': self.file_list[idx]}
 
 
 class SupportSamplerForImages(Sampler):
     def __init__(self, data_source, indices):
-        self.data_source = data_source
+        super().__init__(data_source)
         self.indices = indices
 
     def __iter__(self):
@@ -151,8 +150,8 @@ class Dataset(ABC):
         pass
 
     @abstractmethod
-    def get_dataloader(self, batch_size, num_workers, data_processor, is_missing_indeces=False,
-                       start=None, end=None, missing_indeces=None):
+    def get_dataloader(self, batch_size, num_workers, data_processor, is_missing_indexes=False,
+                       start=None, end=None, missing_indexes=None):
         pass
 
 
@@ -165,9 +164,9 @@ class WikiArt(Dataset):
     def get_size(self):
         return self.dataset.min_len
 
-    def get_dataloader(self, batch_size, num_workers, data_processor, is_missing_indeces=False, start=None, end=None,
-                       missing_indeces=None):
-        if not is_missing_indeces:
+    def get_dataloader(self, batch_size, num_workers, data_processor, is_missing_indexes=False, start=None, end=None,
+                       missing_indexes=None):
+        if not is_missing_indexes:
             if start is not None and end is not None:
                 return self.dataset[start:end].pytorch(num_workers=num_workers,
                                                        transform={'images': data_processor, 'labels': None,
@@ -178,15 +177,15 @@ class WikiArt(Dataset):
             else:
                 raise Exception("Missing start and end parameters.")
         else:
-            if missing_indeces is not None:
-                return self.dataset[missing_indeces].pytorch(num_workers=num_workers,
+            if missing_indexes is not None:
+                return self.dataset[missing_indexes].pytorch(num_workers=num_workers,
                                                              transform={'images': data_processor, 'labels': None,
                                                                         'index': None},
                                                              batch_size=batch_size,
                                                              decode_method={'images': 'pil'},
                                                              collate_fn=self.collate_fn)
             else:
-                raise Exception("Missing missing_indeces parameter.")
+                raise Exception("Missing missing_indexes parameter.")
 
 
 class BestArtworks(Dataset):
@@ -196,10 +195,10 @@ class BestArtworks(Dataset):
     def get_size(self):
         return len(self.dataset)
 
-    def get_dataloader(self, batch_size, num_workers, data_processor, is_missing_indeces=False,
-                       start=None, end=None, missing_indeces=None):
+    def get_dataloader(self, batch_size, num_workers, data_processor, is_missing_indexes=False,
+                       start=None, end=None, missing_indexes=None):
         # Define collate_fn with data_processor
-        if not is_missing_indeces:
+        if not is_missing_indexes:
             if start is not None and end is not None:
                 sampler = SupportSamplerForImages(self.dataset, list(range(start, end)))
                 self.dataset.append_transform(data_processor)
@@ -211,8 +210,8 @@ class BestArtworks(Dataset):
             else:
                 raise Exception("In BestArtworks, missing start and end parameters.")
         else:
-            if missing_indeces is not None:
-                sampler = SupportSamplerForImages(self.dataset, missing_indeces)
+            if missing_indexes is not None:
+                sampler = SupportSamplerForImages(self.dataset, missing_indexes)
                 self.dataset.append_transform(data_processor)
                 return DataLoader(self.dataset,
                                   batch_size=batch_size,
@@ -220,7 +219,7 @@ class BestArtworks(Dataset):
                                   collate_fn=self.collate_fn,
                                   sampler=sampler)
             else:
-                raise Exception("In BestArtworks, missing missing_indeces parameter.")
+                raise Exception("In BestArtworks, missing missing_indexes parameter.")
 
 
 # FUNCTION FOR GETTING DATASET OBJECT
@@ -233,7 +232,7 @@ def get_dataset_object(dataset_name) -> Dataset:
             return WikiArt(ds, DatasetOptions.WIKIART.value["collate_fn"])
     elif dataset_name == DatasetOptions.BEST_ARTWORKS.value["name"]:
         # Create SupportDatasetForImages object
-        ds = SupportDatasetForImages(PATH_TO_BEST_ARTWORKS)
+        ds = SupportDatasetForImages(os.getenv(BEST_ARTWORKS_DIR))
         # Create and return dataset object
         return BestArtworks(ds, DatasetOptions.BEST_ARTWORKS.value["collate_fn"])
 

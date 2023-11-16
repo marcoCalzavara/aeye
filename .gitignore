@@ -2,3 +2,5 @@ __pycache__
 frontend/node_modules
 .idea
 frontend/build
+milvus/volumes
+.vscode

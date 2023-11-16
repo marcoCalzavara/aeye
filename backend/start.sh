@@ -8,6 +8,10 @@ echo "BACKEND_PORT=$BACKEND_PORT" >> /.env
 echo "START=1" >> /.env
 echo "WIKIART_COLLECTION=$WIKIART_COLLECTION" >> /.env
 echo "BEST_ARTWORKS_COLLECTION=$BEST_ARTWORKS_COLLECTION" >> /.env
+echo "BEST_ARTWORKS_DIR=/best_artworks" >> /.env
+
+# Export .env file location
+export ENV_FILE_LOCATION=/.env
 
 cat /.env
 

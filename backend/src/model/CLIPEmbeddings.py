@@ -3,15 +3,15 @@ from abc import ABC
 import torch
 from transformers import CLIPProcessor, CLIPModel
 
-from ..model.EmbeddingsModel import EmbeddingsModel
 from ..CONSTANTS import *
+from ..model.EmbeddingsModel import EmbeddingsModel
 
 
 class ClipEmbeddings(EmbeddingsModel, ABC):
     def __init__(self, device):
         self.device = device
         self.model = CLIPModel.from_pretrained(CLIP_MODEL).to(self.device)
-        self.processor = CLIPProcessor.from_pretrained(CLIP_MODEL)
+        self.processor = CLIPProcessor.from_pretrained(CLIP_MODEL, )
         self.cosine_similarity = torch.nn.CosineSimilarity()
 
     def getSimilarityScore(self, emb1, emb2):
