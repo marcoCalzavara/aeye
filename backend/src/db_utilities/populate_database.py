@@ -11,11 +11,11 @@ from dotenv import load_dotenv
 from pymilvus import utility, db, Collection
 
 from ..CONSTANTS import *
-from ..db_utilities.create_embeddings_collection import create_embeddings_collection
-from ..db_utilities.utils import create_connection
+from .create_embeddings_collection import create_embeddings_collection
+from .utils import create_connection
 from ..model.CLIPEmbeddings import ClipEmbeddings
-from ..model.DatasetPreprocessor import DatasetPreprocessor
-from ..model.Datasets import DatasetOptions, get_dataset_object
+from .DatasetPreprocessor import DatasetPreprocessor
+from .datasets import DatasetOptions, get_dataset_object
 
 # Increase pixel limit
 PIL.Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
@@ -113,7 +113,7 @@ def insert_vectors(collection: Collection, data: dict):
     keys.remove("index")
 
     try:
-        with open(FILE_MISSING_INDECES, "r") as f:
+        with open(FILE_MISSING_INDEXES, "r") as f:
             first_line = f.readline()
             missing_indexes = list(map(int, first_line.strip().split(", "))) if first_line.strip() else []
             start = f.readline()
@@ -145,7 +145,7 @@ def insert_vectors(collection: Collection, data: dict):
                                                           if j < data["embeddings"].shape[0]]))
             continue
 
-    with open(FILE_MISSING_INDECES, "w") as f:
+    with open(FILE_MISSING_INDEXES, "w") as f:
         f.write(', '.join(map(str, missing_indexes)) + "\n")
         f.write(start)
 
@@ -186,10 +186,9 @@ def update_metadata(collection: Collection, dp: DatasetPreprocessor, upper_value
         data = dp.generateRecordsMetadata()
 
     # Update vectors
-    coordinates = ["x", "y", "z"]
     for i in range(len(entities)):
-        for j in range(data["low_dim_embeddings"].shape[1]):
-            entities[i][f"low_dimensional_embedding_{coordinates[j]}"] = data["low_dim_embeddings"][i][j]
+        for j in range(min(data["low_dim_embeddings"].shape[1], 2)):
+            entities[i][f"low_dimensional_embedding_{COORDINATES[j]}"] = data["low_dim_embeddings"][i][j]
 
     try:
         # Insert entities in a new collection
@@ -261,9 +260,9 @@ if __name__ == "__main__":
     print(f"Using collection {collection_name}. The collection contains {collection.num_entities} entities.")
     missing_indexes = []
     start = 0
-    if os.path.exists(FILE_MISSING_INDECES):
+    if os.path.exists(FILE_MISSING_INDEXES):
         # Get information from file
-        with open(FILE_MISSING_INDECES, "r") as f:
+        with open(FILE_MISSING_INDEXES, "r") as f:
             first_line = f.readline()
             missing_indexes = list(map(int, first_line.strip().split(", "))) if first_line.strip() else []
             start = int(f.readline())

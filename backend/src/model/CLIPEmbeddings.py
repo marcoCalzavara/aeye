@@ -4,7 +4,7 @@ import torch
 from transformers import CLIPProcessor, CLIPModel
 
 from ..CONSTANTS import *
-from ..model.EmbeddingsModel import EmbeddingsModel
+from .EmbeddingsModel import EmbeddingsModel
 
 
 class ClipEmbeddings(EmbeddingsModel, ABC):

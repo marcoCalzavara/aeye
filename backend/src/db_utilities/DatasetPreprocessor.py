@@ -71,7 +71,7 @@ class DatasetPreprocessor:
             # Dump information in file for future use. The information consists of two lines:
             # 1. Indexes of samples that have been skipped.
             # 2. Index of the last sample that has been processed plus 1.
-            with open(FILE_MISSING_INDECES, "w") as f:
+            with open(FILE_MISSING_INDEXES, "w") as f:
                 f.write(', '.join(map(str, self._missing_indexes)) + "\n")
                 f.write(str(upper_value + 1))
 
