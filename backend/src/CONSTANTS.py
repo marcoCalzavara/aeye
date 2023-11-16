@@ -31,7 +31,8 @@ SEARCH_LIMIT = 16384
 ROOT_USER = "root"
 ROOT_PASSWD = "Milvus"
 DEFAULT_DATABASE_NAME = "aiplusart"
-METRIC = "COSINE"
+COSINE_METRIC = "COSINE"
+L2_METRIC = "L2"
 INDEX_TYPE = "FLAT"
 
 # Environment variables names

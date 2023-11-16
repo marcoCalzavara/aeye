@@ -10,6 +10,7 @@ import numpy as np
 
 from .datasets import DatasetOptions
 from .utils import create_connection
+from .collections import zoom_levels_collection
 from ..CONSTANTS import *
 
 
@@ -18,13 +19,15 @@ def parsing():
     arguments = sys.argv[1:]
 
     # Options
-    options = "hd:c:"
+    options = "hd:c:r:"
 
     # Long options
-    long_options = ["help", "database", "collection"]
+    long_options = ["help", "database", "collection", "repopulate"]
 
     # Prepare flags
-    flags = {"database": DEFAULT_DATABASE_NAME, "collection": DatasetOptions.BEST_ARTWORKS.value["name"]}
+    flags = {"database": DEFAULT_DATABASE_NAME,
+             "collection": DatasetOptions.BEST_ARTWORKS.value["name"],
+             "repopulate": False}
 
     # Parsing argument
     arguments, values = getopt.getopt(arguments, options, long_options)
@@ -32,7 +35,9 @@ def parsing():
     if len(arguments) > 0 and arguments[0][0] in ("-h", "--help"):
         print(f'This script generates zoom levels.\n\
         -d or --database: database name (default={flags["database"]}).\n\
-        -c or --collection: collection name (default={flags["collection"]}).')
+        -c or --collection: collection name (default={flags["collection"]}).\n\
+        -r or --repopulate: repopulate the collection. Options are y/n (default='
+              f'{"y" if flags["repopulate"] == "y" else "n"}).')
         sys.exit(0)
 
     # Checking each argument
@@ -45,6 +50,13 @@ def parsing():
             else:
                 raise ValueError("The collection must have one of the following names: "
                                  + str([dataset.value["name"] for dataset in DatasetOptions]))
+        elif arg in ("-r", "--repopulate"):
+            if val == "y":
+                flags["repopulate"] = True
+            elif val == "n":
+                flags["repopulate"] = False
+            else:
+                raise ValueError("The repopulate flag must be either y or n.")
 
     return flags
 
@@ -88,7 +100,7 @@ def plot_heat_map(grid: list[list[list[list[list]]]], number_of_tiles: int, zoom
                         = len(grid[i][j][k][m])
 
     # Plot the heat map
-    plt.imshow(np.array(grid_for_heat_map), cmap='hot', interpolation='nearest')
+    plt.imshow(np.array(grid_for_heat_map), cmap="hot", interpolation='nearest')
     # Add a color bar
     plt.colorbar()
     # Save the plot
@@ -97,13 +109,79 @@ def plot_heat_map(grid: list[list[list[list[list]]]], number_of_tiles: int, zoom
     plt.clf()
 
 
-def create_collection_with_grid(grid: list[list[list[list[list]]]], collection_name: str, zoom_level: int) -> None:
-    pass
+def create_collection_with_grid(grids: list[list[list[list[list[list]]]]], collection_name: str,
+                                repopulate: bool) -> None:
+    if utility.has_collection(collection_name) and repopulate:
+        print(f"Found collection {collection_name}. Dropping it.")
+        utility.drop_collection(collection_name)
+    elif utility.has_collection(collection_name) and not repopulate:
+        # Get number of entities in the collection
+        num_entities = Collection(collection_name).num_entities
+        print(f"Found collection {collection_name}. It has {num_entities} entities."
+              f" Not dropping it. Set repopulate to True to drop it.")
+        return
+
+    # Create collection and index
+    collection = zoom_levels_collection(collection_name)
+
+    # Get entities to insert in the collection. Each entity is represented as a dictionary.
+    entities = []
+    # Iterate over grids, tiles in each grid, and cells in each tile
+    for i in range(len(grids)):
+        for x_tile in range(len(grids[i])):
+            for y_tile in range(len(grids[i][x_tile])):
+                # [i, x_tile, y_tile] contains the zoom level information and the tile information. This triplet
+                # uniquely identifies a tile, thus we can use it for vector search.
+                entity = {
+                    "index": i * len(grids[i]) * len(grids[i][x_tile]) + x_tile * len(grids[i][x_tile]) + y_tile,
+                    "zoom_plus_tile": [i, x_tile, y_tile],
+                }
+                # Get images and their locations in the tile. Even though not all images can be displayed, we still
+                # get more than one image per cell for possible future use.
+                images = {
+                    "indexes": [],
+                    "x_cell": [],
+                    "y_cell": []
+                }
+                for x_cell in range(len(grids[i][x_tile][y_tile])):
+                    for y_cell in range(len(grids[i][x_tile][y_tile][x_cell])):
+                        # Take always first image in the list of images in the cell. This is always the same image
+                        # across different zoom levels as the entities are looped in the same order.
+                        if len(grids[i][x_tile][y_tile][x_cell][y_cell]) > 0:
+                            images["indexes"].append(grids[i][x_tile][y_tile][x_cell][y_cell][0])
+                            images["x_cell"].append(x_cell)
+                            images["y_cell"].append(y_cell)
+
+                # Add images to the entity
+                entity["images"] = images
+                # Add entity to the list of entities
+                entities.append(entity)
+
+    # Insert entities in the collection
+    # Insert entities in batches of INSERT_SIZE
+    for i in range(0, len(entities), INSERT_SIZE):
+        try:
+            collection.insert(data=entities[i:i + INSERT_SIZE])
+            # Flush data to disk
+            collection.flush()
+        except Exception as e:
+            print(e.__str__())
+            print("Error in create_collection_with_grid.")
+            # Drop collection to avoid inconsistencies
+            utility.drop_collection(collection_name)
+            return
+
+    # Success
+    print(f"Successfully created collection {collection_name}.")
 
 
-def create_zoom_levels(entities, zoom_levels_collection_name, zoom_levels) -> None:
+def create_zoom_levels(entities, zoom_levels_collection_name, zoom_levels, repopulate) -> None:
     # Remember that DatasetOptions.BEST_ARTWORKS.value["zoom_levels"] contains the number of zoom levels required by
     # the dataset.
+
+    # Randomly shuffle the entities so that when selecting the first image from each cell, we don't always get one from
+    # the same artist.
+    np.random.shuffle(entities)
 
     # Find the maximum and minimum values for each dimension
     max_values = {}
@@ -114,6 +192,9 @@ def create_zoom_levels(entities, zoom_levels_collection_name, zoom_levels) -> No
 
     # For reference, a tile is [[[] for _ in range(WINDOW_SIZE_IN_CELLS_PER_DIM)] for _ in range(
     # WINDOW_SIZE_IN_CELLS_PER_DIM)]
+
+    # Define list of grids, one for each zoom level
+    grids = []
 
     for zoom in range(zoom_levels + 1):
         # Get the number of tiles in each dimension
@@ -155,10 +236,14 @@ def create_zoom_levels(entities, zoom_levels_collection_name, zoom_levels) -> No
 
         # Now grid[i][j][k][l] is a list of indexes of entities that are in the cell (k, l) of the tile (i, j) of the
         # grid of tiles.
+        # Add the grid to the list of grids
+        grids.append(grid)
+
         # Show a heat map of the grid showing the number of entities in each cell
         # plot_heat_map(grid, number_of_tiles, zoom)
-        # Create collection with the grid
-        create_collection_with_grid(grid, zoom_levels_collection_name, zoom)
+
+    # Create collection with the grids
+    create_collection_with_grid(grids, zoom_levels_collection_name, repopulate)
 
 
 if __name__ == "__main__":
@@ -213,4 +298,4 @@ if __name__ == "__main__":
 
     # Create zoom levels
     if entities is not None:
-        create_zoom_levels(entities, flags["collection"] + "_zoom_levels", zoom_levels)
+        create_zoom_levels(entities, flags["collection"] + "_zoom_levels", zoom_levels, flags["repopulate"])

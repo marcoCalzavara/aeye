@@ -22,7 +22,7 @@ def get_image_embeddings_from_text(embeddings: ClipEmbeddings, text, collection,
     text_embeddings = embeddings.getTextEmbeddings(text)
     # Define search parameters
     search_params = {
-        "metric_type": METRIC,
+        "metric_type": COSINE_METRIC,
         "offset": 0
     }
     # Search image
