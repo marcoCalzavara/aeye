@@ -1,3 +1,5 @@
+from typing import List
+
 import torch
 from pymilvus import Collection
 
@@ -63,3 +65,20 @@ def get_tile_data_for_zoom_level(zoom_level: int, tile_x: int, tile_y: int, coll
     # }
 
     return results[0][0].entity.to_dict()
+
+
+def get_images_from_indexes(indexes: List[int], collection: Collection) -> dict:
+    """
+    Get images from their indexes.
+    @param indexes:
+    @param collection:
+    @return:
+    """
+    # Search image
+    results = collection.query(
+        expr=f"index in {indexes}",
+        output_fields=["path"]
+    )
+
+    # Return results
+    return results

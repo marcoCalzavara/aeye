@@ -4,7 +4,6 @@
 echo "MILVUS_IP=$MILVUS_IP" > /.env
 # shellcheck disable=SC2129
 echo "MILVUS_PORT=$MILVUS_PORT" >> /.env
-echo "BACKEND_PORT=$BACKEND_PORT" >> /.env
 echo "START=1" >> /.env
 echo "WIKIART_COLLECTION=$WIKIART_COLLECTION" >> /.env
 echo "BEST_ARTWORKS_COLLECTION=$BEST_ARTWORKS_COLLECTION" >> /.env
@@ -42,7 +41,6 @@ for var in $(compgen -e); do
   if [[ "$var" == *COLLECTION ]]; then
     # Get value of the variable
     value="${!var}"
-    echo "$value"
     # Create a temporary collection name
     export TEMP_COLLECTION_NAME="temp_$value"
     # Write the temporary collection name to .env file
@@ -58,4 +56,5 @@ sed -i '/START/d' /.env
 
 echo "Database and collections created."
 
-python -m src.app.main
+# Start the backend
+uvicorn src.app.main:app --host 0.0.0.0 --port "$BACKEND_PORT" --reload

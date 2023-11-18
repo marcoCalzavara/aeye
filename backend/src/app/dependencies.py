@@ -30,16 +30,16 @@ class HelperCollection:
 
 
 class CollectionNameGetter:
-    def __init__(self):
+    def __init__(self, suffix: str = ""):
+        # TODO probably a lock is necessary for the collections object
         self.collections = {}
+        # Get collections from DatasetOptions
+        for dataset in DatasetOptions:
+            name = dataset.value["name"] + suffix
+            if name in utility.list_collections():
+                self.collections[name] = HelperCollection(name)
 
     def __call__(self, collection: str = Query(...)) -> Collection | None:
-        pass
-
-    def set_collections(self):
-        pass
-
-    def get_collection_names(self):
         pass
 
     def check_counter(self, collection_name: str):
@@ -79,19 +79,10 @@ class DatasetCollectionNameGetter(CollectionNameGetter):
         else:
             return None
 
-    def set_collections(self):
-        # Get collections from DatasetOptions
-        for dataset in DatasetOptions:
-            if dataset.value["name"] in utility.list_collections():
-                self.collections[dataset.value["name"]] = HelperCollection(dataset.value["name"])
-
-    def get_collection_names(self):
-        return list([key for key in self.collections.keys() if key in utility.list_collections()])
-
 
 class ZoomLevelCollectionNameGetter(CollectionNameGetter):
     def __init__(self):
-        super().__init__()
+        super().__init__("_zoom_levels")
 
     def __call__(self, collection: str = Query(...)) -> Collection | None:
         if collection in self.collections.keys():
@@ -104,11 +95,36 @@ class ZoomLevelCollectionNameGetter(CollectionNameGetter):
         else:
             return None
 
-    def set_collections(self):
+
+class Updater:
+    """
+    Class for updating the collections. When the client requests the list of collections, it could become necessary to
+    update the list of collections if a new collection has been created.
+    """
+    def __init__(self, dataset_collection_name_getter: DatasetCollectionNameGetter,
+                 zoom_level_collection_name_getter: ZoomLevelCollectionNameGetter):
+        self.dataset_collection_name_getter = dataset_collection_name_getter
+        self.zoom_level_collection_name_getter = zoom_level_collection_name_getter
+
+    def __call__(self):
+        # First, update the list of collections if necessary
+        for dataset in DatasetOptions:
+            name = dataset.value["name"]
+            if (name in utility.list_collections() and
+                    name not in self.dataset_collection_name_getter.collections.keys()):
+                # The collection is in the database, but not in the list of collections. Add it to the list.
+                self.dataset_collection_name_getter.collections[name] = HelperCollection(name)
+        # Second, update the list of zoom level collections if necessary
         for dataset in DatasetOptions:
             name = dataset.value["name"] + "_zoom_levels"
-            if name in utility.list_collections():
-                self.collections[name] = HelperCollection(name)
+            if (name in utility.list_collections() and
+                    name not in self.zoom_level_collection_name_getter.collections.keys()):
+                # The collection is in the database, but not in the list of collections. Add it to the list.
+                self.zoom_level_collection_name_getter.collections[name] = HelperCollection(name)
+
+        # Now, return the list of collections
+        return [dataset.value["name"] for dataset in DatasetOptions
+                if dataset.value["name"] in utility.list_collections()]
 
 
 class Embedder:

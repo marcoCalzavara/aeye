@@ -1,6 +1,5 @@
-import os
+from typing import List
 
-import uvicorn
 from fastapi import FastAPI, Depends, HTTPException
 from pymilvus import db, MilvusException
 
@@ -10,11 +9,18 @@ from .dependencies import *
 from ..model.CLIPEmbeddings import ClipEmbeddings
 from ..db_utilities.utils import create_connection
 
-# Global variables
-embeddings = ClipEmbeddings(DEVICE)
+
+# Create connection
+create_connection(ROOT_USER, ROOT_PASSWD)
+
+# Set database
+db.using_database(DEFAULT_DATABASE_NAME)
+
+# Create dependency objects
 dataset_collection_name_getter = DatasetCollectionNameGetter()
 zoom_level_collection_name_getter = ZoomLevelCollectionNameGetter()
-embeddings = Embedder(embeddings)
+updater = Updater(dataset_collection_name_getter, zoom_level_collection_name_getter)
+embeddings = Embedder(ClipEmbeddings(DEVICE))
 
 # Create app
 app = FastAPI()
@@ -22,9 +28,9 @@ app = FastAPI()
 
 # Define routes
 @app.get("/api/collection-names")
-def get_collection_names():
+def get_collection_names(collections: list[str] = Depends(updater)):
     # Return collection names as a list
-    return {"collections": dataset_collection_name_getter.get_collection_names()}
+    return {"collections": collections}
 
 
 @app.get("/api/image-text")
@@ -57,31 +63,22 @@ def get_tile_data(zoom_level: int,
                 raise HTTPException(status_code=404, detail="Tile data not found")
             # Return tile data
             return tile_data["entity"]
-        except MilvusException as e:
+        except MilvusException:
             # Milvus error, return code 505
             raise HTTPException(status_code=404, detail="Tile data not found")
 
 
-def set_up_connection():
-    # Create a connection to database.
-    create_connection(ROOT_USER, ROOT_PASSWD)
-
-    # Set database
-    db.using_database(DEFAULT_DATABASE_NAME)
-
-    # Set dataset collections
-    dataset_collection_name_getter.set_collections()
-
-    # Set zoom level collections
-    zoom_level_collection_name_getter.set_collections()
-
-
-def main():
-    # Set up connection
-    set_up_connection()
-
-    uvicorn.run("src.app.main:app", host="0.0.0.0", port=int(os.environ[BACKEND_PORT]), reload=True)
-
-
-if __name__ == "__main__":
-    main()
+@app.get("/api/images")
+def get_images(indexes: List[int] = Query(...), collection: Collection = Depends(dataset_collection_name_getter)):
+    # Both indexes and collection are query parameters
+    if collection is None:
+        # Collection not found, return 404
+        raise HTTPException(status_code=404, detail="Collection not found")
+    else:
+        # Collection found, return images
+        try:
+            images = gets.get_images_from_indexes(indexes, collection)
+            return images
+        except MilvusException:
+            # Milvus error, return code 505
+            raise HTTPException(status_code=505, detail="Milvus error")

@@ -12,3 +12,4 @@ Pillow
 tqdm
 fastapi
 uvicorn[standard]
+python-dotenv

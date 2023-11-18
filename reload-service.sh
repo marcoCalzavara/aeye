@@ -11,9 +11,3 @@ docker compose build "$service_name"
 
 # Recreate the backend container
 docker compose up -d --no-deps "$service_name"
-
-# Wait for the backend container to start
-sleep 5
-
-# Check the logs of the backend container
-docker logs -f "$service_name"
