@@ -1,6 +1,6 @@
 #!/bin/bash
 
-mkdir logs
+mkdir -p logs
 envsubst < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 chmod 755 /usr/share/nginx/html
 find /usr/share/nginx/html -type d -exec chmod 755 {} \;
