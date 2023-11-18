@@ -1,16 +1,16 @@
+import getopt
 import getpass
 import os
 import sys
 
-from dotenv import load_dotenv
-import getopt
-from pymilvus import db, Collection, utility
 import matplotlib.pyplot as plt
 import numpy as np
+from dotenv import load_dotenv
+from pymilvus import db, Collection, utility
 
+from .collections import zoom_levels_collection
 from .datasets import DatasetOptions
 from .utils import create_connection
-from .collections import zoom_levels_collection
 from ..CONSTANTS import *
 
 

@@ -4,6 +4,10 @@ from pymilvus import CollectionSchema, FieldSchema, DataType, Collection
 from ..CONSTANTS import *
 
 
+EMBEDDING_VECTOR_FIELD_NAME = "embedding"
+ZOOM_LEVEL_VECTOR_FIELD_NAME = "zoom_plus_tile"
+
+
 def embeddings_collection(collection_name: str):
     # Create fields for collection
     index = FieldSchema(
@@ -22,7 +26,7 @@ def embeddings_collection(collection_name: str):
         default_value=np.nan
     )
     embedding = FieldSchema(
-        name="embedding",
+        name=EMBEDDING_VECTOR_FIELD_NAME,
         dtype=DataType.FLOAT_VECTOR,
         dim=512
     )
@@ -64,7 +68,7 @@ def zoom_levels_collection(collection_name: str):
         is_primary=True
     )
     zoom_level = FieldSchema(
-        name="zoom_plus_tile",
+        name=ZOOM_LEVEL_VECTOR_FIELD_NAME,
         dtype=DataType.FLOAT_VECTOR,
         dim=3
     )
@@ -93,7 +97,7 @@ def zoom_levels_collection(collection_name: str):
     }
 
     collection.create_index(
-        field_name="zoom_plus_tile",
+        field_name=ZOOM_LEVEL_VECTOR_FIELD_NAME,
         index_params=index_params
     )
 

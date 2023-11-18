@@ -242,18 +242,11 @@ if __name__ == "__main__":
         print("Error in main. Connection failed!")
         sys.exit(1)
 
-    # Choose a collection. If the collection does not exist, create it.
-    collection_name = input("Collection name: ")
+    # Get the collection object
+    collection_name = "temp_" + flags["dataset"]
     if collection_name not in utility.list_collections():
-        choice = input("The collection does not exist. Create collection? (y/n) ")
-        if choice.lower() == "y":
-            collection, collection_name = create_embeddings_collection(collection_name=collection_name,
-                                                                       choose_database=False)
-        elif choice.lower() == "n":
-            sys.exit(0)
-        else:
-            print("Wrong choice.")
-            sys.exit(1)
+        print(f"The collection {collection_name} does not exist.")
+        sys.exit(1)
     else:
         collection = Collection(collection_name)
 
