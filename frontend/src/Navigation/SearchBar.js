@@ -2,7 +2,6 @@ import React from "react";
 import IconButton from '@mui/material/IconButton';
 import SearchIcon from '@mui/icons-material/Search';
 import {InputBase} from "@mui/material";
-import {BACKEND_URL} from "../CONSTANTS"
 
 
 export class SearchBar extends React.Component {
@@ -39,7 +38,7 @@ export class SearchBar extends React.Component {
     };
 
     sendText = (text) => {
-        const url = BACKEND_URL + '/api/image-text';
+        const url = '/api/image-text';
 
         fetch(url, {
             method: 'GET',

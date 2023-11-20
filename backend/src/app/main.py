@@ -9,7 +9,6 @@ from .dependencies import *
 from ..model.CLIPEmbeddings import ClipEmbeddings
 from ..db_utilities.utils import create_connection
 
-
 # Create connection
 create_connection(ROOT_USER, ROOT_PASSWD)
 
@@ -19,6 +18,7 @@ db.using_database(DEFAULT_DATABASE_NAME)
 # Create dependency objects
 dataset_collection_name_getter = DatasetCollectionNameGetter()
 zoom_level_collection_name_getter = ZoomLevelCollectionNameGetter()
+dataset_collection_info_getter = DatasetCollectionInfoGetter()
 updater = Updater(dataset_collection_name_getter, zoom_level_collection_name_getter)
 embeddings = Embedder(ClipEmbeddings(DEVICE))
 
@@ -31,6 +31,17 @@ app = FastAPI()
 def get_collection_names(collections: list[str] = Depends(updater)):
     # Return collection names as a list
     return {"collections": collections}
+
+
+# Get collection information.
+@app.get("/api/collection-info")
+def get_collection_info(collection: {} = Depends(dataset_collection_info_getter)):
+    if collection is None:
+        # Collection not found, return 404
+        raise HTTPException(status_code=404, detail="Collection not found")
+    else:
+        # Collection found, return collection info
+        return {"number_of_entities": collection["number_of_entities"], "zoom_levels": collection["zoom_levels"]}
 
 
 @app.get("/api/image-text")

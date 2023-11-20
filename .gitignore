@@ -5,3 +5,4 @@ frontend/build
 milvus/volumes
 .vscode
 .pytest_cache
+frontend/coverage

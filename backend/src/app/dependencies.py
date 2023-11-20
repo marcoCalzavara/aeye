@@ -96,6 +96,23 @@ class ZoomLevelCollectionNameGetter(CollectionNameGetter):
             return None
 
 
+class DatasetCollectionInfoGetter:
+    def __init__(self):
+        self.collections = {}
+        # Get collections from DatasetOptions
+        for dataset in DatasetOptions:
+            name = dataset.value["name"]
+            if name in utility.list_collections():
+                self.collections[name] = {"number_of_entities": Collection(name).num_entities,
+                                          "zoom_levels": dataset.value["zoom_levels"]}
+
+    def __call__(self, collection: str = Query(...)):
+        if collection in self.collections.keys():
+            return self.collections[collection]
+        else:
+            return None
+
+
 class Updater:
     """
     Class for updating the collections. When the client requests the list of collections, it could become necessary to
