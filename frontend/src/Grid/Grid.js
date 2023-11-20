@@ -66,7 +66,7 @@ export default function Grid() {
 
         // Now set_cells_to_be_displayed should be a map from tile coordinates to coordinates of cells that are within
         // the effective window. The coordinates of the cells are relative to the tile.
-        setRealCoordinatesToImagePaths(mapCellsToRealCoordinatePathPairs(x, y, cells_to_be_displayed, zoom_level));
+        setRealCoordinatesToImagePaths(mapCellsToRealCoordinatePathPairs(cells_to_be_displayed, zoom_level));
     }
 
     // Define handler for wheel event. The handler is called when the user zooms in or out.
@@ -127,7 +127,7 @@ export default function Grid() {
         setCellsToBeDisplayed(getGridCellsToBeDisplayed(x, y, width_effective, height_effective, WINDOW_SIZE_IN_CELLS_PER_DIM));
         // Now set_cells_to_be_displayed should be a map from tile coordinates to coordinates of cells that are within
         // the effective window. The coordinates of the cells are relative to the tile.
-        setCellsToBeDisplayed(mapCellsToRealCoordinatePathPairs(x, y, cells_to_be_displayed, zoom_level));
+        setCellsToBeDisplayed(mapCellsToRealCoordinatePathPairs(cells_to_be_displayed, zoom_level));
     }
 
     // Return react component. The React component is a div component with many div components inside. The div components

@@ -1,29 +1,48 @@
+import {DATASET} from "./Cache"
+
 // FETCHING FUNCTIONS
 // Define function for fetching tile data from the server
-function fetchTileData(zoom_level, x, y) {
+
+export function fetchTileData(zoom_level, x, y, host="") {
     // Fetch tile data from the server and return it
-    return fetch(`/api/tile-data?$zoom_level=${zoom_level}&tile_x=${x}&tile_y${y}`)
-        .then(response => response.json())
-        .catch(error => console.log(error));
+    const url = `${host}/api/tile-data?zoom_level=${zoom_level}&tile_x=${x}&tile_y=${y}&collection=${DATASET}_zoom_levels`;
+    return fetch(url,
+        {
+            method: 'GET',
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Tile data could not be retrieved from the server.' +
+                    ' Please try again later. Status: ' + response.status + ' ' + response.statusText);
+            }
+            return response.json();
+        })
+        .catch(error => {
+            // Handle any errors that occur during the fetch operation
+            console.error('Error:', error);
+        });
 }
 
 // Define function for fetching images from the server. The function takes as input a list of indexes of images to
 // be fetched and return a list of paths of images.
-function fetchImages(images_indexes) {
+export function fetchImages(images_indexes, host="") {
     // Define query string
     const query_string = images_indexes.map(index => `indexes=${index}`).join('&');
-    // Save fetched path of images in a list
-    const images_paths = new Map();
     // Fetch images from the server
-    fetch(`/api/images?${query_string}`)
-        .then(response => response.json())
-        .then(data => {
-            // For each image, save the path in the list
-            data.forEach(image => images_paths.set(image.index, image.path));
+    return fetch(`${host}/api/images?${query_string}&collection=${DATASET}`,
+        {
+            method: 'GET',
         })
-        .catch(error => console.log(error));
-    // Return map from indexes to paths of images
-    return images_paths;
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Images could not be retrieved from the server.' +
+                    ' Please try again later. Status: ' + response.status + ' ' + response.statusText);
+            }
+            return response.json();
+        })
+        .catch(error => {
+            console.log(error)
+        });
 }
 
 /**
@@ -131,12 +150,12 @@ export function getGridCellsToBeDisplayed(
 /**
  * Get mapping from coordinates of cells in the real window to indexes of images to be displayed on those cells.
  *
- * @param {*} current_real_x - x coordinate of the next available cell in the real window
- * @param {*} current_real_y - y coordinate of the next available cell in the real window
- * @param {*} tile_x - x coordinate of the tile
- * @param {*} tile_y - y coordinate of the tile
- * @param {*} tile_data - data of the tile
- * @param {*} cells_to_be_displayed - map from coordinates of tiles to coordinates of cells to be displayed. The
+ * @param {int} current_real_x - x coordinate of the next available cell in the real window
+ * @param {int} current_real_y - y coordinate of the next available cell in the real window
+ * @param {int} tile_x - x coordinate of the tile
+ * @param {int} tile_y - y coordinate of the tile
+ * @param {{}} tile_data - data of the tile
+ * @param {Map} cells_to_be_displayed - map from coordinates of tiles to coordinates of cells to be displayed. The
  *                                    coordinates of the cells are relative to the tile.
  * @return {{}} - map from coordinates of images in the real window to indexes of images to be displayed, and shift
  *               in x and y for real coordinates with respect to the coordinate (0,0) of the real window.
@@ -149,96 +168,98 @@ export function getRealCoordinatesAndIndexesOfImagesToBeDisplayed(
     tile_data,
     cells_to_be_displayed
 ) {
+    // Assert that the coordinates of the tile in tile data are the same as the ones passed as input
+    if (tile_data["zoom_plus_tile"][1] !== tile_x || tile_data["zoom_plus_tile"][2] !== tile_y) {
+        throw new Error("Coordinates of tile in tile data are not the same as the ones passed as input.");
+    }
     // Use the tile data to create a mapping from cells coordinates to indexes of images to be displayed
     const cells_to_indexes = new Map();
     for (let i = 0; i < tile_data["images"]["indexes"].length; i++) {
-        cells_to_indexes.set({
+        cells_to_indexes.set(JSON.stringify({
             cell_x: tile_data["images"]["x_cell"][i],
             cell_y: tile_data["images"]["y_cell"][i]
-        }, tile_data["images"]["indexes"][i]);
+        }), tile_data["images"]["indexes"][i]);
     }
     // Get top left cell to be displayed in the current tile. This is the first element in the list of cells to be
     // displayed for the current tile.
-    const top_left_cell_to_be_displayed = cells_to_be_displayed.get({tile_x: tile_x, tile_y: tile_y})[0];
+    const top_left_cell_to_be_displayed = cells_to_be_displayed.get(JSON.stringify({tile_x: tile_x, tile_y: tile_y}))[0];
     // Define map from coordinates of images in the real window to indexes of images to be displayed
     const real_coordinates_to_indexes = new Map();
     // Define object for returning shift in x and y for real coordinates. This is equal to the difference between
     // the max and min coordinates of the cells to be displayed in the current tile.
     const max_min = {
         x: {
-            max: cells_to_be_displayed.get({tile_x: tile_x, tile_y: tile_y})[0].cell_x,
-            min: cells_to_be_displayed.get({tile_x: tile_x, tile_y: tile_y})[0].cell_x
+            max: cells_to_be_displayed.get(JSON.stringify({tile_x: tile_x, tile_y: tile_y}))[0].cell_x,
+            min: cells_to_be_displayed.get(JSON.stringify({tile_x: tile_x, tile_y: tile_y}))[0].cell_x
         },
         y: {
-            max: cells_to_be_displayed.get({tile_x: tile_x, tile_y: tile_y})[0].cell_y,
-            min: cells_to_be_displayed.get({tile_x: tile_x, tile_y: tile_y})[0].cell_y
+            max: cells_to_be_displayed.get(JSON.stringify({tile_x: tile_x, tile_y: tile_y}))[0].cell_y,
+            min: cells_to_be_displayed.get(JSON.stringify({tile_x: tile_x, tile_y: tile_y}))[0].cell_y
         }
     };
     // Get indexes of images that have the same tile coordinates as the cells to be displayed in the current tile.
     // Also, compute the corresponding coordinates of the images in the real window starting from the coordinate
     // (current_real_x, current_real_y).
-    for (let i = 0; i < cells_to_be_displayed.get({tile_x: tile_x, tile_y: tile_y}).length; i++) {
+    for (let i = 0; i < cells_to_be_displayed.get(JSON.stringify({tile_x: tile_x, tile_y: tile_y})).length; i++) {
         // Update max_min object
-        if (cells_to_be_displayed.get({tile_x: tile_x, tile_y: tile_y})[i].cell_x > max_min.x.max) {
-            max_min.x.max = cells_to_be_displayed.get({tile_x: tile_x, tile_y: tile_y})[i].cell_x;
+        if (cells_to_be_displayed.get(JSON.stringify({tile_x: tile_x, tile_y: tile_y}))[i].cell_x > max_min.x.max) {
+            max_min.x.max = cells_to_be_displayed.get(JSON.stringify({tile_x: tile_x, tile_y: tile_y}))[i].cell_x;
         }
-        if (cells_to_be_displayed.get({tile_x: tile_x, tile_y: tile_y})[i].cell_x < max_min.x.min) {
-            max_min.x.min = cells_to_be_displayed.get({tile_x: tile_x, tile_y: tile_y})[i].cell_x;
+        if (cells_to_be_displayed.get(JSON.stringify({tile_x: tile_x, tile_y: tile_y}))[i].cell_x < max_min.x.min) {
+            max_min.x.min = cells_to_be_displayed.get(JSON.stringify({tile_x: tile_x, tile_y: tile_y}))[i].cell_x;
         }
-        if (cells_to_be_displayed.get({tile_x: tile_x, tile_y: tile_y})[i].cell_y > max_min.y.max) {
-            max_min.y.max = cells_to_be_displayed.get({tile_x: tile_x, tile_y: tile_y})[i].cell_y;
+        if (cells_to_be_displayed.get(JSON.stringify({tile_x: tile_x, tile_y: tile_y}))[i].cell_y > max_min.y.max) {
+            max_min.y.max = cells_to_be_displayed.get(JSON.stringify({tile_x: tile_x, tile_y: tile_y}))[i].cell_y;
         }
-        if (cells_to_be_displayed.get({tile_x: tile_x, tile_y: tile_y})[i].cell_y < max_min.y.min) {
-            max_min.y.min = cells_to_be_displayed.get({tile_x: tile_x, tile_y: tile_y})[i].cell_y;
+        if (cells_to_be_displayed.get(JSON.stringify({tile_x: tile_x, tile_y: tile_y}))[i].cell_y < max_min.y.min) {
+            max_min.y.min = cells_to_be_displayed.get(JSON.stringify({tile_x: tile_x, tile_y: tile_y}))[i].cell_y;
         }
 
-        // If the cell has an images, then add the index of the image to the list of indexes of images to be
+        // If the cell has an image, then add the index of the image to the list of indexes of images to be
         // displayed
-        if (cells_to_indexes.has(cells_to_be_displayed.get({tile_x: tile_x, tile_y: tile_y})[i])) {
+        if (cells_to_indexes.has(JSON.stringify(cells_to_be_displayed.get(JSON.stringify({tile_x: tile_x, tile_y: tile_y}))[i]))) {
             // Get index of image
-            const image_index = cells_to_indexes.get(cells_to_be_displayed.get({
+            const image_index = cells_to_indexes.get(JSON.stringify(cells_to_be_displayed.get(JSON.stringify({
                 tile_x: tile_x,
                 tile_y: tile_y
-            })[i]);
+            }))[i]));
             // Compute coordinates of image in the real window
             const image_real_x = current_real_x +
-                cells_to_be_displayed.get({
+                cells_to_be_displayed.get(JSON.stringify({
                     tile_x: tile_x,
                     tile_y: tile_y
-                })[i].cell_x - top_left_cell_to_be_displayed.cell_x;
+                }))[i].cell_x - top_left_cell_to_be_displayed.cell_x;
             const image_real_y = current_real_y +
-                cells_to_be_displayed.get({
+                cells_to_be_displayed.get(JSON.stringify({
                     tile_x: tile_x,
                     tile_y: tile_y
-                })[i].cell_y - top_left_cell_to_be_displayed.cell_y;
+                }))[i].cell_y - top_left_cell_to_be_displayed.cell_y;
 
             // Add coordinates of image in the real window to the list of coordinates of images to be displayed
-            real_coordinates_to_indexes.set({x: image_real_x, y: image_real_y}, image_index);
+            real_coordinates_to_indexes.set(JSON.stringify({x: image_real_x, y: image_real_y}), image_index);
         }
     }
 
     // Return map from coordinates of images in the real window to indexes of images to be displayed, and shift in
     // x and y for real coordinates
     return {
-        real_coordinates_to_indexes: real_coordinates_to_indexes, shift_x: max_min.x.max - max_min.x.min + 1,
-        shift_y: max_min.y.max - max_min.y.min + 1
+        real_coordinates_to_indexes: real_coordinates_to_indexes, shift_x: max_min.x.max - max_min.x.min + 1 + current_real_x,
+        shift_y: max_min.y.max - max_min.y.min + 1 + current_real_y
     };
 }
 
 /**
  * Define function for mapping coordinates of cells in the real window to images to be displayed.
  *
- * @param {*} x - x coordinate of the top left corner of the effective window
- * @param {*} y - y coordinate of the top left corner of the effective window
  * @param {Map<*, *>} cells_to_be_displayed - map from coordinates of tiles to coordinates of cells to be displayed.
- * @param {*} zoom_level - zoom level of the map
+ * @param {int} zoom_level - zoom level of the map
+ * @param {string} host - host of the server
  * @return {Map} - map from coordinates of cells in the real window to paths of images to be displayed
  */
-export function mapCellsToRealCoordinatePathPairs(
-    x,
-    y,
+export async function mapCellsToRealCoordinatePathPairs(
     cells_to_be_displayed,
-    zoom_level
+    zoom_level,
+    host = ""
 ) {
     // Remember that the first tile is the one with coordinates (x,y). The second tile is the one with coordinates
     // (x+1,y), the third tile is the one with coordinates (x,y+1), and the fourth tile is the one with coordinates
@@ -249,21 +270,22 @@ export function mapCellsToRealCoordinatePathPairs(
     const tiles_keys = Array.from(cells_to_be_displayed.keys());
 
     // Consider first tile
-    const first_tile_key = tiles_keys[0];
+    const first_tile_key = JSON.parse(tiles_keys[0]);
     // Fetch tile data from the server
-    const first_tile_data = fetchTileData(zoom_level, first_tile_key.tile_x, first_tile_key.tile_y);
+    const first_tile_data = await fetchTileData(zoom_level, first_tile_key.tile_x, first_tile_key.tile_y, host);
     // Get mappings from real coordinates to indexes of images to be displayed
-    const return_value_first_tile = getRealCoordinatesAndIndexesOfImagesToBeDisplayed(x, y, first_tile_key.tile_x,
+    const return_value_first_tile = getRealCoordinatesAndIndexesOfImagesToBeDisplayed(0, 0, first_tile_key.tile_x,
         first_tile_key.tile_y, first_tile_data, cells_to_be_displayed);
 
     // Define map from real coordinates to index
     const real_coordinates_to_indexes = return_value_first_tile.real_coordinates_to_indexes;
 
     // Consider second tile, which is always the one on the right of the first tile
-    const second_tile_key = tiles_keys[1];
+    let second_tile_key = tiles_keys[1];
     // Get data if the there is something to be displayed in the second tile
     if (cells_to_be_displayed.get(second_tile_key).length > 0) {
-        const second_tile_data = fetchTileData(zoom_level, second_tile_key.tile_x, second_tile_key.tile_y);
+        second_tile_key = JSON.parse(second_tile_key);
+        const second_tile_data = await fetchTileData(zoom_level, second_tile_key.tile_x, second_tile_key.tile_y);
         // Get mappings from real coordinates to indexes of images to be displayed
         // Current x is equal to the number of cells from the first tile along the x direction.
         const second_tile_real_coordinates_to_indexes = getRealCoordinatesAndIndexesOfImagesToBeDisplayed(return_value_first_tile.shift_x,
@@ -275,10 +297,11 @@ export function mapCellsToRealCoordinatePathPairs(
     }
 
     // Consider third tile, which is always the one on the bottom of the first tile
-    const third_tile_key = tiles_keys[2];
+    let third_tile_key = tiles_keys[2];
     // Get data if the there is something to be displayed in the third tile
     if (cells_to_be_displayed.get(third_tile_key).length > 0) {
-        const third_tile_data = fetchTileData(zoom_level, third_tile_key.tile_x, third_tile_key.tile_y);
+        third_tile_key = JSON.parse(third_tile_key);
+        const third_tile_data = await fetchTileData(zoom_level, third_tile_key.tile_x, third_tile_key.tile_y);
         // Get mappings from real coordinates to indexes of images to be displayed
         // Current y is equal to the number of cells from the first tile along the y direction.
         const third_tile_real_coordinates_to_indexes = getRealCoordinatesAndIndexesOfImagesToBeDisplayed(0,
@@ -290,10 +313,11 @@ export function mapCellsToRealCoordinatePathPairs(
     }
 
     // Consider fourth tile, which is always the one on the bottom right of the first tile
-    const fourth_tile_key = tiles_keys[3];
+    let fourth_tile_key = tiles_keys[3];
     // Get data if the there is something to be displayed in the fourth tile
     if (cells_to_be_displayed.get(fourth_tile_key).length > 0) {
-        const fourth_tile_data = fetchTileData(zoom_level, fourth_tile_key.tile_x, fourth_tile_key.tile_y);
+        fourth_tile_key = JSON.parse(fourth_tile_key);
+        const fourth_tile_data = await fetchTileData(zoom_level, fourth_tile_key.tile_x, fourth_tile_key.tile_y);
         // Get mappings from real coordinates to indexes of images to be displayed
         // Current x is equal to the number of cells from the first tile along the x direction.
         const fourth_tile_real_coordinates_to_indexes = getRealCoordinatesAndIndexesOfImagesToBeDisplayed(return_value_first_tile.shift_x,
@@ -307,7 +331,11 @@ export function mapCellsToRealCoordinatePathPairs(
     // Change the mapping from real coordinates to indexes of images to be displayed to a mapping from real coordinates
     // to paths of images to be displayed
     const real_coordinates_to_images = new Map();
-    const indexes_to_paths = fetchImages(Array.from(real_coordinates_to_indexes.values()));
+    const list_indexes_paths = await fetchImages(Array.from(real_coordinates_to_indexes.values()), host);
+    // Map indexes to paths
+    const indexes_to_paths = new Map();
+    list_indexes_paths.forEach((item) => indexes_to_paths.set(item["index"], item["path"]));
+    // Map real coordinates to paths
     real_coordinates_to_indexes.forEach((value, key) => real_coordinates_to_images.set(key, indexes_to_paths.get(value)));
     return real_coordinates_to_images;
 }

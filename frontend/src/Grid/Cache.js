@@ -1,4 +1,4 @@
-const DATASET = "best_artworks"; // TODO get dataset from other component
+export const DATASET = "best_artworks"; // TODO get dataset from other component
 
 // Define class for a cache with lru policy
 class Cache {

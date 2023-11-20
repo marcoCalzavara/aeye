@@ -9,7 +9,7 @@ url example (path and query only): /api/image-text?collection=best_artworks&text
 response example: {"path":"2876-Henri_de_Toulouse-Lautrec.jpg"}
 
 ### /api/tile-data
-url example (path and query only): /api/tile-data?zoom_level=5&tile_x=12&tile_y=7&collection=best_artworks <br>
+url example (path and query only): /api/tile-data?zoom_level=5&tile_x=12&tile_y=7&collection=best_artworks_zoom_levels <br>
 response example: {"zoom_plus_tile":[5.0,12.0,7.0],"images":{"indexes":[6363,3299],"x_cell":[3,3],"y_cell":[0,8]}}
 
 ### /api/images
