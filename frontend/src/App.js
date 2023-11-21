@@ -1,5 +1,6 @@
 import React from "react";
 import StickyBar from "./Navigation/StickyBar";
+import Grid from "./Grid/Grid";
 
 function App() {
     const [image, setImage] = React.useState(null);
@@ -9,8 +10,9 @@ function App() {
     }
 
     return (
-        <div className="w-screen h-screen overflow-x-auto flex">
-            <StickyBar onImageFetched={updateImage}/>
+        <div className="flex justify-center">
+            {/*<StickyBar onImageFetched={updateImage}/>*/}
+            <Grid/>
         </div>
     );
 }

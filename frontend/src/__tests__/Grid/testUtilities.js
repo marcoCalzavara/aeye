@@ -118,6 +118,16 @@ test('getGridCellsToBeDisplayed', () => {
     for (let key of cells_to_be_displayed.keys()) {
         expect(cells_to_be_displayed.get(key)).toEqual(expected_cells_to_be_displayed.get(key));
     }
+
+    // Test initial conditions
+    // Define the parameters for the function
+    const x1 = 0;
+    const y1 = 0;
+    const width_effective1 = 1920;
+    const height_effective1 = 1080;
+    const cells_to_be_displayed1 = getGridCellsToBeDisplayed(x1, y1, width_effective1, height_effective1, window_size_in_cells_per_dim);
+    // Check that the first key of cells_to_be_displayed1 contains all 100 cells
+    expect(cells_to_be_displayed1.get(JSON.stringify({tile_x: 0, tile_y: 0})).length).toEqual(100);
 });
 
 // Test getRealCoordinatesAndIndexesOfImagesToBeDisplayed
@@ -299,6 +309,19 @@ test('mapCellsToRealCoordinatePathPairs', async () => {
     let zoom_level = 3;
     // Get the result
     let res = await mapCellsToRealCoordinatePathPairs(cells_to_be_displayed, zoom_level, "http://localhost:80");
+    // Check that the result contains 100 elements
+    expect(res.size).toBeLessThanOrEqual(100);
+
+
+    // Test initial conditions
+    // Define the parameters for the function
+    const x1 = 0;
+    const y1 = 0;
+    const width_effective1 = 1920;
+    const height_effective1 = 1080;
+    const cells_to_be_displayed1 = getGridCellsToBeDisplayed(x1, y1, width_effective1, height_effective1, 10);
+    // Get the result
+    res = await mapCellsToRealCoordinatePathPairs(cells_to_be_displayed1, 0, "http://localhost:80");
     // Check that the result contains 100 elements
     expect(res.size).toBeLessThanOrEqual(100);
 });

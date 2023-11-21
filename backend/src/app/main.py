@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
 from pymilvus import db, MilvusException
 
 from .database import gets
@@ -24,6 +24,14 @@ embeddings = Embedder(ClipEmbeddings(DEVICE))
 
 # Create app
 app = FastAPI()
+
+
+# Add dependency that adds header "Access-Control-Allow-Origin: *" to all responses
+@app.middleware("http")
+async def add_access_control_allow_origin_header(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
 
 
 # Define routes

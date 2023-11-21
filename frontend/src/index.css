@@ -10,6 +10,14 @@
     height: 5.5vh;
 }
 
+.h-1\/10 {
+    height: 10%;
+}
+
+.h-1\/16 {
+    height: 6.25%;
+}
+
 .h-50px {
     height: 400px;
 }
@@ -17,8 +25,15 @@
 .h-30px {
     height: 30px;
 }
+.h-1080px {
+    height: 1080px;
+}
 
 .w-2\/19 {
+    width: 10%;
+}
+
+.w-1\/10 {
     width: 10%;
 }
 

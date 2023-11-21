@@ -80,7 +80,7 @@ services:
       - MILVUS_PORT=${MILVUS_PORT}
     volumes:
       - ./backend/src:/code/src
-      - ../best-artworks:/best_artworks
+      - ../best_artworks:/best_artworks
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
@@ -99,7 +99,7 @@ services:
     volumes:
       - ./frontend/build:/usr/share/nginx/html
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template
-      - ../best_artworks:/usr/share/nginx/best-artworks
+      - ../best_artworks:/usr/share/nginx/best_artworks
     ports:
       - "80:80"
     depends_on:

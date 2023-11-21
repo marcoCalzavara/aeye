@@ -50,8 +50,8 @@ http {
             proxy_set_header X-Forwarded-For ${DOLLAR}proxy_add_x_forwarded_for;
             proxy_buffers 32 4k;
         }
-        location /best-artworks/ {
-            alias /usr/share/nginx/best-artworks/;
+        location /best_artworks/ {
+            alias /usr/share/nginx/best_artworks/;
         }
     }
 }

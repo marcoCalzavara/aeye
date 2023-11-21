@@ -12,7 +12,6 @@ import {DATASET} from "./Cache"
  * @return {Promise<Response>} - promise that resolves to the tile data
  */
 export function fetchTileData(zoom_level, x, y, host = "") {
-    // Fetch tile data from the server and return it
     const url = `${host}/api/tile-data?zoom_level=${zoom_level}&tile_x=${x}&tile_y=${y}&collection=${DATASET}_zoom_levels`;
     return fetch(url,
         {
@@ -37,26 +36,31 @@ export function fetchTileData(zoom_level, x, y, host = "") {
  *
  * @param {*[]} images_indexes - indexes of images to be fetched
  * @param {string} host - host of the server
- * @return {Promise<Response>} - promise that resolves to an array of indexes and paths pairs for the images
+ * @return {Promise<Response>} - promise that resolves to the image paths
  */
 export function fetchImages(images_indexes, host = "") {
-    // Define query string
-    const query_string = images_indexes.map(index => `indexes=${index}`).join('&');
-    // Fetch images from the server
-    return fetch(`${host}/api/images?${query_string}&collection=${DATASET}`,
-        {
-            method: 'GET',
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Images could not be retrieved from the server.' +
-                    ' Please try again later. Status: ' + response.status + ' ' + response.statusText);
-            }
-            return response.json();
-        })
-        .catch(error => {
-            console.log(error)
-        });
+    if (images_indexes.length === 0) {
+        // Return empty array if there are no images to be fetched
+        return Promise.resolve([]);
+    } else {
+        // Create query string
+        const query_string = images_indexes.map(index => `indexes=${index}`).join('&');
+        // Fetch images from the server
+        return fetch(`${host}/api/images?${query_string}&collection=${DATASET}`,
+            {
+                method: 'GET'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Images could not be retrieved from the server.' +
+                        ' Please try again later. Status: ' + response.status + ' ' + response.statusText);
+                }
+                return response.json();
+            })
+            .catch(error => {
+                console.log(error)
+            });
+    }
 }
 
 // UTILITY FUNCTIONS
@@ -280,7 +284,8 @@ export function getRealCoordinatesAndIndexesOfImagesToBeDisplayed(
  * @param {Map<*, *>} cells_to_be_displayed - map from coordinates of tiles to coordinates of cells to be displayed.
  * @param {int} zoom_level - zoom level of the map
  * @param {string} host - host of the server
- * @return {Map} - map from coordinates of cells in the real window to paths of images to be displayed
+ * @return {Promise<Map>} - promise that resolves to a map from coordinates of images in the real window to paths of
+ *                         images to be displayed
  */
 export async function mapCellsToRealCoordinatePathPairs(
     cells_to_be_displayed,
@@ -311,7 +316,7 @@ export async function mapCellsToRealCoordinatePathPairs(
     // Get data if the there is something to be displayed in the second tile
     if (cells_to_be_displayed.get(second_tile_key).length > 0) {
         second_tile_key = JSON.parse(second_tile_key);
-        const second_tile_data = await fetchTileData(zoom_level, second_tile_key.tile_x, second_tile_key.tile_y);
+        const second_tile_data = await fetchTileData(zoom_level, second_tile_key.tile_x, second_tile_key.tile_y, host);
         // Get mappings from real coordinates to indexes of images to be displayed
         // Current x is equal to the number of cells from the first tile along the x direction.
         const second_tile_real_coordinates_to_indexes = getRealCoordinatesAndIndexesOfImagesToBeDisplayed(return_value_first_tile.shift_x,
@@ -327,7 +332,7 @@ export async function mapCellsToRealCoordinatePathPairs(
     // Get data if the there is something to be displayed in the third tile
     if (cells_to_be_displayed.get(third_tile_key).length > 0) {
         third_tile_key = JSON.parse(third_tile_key);
-        const third_tile_data = await fetchTileData(zoom_level, third_tile_key.tile_x, third_tile_key.tile_y);
+        const third_tile_data = await fetchTileData(zoom_level, third_tile_key.tile_x, third_tile_key.tile_y, host);
         // Get mappings from real coordinates to indexes of images to be displayed
         // Current y is equal to the number of cells from the first tile along the y direction.
         const third_tile_real_coordinates_to_indexes = getRealCoordinatesAndIndexesOfImagesToBeDisplayed(0,
@@ -343,7 +348,7 @@ export async function mapCellsToRealCoordinatePathPairs(
     // Get data if the there is something to be displayed in the fourth tile
     if (cells_to_be_displayed.get(fourth_tile_key).length > 0) {
         fourth_tile_key = JSON.parse(fourth_tile_key);
-        const fourth_tile_data = await fetchTileData(zoom_level, fourth_tile_key.tile_x, fourth_tile_key.tile_y);
+        const fourth_tile_data = await fetchTileData(zoom_level, fourth_tile_key.tile_x, fourth_tile_key.tile_y, host);
         // Get mappings from real coordinates to indexes of images to be displayed
         // Current x is equal to the number of cells from the first tile along the x direction.
         const fourth_tile_real_coordinates_to_indexes = getRealCoordinatesAndIndexesOfImagesToBeDisplayed(return_value_first_tile.shift_x,
@@ -421,6 +426,20 @@ export async function updateZoomLevel(zoom_level,
     // Change width and height of effective window
     const width_effective = zoom_level === 0 ? width_real : width_real / (2 ** zoom_level);
     const height_effective = zoom_level === 0 ? height_real : height_real / (2 ** zoom_level);
+
+    // Make sure x and y are within the real window
+    if (x < 0) {
+        x = 0;
+    }
+    if (y < 0) {
+        y = 0;
+    }
+    if (x + width_effective > width_real) {
+        x = width_real - width_effective;
+    }
+    if (y + height_effective > height_real) {
+        y = height_real - height_effective;
+    }
 
     // Get the cells to be displayed
     const cells_to_be_displayed = getGridCellsToBeDisplayed(x, y, width_effective, height_effective, window_size_in_cells_per_dim);
