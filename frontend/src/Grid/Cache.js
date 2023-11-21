@@ -1,7 +1,7 @@
 export const DATASET = "best_artworks"; // TODO get dataset from other component
 
 // Define class for a cache with lru policy
-class Cache {
+export class Cache {
     constructor(max_size) {
         this.max_size = max_size;
         // Define map of path-image pairs

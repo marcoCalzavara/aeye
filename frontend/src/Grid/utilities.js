@@ -1,9 +1,17 @@
 import {DATASET} from "./Cache"
 
 // FETCHING FUNCTIONS
-// Define function for fetching tile data from the server
 
-export function fetchTileData(zoom_level, x, y, host="") {
+/**
+ * Fetch tile data from the server.
+ *
+ * @param {int} zoom_level - zoom level of the map
+ * @param {number} x - x coordinate of the tile
+ * @param {number} y - y coordinate of the tile
+ * @param {string} host - host of the server
+ * @return {Promise<Response>} - promise that resolves to the tile data
+ */
+export function fetchTileData(zoom_level, x, y, host = "") {
     // Fetch tile data from the server and return it
     const url = `${host}/api/tile-data?zoom_level=${zoom_level}&tile_x=${x}&tile_y=${y}&collection=${DATASET}_zoom_levels`;
     return fetch(url,
@@ -23,9 +31,15 @@ export function fetchTileData(zoom_level, x, y, host="") {
         });
 }
 
-// Define function for fetching images from the server. The function takes as input a list of indexes of images to
-// be fetched and return a list of paths of images.
-export function fetchImages(images_indexes, host="") {
+
+/**
+ * Fetch image paths from the server.
+ *
+ * @param {*[]} images_indexes - indexes of images to be fetched
+ * @param {string} host - host of the server
+ * @return {Promise<Response>} - promise that resolves to an array of indexes and paths pairs for the images
+ */
+export function fetchImages(images_indexes, host = "") {
     // Define query string
     const query_string = images_indexes.map(index => `indexes=${index}`).join('&');
     // Fetch images from the server
@@ -44,6 +58,8 @@ export function fetchImages(images_indexes, host="") {
             console.log(error)
         });
 }
+
+// UTILITY FUNCTIONS
 
 /**
  * @param {number} x - x coordinate of the top left corner of the effective window
@@ -107,7 +123,10 @@ export function getGridCellsToBeDisplayed(
     }
 
     // Add cells to be displayed for the next tile on the right to the map
-    cells_to_be_displayed.set(JSON.stringify({tile_x: tile_x + 1, tile_y: tile_y}), cells_to_be_displayed_next_tile_right)
+    cells_to_be_displayed.set(JSON.stringify({
+        tile_x: tile_x + 1,
+        tile_y: tile_y
+    }), cells_to_be_displayed_next_tile_right)
 
     // Define array to store coordinates of cells to be displayed for the next tile on the bottom
     const cells_to_be_displayed_next_tile_bottom = [];
@@ -150,10 +169,10 @@ export function getGridCellsToBeDisplayed(
 /**
  * Get mapping from coordinates of cells in the real window to indexes of images to be displayed on those cells.
  *
- * @param {int} current_real_x - x coordinate of the next available cell in the real window
- * @param {int} current_real_y - y coordinate of the next available cell in the real window
- * @param {int} tile_x - x coordinate of the tile
- * @param {int} tile_y - y coordinate of the tile
+ * @param {number} current_real_x - x coordinate of the next available cell in the real window
+ * @param {number} current_real_y - y coordinate of the next available cell in the real window
+ * @param {number} tile_x - x coordinate of the tile
+ * @param {number} tile_y - y coordinate of the tile
  * @param {{}} tile_data - data of the tile
  * @param {Map} cells_to_be_displayed - map from coordinates of tiles to coordinates of cells to be displayed. The
  *                                    coordinates of the cells are relative to the tile.
@@ -182,7 +201,10 @@ export function getRealCoordinatesAndIndexesOfImagesToBeDisplayed(
     }
     // Get top left cell to be displayed in the current tile. This is the first element in the list of cells to be
     // displayed for the current tile.
-    const top_left_cell_to_be_displayed = cells_to_be_displayed.get(JSON.stringify({tile_x: tile_x, tile_y: tile_y}))[0];
+    const top_left_cell_to_be_displayed = cells_to_be_displayed.get(JSON.stringify({
+        tile_x: tile_x,
+        tile_y: tile_y
+    }))[0];
     // Define map from coordinates of images in the real window to indexes of images to be displayed
     const real_coordinates_to_indexes = new Map();
     // Define object for returning shift in x and y for real coordinates. This is equal to the difference between
@@ -217,7 +239,10 @@ export function getRealCoordinatesAndIndexesOfImagesToBeDisplayed(
 
         // If the cell has an image, then add the index of the image to the list of indexes of images to be
         // displayed
-        if (cells_to_indexes.has(JSON.stringify(cells_to_be_displayed.get(JSON.stringify({tile_x: tile_x, tile_y: tile_y}))[i]))) {
+        if (cells_to_indexes.has(JSON.stringify(cells_to_be_displayed.get(JSON.stringify({
+            tile_x: tile_x,
+            tile_y: tile_y
+        }))[i]))) {
             // Get index of image
             const image_index = cells_to_indexes.get(JSON.stringify(cells_to_be_displayed.get(JSON.stringify({
                 tile_x: tile_x,
@@ -243,7 +268,8 @@ export function getRealCoordinatesAndIndexesOfImagesToBeDisplayed(
     // Return map from coordinates of images in the real window to indexes of images to be displayed, and shift in
     // x and y for real coordinates
     return {
-        real_coordinates_to_indexes: real_coordinates_to_indexes, shift_x: max_min.x.max - max_min.x.min + 1 + current_real_x,
+        real_coordinates_to_indexes: real_coordinates_to_indexes,
+        shift_x: max_min.x.max - max_min.x.min + 1 + current_real_x,
         shift_y: max_min.y.max - max_min.y.min + 1 + current_real_y
     };
 }
@@ -338,4 +364,76 @@ export async function mapCellsToRealCoordinatePathPairs(
     // Map real coordinates to paths
     real_coordinates_to_indexes.forEach((value, key) => real_coordinates_to_images.set(key, indexes_to_paths.get(value)));
     return real_coordinates_to_images;
+}
+
+
+/**
+ * Update zoom level. The zoom level is updated by the user when zooming in or out.
+ *
+ * @param {number} zoom_level - new zoom level
+ * @param {number} prev_zoom_level - previous zoom level
+ * @param {number} pointer_x - x coordinate of the pointer within the real window
+ * @param {*} pointer_y - y coordinate of the pointer within the real window
+ * @param {number} prev_x - x coordinate of the top left corner of the effective window
+ * @param {number} prev_y  - y coordinate of the top left corner of the effective window
+ * @param {number} prev_width_effective - width of the effective window
+ * @param {number} prev_height_effective - height of the effective window
+ * @param {number} width_real - width of the real window
+ * @param {number} height_real - height of the real window
+ * @param {number} window_size_in_cells_per_dim - number of cells along each dimension
+ * @param {string} host - host of the server
+ * @return {Promise<{x: number, y: number,
+ * width_effective: number, height_effective: number,
+ * real_coordinates_to_image_paths: Map}>} - new x and y coordinates of the top left corner of the effective window,
+ * new width and height of the effective window, and a mapping from real coordinates to paths of images to be displayed
+ */
+export async function updateZoomLevel(zoom_level,
+                                      prev_zoom_level,
+                                      pointer_x,
+                                      pointer_y,
+                                      prev_x,
+                                      prev_y,
+                                      prev_width_effective,
+                                      prev_height_effective,
+                                      width_real,
+                                      height_real,
+                                      window_size_in_cells_per_dim,
+                                      host = "") {
+    // Note that the check on the validity of the new zoom level is done in the function that calls this function.
+    // If the new zoom level is greater than the current zoom level, then the user is zooming in. Modify the location
+    // of the effective window so that the point where the pointer is remains fixed.
+
+    // Get position of the pointer in the effective window with respect to the coordinate system of the effective window.
+    const pointer_x_effective_window = (pointer_x * prev_width_effective) / width_real;
+    const pointer_y_effective_window = (pointer_y * prev_height_effective) / height_real;
+    // The point where the pointer is remains fixed, the window shrinks or expands around it.
+    // Compute x and y coordinates of the effective window.
+    let x;
+    let y;
+    if (zoom_level > prev_zoom_level) {
+        x = prev_x + pointer_x_effective_window / 2 ** (zoom_level - prev_zoom_level);
+        y = prev_y + pointer_y_effective_window / 2 ** (zoom_level - prev_zoom_level);
+    } else {
+        x = prev_x - pointer_x_effective_window * 2 ** (prev_zoom_level - zoom_level - 1);
+        y = prev_y - pointer_y_effective_window * 2 ** (prev_zoom_level - zoom_level - 1);
+    }
+
+    // Change width and height of effective window
+    const width_effective = zoom_level === 0 ? width_real : width_real / (2 ** zoom_level);
+    const height_effective = zoom_level === 0 ? height_real : height_real / (2 ** zoom_level);
+
+    // Get the cells to be displayed
+    const cells_to_be_displayed = getGridCellsToBeDisplayed(x, y, width_effective, height_effective, window_size_in_cells_per_dim);
+
+    // Now set_cells_to_be_displayed should be a map from tile coordinates to coordinates of cells that are within
+    // the effective window. The coordinates of the cells are relative to the tile.
+    // Return x, y, width_effective, height_effective, and a mapping from real cells to paths created with
+    // mapCellsToRealCoordinatePathPairs. Organize the return value as an object.
+    return {
+        x: x,
+        y: y,
+        width_effective: width_effective,
+        height_effective: height_effective,
+        real_coordinates_to_image_paths: await mapCellsToRealCoordinatePathPairs(cells_to_be_displayed, zoom_level, host)
+    };
 }

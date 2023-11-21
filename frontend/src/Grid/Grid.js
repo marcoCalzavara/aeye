@@ -1,6 +1,6 @@
-import Cache from './Cache.js';
+import { Cache } from './Cache.js';
 import React from 'react';
-import {getGridCellsToBeDisplayed, mapCellsToRealCoordinatePathPairs} from './utilities.js';
+import {getGridCellsToBeDisplayed, mapCellsToRealCoordinatePathPairs, updateZoomLevel} from './utilities.js';
 
 
 // Define constants
@@ -33,48 +33,20 @@ export default function Grid() {
     // between tiles when the user moves the pointer.
     const images = new Cache(MAX_CACHE_SIZE);
 
-    // Define tile data to be displayed. This is a map from tile coordinates to coordinates of cells that are within
-    // the effective window. The coordinates of the cells are relative to the tile.
-    const [cells_to_be_displayed, setCellsToBeDisplayed] = React.useState(new Map());
-
     // Define data structure for storing the images with the real window coordinates. This is a map from
     // coordinates of images in the real window to paths.
     const [real_coordinates_to_image_paths, setRealCoordinatesToImagePaths] = React.useState(new Map());
 
 
-    // Define function for updating the zoom level. The zoom level is updated by the user when zooming in or out.
-    const updateZoomLevel = (new_zoom_level) => {
-        // Note that the check on the validity of the new zoom level is done in the function that calls this function.
-        // If the new zoom level is greater than the current zoom level, then the user is zooming in. Modify the location
-        // of the effective window so that the point where the pointer is remains fixed.
-        // Compute temporary x and y coordinates of the effective window
-        const x_temp = x + width_effective / 2 ** (new_zoom_level - zoom_level);
-        const y_temp = y + height_effective / 2 ** (new_zoom_level - zoom_level);
-        // Move x and y so that the point coincides with the top right corner of the cell in the tile which contains (x,y).
-        // Note that the effective window is always equal to a tile and there are 10x10 grid cells in a tile.
-        setX(x_temp - x_temp % (width_effective / WINDOW_SIZE_IN_CELLS_PER_DIM));
-        setY(y_temp - y_temp % (height_effective / WINDOW_SIZE_IN_CELLS_PER_DIM));
-
-        // Update zoom level
-        setZoomLevel(new_zoom_level);
-        // Change width and height of effective window
-        setWEff(width_real / (2 ** new_zoom_level));
-        setHEff(height_real / (2 ** new_zoom_level));
-
-        // Get the cells to be displayed
-        setCellsToBeDisplayed(getGridCellsToBeDisplayed(x, y, width_effective, height_effective, WINDOW_SIZE_IN_CELLS_PER_DIM));
-
-        // Now set_cells_to_be_displayed should be a map from tile coordinates to coordinates of cells that are within
-        // the effective window. The coordinates of the cells are relative to the tile.
-        setRealCoordinatesToImagePaths(mapCellsToRealCoordinatePathPairs(cells_to_be_displayed, zoom_level));
-    }
-
     // Define handler for wheel event. The handler is called when the user zooms in or out.
-    const onWheel = (event) => {
+    const onWheel = async (event) => {
         // Prevent default behavior of the event
         event.preventDefault();
         // Get the new zoom level
         let new_zoom_level = zoom_level - event.deltaY / 100;
+        // Get position of pointer
+        const pointer_x = event.clientX;
+        const pointer_y = event.clientY;
         // Check that the zoom level is not lower than 0 or greater than the max available zoom level for the collection
         if (new_zoom_level < 0) {
             new_zoom_level = 0;
@@ -83,12 +55,19 @@ export default function Grid() {
         }
         // Update zoom level if it has changed
         if (new_zoom_level !== zoom_level) {
-            updateZoomLevel(new_zoom_level);
+            const res = await updateZoomLevel(new_zoom_level, zoom_level, pointer_x, pointer_y, x, y, width_effective,
+                height_effective, width_real, height_real, WINDOW_SIZE_IN_CELLS_PER_DIM);
+            setZoomLevel(new_zoom_level)
+            setX(res.x);
+            setY(res.y);
+            setWEff(res.width_effective);
+            setHEff(res.height_effective);
+            setRealCoordinatesToImagePaths(res.real_coordinates_to_image_paths)
         }
     }
 
     // Define handler for drag event. The handler is called when the user drags the map.
-    const onDrag = (event) => {
+    const onDrag = async (event) => {
         // Prevent default behavior of the event
         event.preventDefault();
         // Get the new location of the effective window
@@ -124,10 +103,10 @@ export default function Grid() {
         }
         // Update the list of images to be displayed
         // Get the cells to be displayed
-        setCellsToBeDisplayed(getGridCellsToBeDisplayed(x, y, width_effective, height_effective, WINDOW_SIZE_IN_CELLS_PER_DIM));
+        const cells_to_be_displayed = getGridCellsToBeDisplayed(x, y, width_effective, height_effective, WINDOW_SIZE_IN_CELLS_PER_DIM);
         // Now set_cells_to_be_displayed should be a map from tile coordinates to coordinates of cells that are within
         // the effective window. The coordinates of the cells are relative to the tile.
-        setCellsToBeDisplayed(mapCellsToRealCoordinatePathPairs(cells_to_be_displayed, zoom_level));
+        setRealCoordinatesToImagePaths(await mapCellsToRealCoordinatePathPairs(cells_to_be_displayed, zoom_level));
     }
 
     // Return react component. The React component is a div component with many div components inside. The div components

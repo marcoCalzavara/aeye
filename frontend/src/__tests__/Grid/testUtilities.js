@@ -5,7 +5,8 @@ const {
     fetchImages,
     getGridCellsToBeDisplayed,
     getRealCoordinatesAndIndexesOfImagesToBeDisplayed,
-    mapCellsToRealCoordinatePathPairs
+    mapCellsToRealCoordinatePathPairs,
+    updateZoomLevel
 } = require('../../Grid/utilities');
 
 // Test fetchTileData
@@ -300,4 +301,40 @@ test('mapCellsToRealCoordinatePathPairs', async () => {
     let res = await mapCellsToRealCoordinatePathPairs(cells_to_be_displayed, zoom_level, "http://localhost:80");
     // Check that the result contains 100 elements
     expect(res.size).toBeLessThanOrEqual(100);
+});
+
+// Test updateZoomLevel
+// ----------------------------------------------------------------------------
+test('updateZoomLevel', async () => {
+    let zoom_level = 2;
+    let new_zoom_level = 3;
+    let pointer_x = 1250;
+    let pointer_y = 1000;
+    let x = 1354;
+    let y = 727;
+    let width_effective = 1000;
+    let height_effective = 1000;
+    let width_real = 4000;
+    let height_real = 4000;
+    let window_size_in_cells_per_dim = 10;
+    let res = await updateZoomLevel(new_zoom_level, zoom_level, pointer_x, pointer_y, x, y, width_effective,
+        height_effective, width_real, height_real, window_size_in_cells_per_dim, "http://localhost:80");
+    expect(res.x).toEqual(1354+(1000/3.2)/2);
+    expect(res.y).toEqual(727+125);
+    expect(res.width_effective).toEqual(500);
+    expect(res.height_effective).toEqual(500);
+    expect(res.real_coordinates_to_image_paths.size).toEqual(15);
+
+    // Check shrinking
+    zoom_level = 3;
+    new_zoom_level = 2;
+    width_effective = 500;
+    height_effective = 500;
+    res = await updateZoomLevel(new_zoom_level, zoom_level, pointer_x, pointer_y, x, y, width_effective,
+        height_effective, width_real, height_real, window_size_in_cells_per_dim, "http://localhost:80");
+    expect(res.x).toEqual(1354-(1250*500/4000));
+    expect(res.y).toEqual(727-(1000*500/4000));
+    expect(res.width_effective).toEqual(1000);
+    expect(res.height_effective).toEqual(1000);
+    expect(res.real_coordinates_to_image_paths.size).toEqual(61);
 });
