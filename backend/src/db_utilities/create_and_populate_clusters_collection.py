@@ -3,16 +3,16 @@ import os
 import sys
 
 import numpy as np
+from PIL import Image
 from dotenv import load_dotenv
 from pymilvus import db, Collection, utility
 from sklearn.cluster import KMeans
-from PIL import Image
 
 from .collections import zoom_level_collection_with_images, ZOOM_LEVEL_VECTOR_FIELD_NAME, EMBEDDING_VECTOR_FIELD_NAME
+from .create_and_populate_grid_collection import parsing, load_vectors_from_collection
 # from .datasets import DatasetOptions
 from .utils import create_connection
 from ..CONSTANTS import *
-from .create_and_populate_zoom_levels_collection import parsing, load_vectors_from_collection
 
 # from .create_and_populate_zoom_levels_collection import plot_heat_map
 
@@ -22,9 +22,9 @@ NUMBER_OF_CLUSTERS = 20
 THRESHOLD = 0.8
 
 
-def create_collection_with_zoom_levels(zoom_levels_paths: dict[int, dict[tuple[int, int], dict[str, dict]]],
-                                       collection_name: str,
-                                       repopulate: bool) -> None:
+def create_clusters_collection(zoom_levels_paths: dict[int, dict[tuple[int, int], dict[str, dict]]],
+                               collection_name: str,
+                               repopulate: bool) -> None:
     if utility.has_collection(collection_name) and repopulate:
         print(f"Found collection {collection_name}. Dropping it.")
         utility.drop_collection(collection_name)

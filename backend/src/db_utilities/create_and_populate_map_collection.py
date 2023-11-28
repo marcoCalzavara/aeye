@@ -3,21 +3,23 @@ import os
 import sys
 
 import numpy as np
+from PIL import Image
 from dotenv import load_dotenv
 from pymilvus import db, Collection, utility
-from PIL import Image
 
 from .collections import zoom_level_collection_with_images, ZOOM_LEVEL_VECTOR_FIELD_NAME
+from .create_and_populate_grid_collection import parsing, load_vectors_from_collection
 from .datasets import DatasetOptions
 from .utils import create_connection
 from ..CONSTANTS import *
-from .create_and_populate_zoom_levels_collection import parsing, load_vectors_from_collection
+
+
 # from .create_and_populate_zoom_levels_collection import plot_heat_map
 
 
-def create_collection_with_zoom_levels(zoom_levels_paths: dict[int, dict[tuple[int, int], dict[str, dict]]],
-                                       collection_name: str,
-                                       repopulate: bool) -> None:
+def create_map_collection(zoom_levels_paths: dict[int, dict[tuple[int, int], dict[str, dict]]],
+                          collection_name: str,
+                          repopulate: bool) -> None:
     if utility.has_collection(collection_name) and repopulate:
         print(f"Found collection {collection_name}. Dropping it.")
         utility.drop_collection(collection_name)
@@ -245,7 +247,7 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
         for image_coordinates in zoom_levels[zoom_level]:
             # Get path to save image
             path_to_save = "zoom_levels/" + str(zoom_level) + "_" + str(image_coordinates[0]) \
-                   + "_" + str(image_coordinates[1]) + ".jpg"
+                           + "_" + str(image_coordinates[1]) + ".jpg"
             path = os.getenv(BEST_ARTWORKS_DIR) + "/" + path_to_save
             # Save image as jpg
             zoom_levels[zoom_level][image_coordinates]["image"].save(path)
@@ -256,7 +258,7 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
 
     # Now zoom_levels_paths contains all the paths to the images for all the zoom levels. Create a collection with the
     # paths to the images.
-    create_collection_with_zoom_levels(zoom_levels_paths, zoom_levels_collection_name, repopulate)
+    create_map_collection(zoom_levels_paths, zoom_levels_collection_name, repopulate)
 
 
 if __name__ == "__main__":

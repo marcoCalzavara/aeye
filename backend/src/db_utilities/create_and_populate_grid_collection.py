@@ -119,8 +119,7 @@ def plot_heat_map(grid: list[list[list[list[list]]]], number_of_tiles: int, zoom
     plt.clf()
 
 
-def create_collection_with_grid(grids: list[list[list[list[list[list]]]]], collection_name: str,
-                                repopulate: bool) -> None:
+def create_grid_collection(grids: list[list[list[list[list[list]]]]], collection_name: str, repopulate: bool) -> None:
     if utility.has_collection(collection_name) and repopulate:
         print(f"Found collection {collection_name}. Dropping it.")
         utility.drop_collection(collection_name)
@@ -253,7 +252,7 @@ def create_zoom_levels(entities, zoom_levels_collection_name, zoom_levels, repop
         # plot_heat_map(grid, number_of_tiles, zoom)
 
     # Create collection with the grids
-    create_collection_with_grid(grids, zoom_levels_collection_name, repopulate)
+    create_grid_collection(grids, zoom_levels_collection_name, repopulate)
 
 
 if __name__ == "__main__":
