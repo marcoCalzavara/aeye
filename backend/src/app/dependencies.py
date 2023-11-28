@@ -5,9 +5,9 @@ from fastapi import Query
 from pymilvus import Collection
 from pymilvus.orm import utility
 
+from .CONSTANTS import *
 from ..db_utilities.datasets import DatasetOptions
 from ..model.EmbeddingsModel import EmbeddingsModel
-from .CONSTANTS import *
 
 
 # Define helper class for representing a collection
@@ -80,9 +80,9 @@ class DatasetCollectionNameGetter(CollectionNameGetter):
             return None
 
 
-class ZoomLevelCollectionNameGetter(CollectionNameGetter):
+class GridCollectionNameGetter(CollectionNameGetter):
     def __init__(self):
-        super().__init__("_zoom_levels")
+        super().__init__("_zoom_levels_grid")
 
     def __call__(self, collection: str = Query(...)) -> Collection | None:
         if collection in self.collections.keys():
@@ -96,9 +96,25 @@ class ZoomLevelCollectionNameGetter(CollectionNameGetter):
             return None
 
 
-class ZoomLevelImagesCollectionNameGetter(CollectionNameGetter):
+class MapCollectionNameGetter(CollectionNameGetter):
     def __init__(self):
-        super().__init__("_zoom_levels_images")
+        super().__init__("_zoom_levels_map")
+
+    def __call__(self, collection: str = Query(...)) -> Collection | None:
+        if collection in self.collections.keys():
+            # Check if the collection must be loaded
+            self.check_counter(collection)
+            # Update counter for all collections
+            self.update_counters(collection)
+            # Return the requested collection
+            return self.collections[collection].collection
+        else:
+            return None
+
+
+class ClustersCollectionNameGetter(CollectionNameGetter):
+    def __init__(self):
+        super().__init__("_zoom_levels_clusters")
 
     def __call__(self, collection: str = Query(...)) -> Collection | None:
         if collection in self.collections.keys():
@@ -136,9 +152,13 @@ class Updater:
     """
 
     def __init__(self, dataset_collection_name_getter: DatasetCollectionNameGetter,
-                 zoom_level_collection_name_getter: ZoomLevelCollectionNameGetter):
+                 grid_collection_name_getter: GridCollectionNameGetter,
+                 map_collection_name_getter: MapCollectionNameGetter,
+                 clusters_collection_name_getter: ClustersCollectionNameGetter):
         self.dataset_collection_name_getter = dataset_collection_name_getter
-        self.zoom_level_collection_name_getter = zoom_level_collection_name_getter
+        self.grid_collection_name_getter = grid_collection_name_getter
+        self.map_collection_name_getter = map_collection_name_getter
+        self.clusters_collection_name_getter = clusters_collection_name_getter
 
     def __call__(self):
         # First, update the list of collections if necessary
@@ -150,11 +170,26 @@ class Updater:
                 self.dataset_collection_name_getter.collections[name] = HelperCollection(name)
         # Second, update the list of zoom level collections if necessary
         for dataset in DatasetOptions:
-            name = dataset.value["name"] + "_zoom_levels"
+            name = dataset.value["name"] + "_zoom_levels_grid"
+            # Check if name is the suffix of one of the elements of the list of collections
             if (name in utility.list_collections() and
-                    name not in self.zoom_level_collection_name_getter.collections.keys()):
+                    name not in self.grid_collection_name_getter.collections.keys()):
                 # The collection is in the database, but not in the list of collections. Add it to the list.
-                self.zoom_level_collection_name_getter.collections[name] = HelperCollection(name)
+                self.grid_collection_name_getter.collections[name] = HelperCollection(name)
+
+            name = dataset.value["name"] + "_zoom_levels_map"
+            # Check if name is the suffix of one of the elements of the list of collections
+            if (name in utility.list_collections() and
+                    name not in self.map_collection_name_getter.collections.keys()):
+                # The collection is in the database, but not in the list of collections. Add it to the list.
+                self.map_collection_name_getter.collections[name] = HelperCollection(name)
+
+            name = dataset.value["name"] + "_zoom_levels_clusters"
+            # Check if name is the suffix of one of the elements of the list of collections
+            if (name in utility.list_collections() and
+                    name not in self.clusters_collection_name_getter.collections.keys()):
+                # The collection is in the database, but not in the list of collections. Add it to the list.
+                self.clusters_collection_name_getter.collections[name] = HelperCollection(name)
 
         # Now, return the list of collections
         return [dataset.value["name"] for dataset in DatasetOptions

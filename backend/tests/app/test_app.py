@@ -1,8 +1,9 @@
 from fastapi.testclient import TestClient
 from pymilvus import utility
+
 import backend.src.app.main as main
+from backend.src.db_utilities.collections import ZOOM_LEVEL_VECTOR_FIELD_NAME
 from backend.src.db_utilities.datasets import DatasetOptions
-from backend.src.db_utilities.collections import EMBEDDING_VECTOR_FIELD_NAME, ZOOM_LEVEL_VECTOR_FIELD_NAME
 
 client = TestClient(main.app)
 
@@ -36,10 +37,10 @@ def test_get_image_from_text():
 
 
 def test_get_tile_data():
-    response = client.get("/api/tile-data", params={"zoom_level": 0,
-                                                    "tile_x": 0,
-                                                    "tile_y": 0,
-                                                    "collection": "best_artworks_zoom_levels"})
+    response = client.get("/api/grid", params={"zoom_level": 0,
+                                               "tile_x": 0,
+                                               "tile_y": 0,
+                                               "collection": "best_artworks_zoom_levels_grid"})
     assert response.status_code == 200
     assert response.json()[ZOOM_LEVEL_VECTOR_FIELD_NAME] == [0, 0, 0]
     assert response.json()["images"].keys() == {"indexes", "x_cell", "y_cell"}
@@ -47,47 +48,47 @@ def test_get_tile_data():
             == len(response.json()["images"]["y_cell"]))
 
     # Make second request to test that status code is 404 when collection is not found
-    response = client.get("/api/tile-data", params={"zoom_level": 0,
-                                                    "tile_x": 0,
-                                                    "tile_y": 0,
-                                                    "collection": "test_collection"})
+    response = client.get("/api/grid", params={"zoom_level": 0,
+                                               "tile_x": 0,
+                                               "tile_y": 0,
+                                               "collection": "test_collection"})
     assert response.status_code == 404
     # Check that the server returns 404 when the tile data is not found
-    response = client.get("/api/tile-data", params={"zoom_level": 0,
-                                                    "tile_x": 1,
-                                                    "tile_y": 1,
-                                                    "collection": "best_artworks_zoom_levels"})
+    response = client.get("/api/grid", params={"zoom_level": 0,
+                                               "tile_x": 1,
+                                               "tile_y": 1,
+                                               "collection": "best_artworks_zoom_levels_grid"})
     assert response.status_code == 404
 
 
 def test_get_zoom_level_data():
-    response = client.get("/api/zoom-level-data", params={"zoom_level": 0,
-                                                          "image_x": 0,
-                                                          "image_y": 0,
-                                                          "collection": "best_artworks_zoom_levels_images"})
+    response = client.get("/api/map", params={"zoom_level": 0,
+                                              "image_x": 0,
+                                              "image_y": 0,
+                                              "collection": "best_artworks_zoom_levels_map"})
     assert response.status_code == 200
     assert response.json()[ZOOM_LEVEL_VECTOR_FIELD_NAME] == [0, 0, 0]
     assert len(response.json()["images"].keys()) == 1
     assert response.json()["images"]["has_info"] is False
 
     # Make second request to test that status code is 404 when collection is not found
-    response = client.get("/api/zoom-level-data", params={"zoom_level": 0,
-                                                          "image_x": 0,
-                                                          "image_y": 0,
-                                                          "collection": "test_collection"})
+    response = client.get("/api/map", params={"zoom_level": 0,
+                                              "image_x": 0,
+                                              "image_y": 0,
+                                              "collection": "test_collection"})
     assert response.status_code == 404
     # Check that the server returns 404 when the tile data is not found
-    response = client.get("/api/zoom-level-data", params={"zoom_level": 0,
-                                                          "image_x": 1,
-                                                          "image_y": 1,
-                                                          "collection": "best_artworks_zoom_levels_images"})
+    response = client.get("/api/map", params={"zoom_level": 0,
+                                              "image_x": 1,
+                                              "image_y": 1,
+                                              "collection": "best_artworks_zoom_levels_map"})
     assert response.status_code == 404
 
     # Check that an image from zoom level 5 has many more fields in images
-    response = client.get("/api/zoom-level-data", params={"zoom_level": 5,
-                                                          "image_x": 0,
-                                                          "image_y": 0,
-                                                          "collection": "best_artworks_zoom_levels_images"})
+    response = client.get("/api/map", params={"zoom_level": 5,
+                                              "image_x": 0,
+                                              "image_y": 0,
+                                              "collection": "best_artworks_zoom_levels_map"})
     assert response.status_code == 200
     assert response.json()[ZOOM_LEVEL_VECTOR_FIELD_NAME] == [5, 0, 0]
     assert len(response.json()["images"].keys()) == 6

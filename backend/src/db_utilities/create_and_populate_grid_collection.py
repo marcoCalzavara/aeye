@@ -8,7 +8,7 @@ import numpy as np
 from dotenv import load_dotenv
 from pymilvus import db, Collection, utility
 
-from .collections import zoom_levels_collection
+from .collections import grid_collection
 from .datasets import DatasetOptions
 from .utils import create_connection
 from ..CONSTANTS import *
@@ -131,7 +131,7 @@ def create_grid_collection(grids: list[list[list[list[list[list]]]]], collection
         return
 
     # Create collection and index
-    collection = zoom_levels_collection(collection_name)
+    collection = grid_collection(collection_name)
 
     # Get entities to insert in the collection. Each entity is represented as a dictionary.
     entities = []
@@ -307,4 +307,4 @@ if __name__ == "__main__":
 
     # Create zoom levels
     if entities is not None:
-        create_zoom_levels(entities, flags["collection"] + "_zoom_levels", zoom_levels, flags["repopulate"])
+        create_zoom_levels(entities, flags["collection"] + "_zoom_levels_grid", zoom_levels, flags["repopulate"])

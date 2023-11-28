@@ -4,10 +4,10 @@ from fastapi import FastAPI, Depends, HTTPException, Request
 from pymilvus import db, MilvusException
 
 from .database import gets
-from ..CONSTANTS import *
 from .dependencies import *
-from ..model.CLIPEmbeddings import ClipEmbeddings
+from ..CONSTANTS import *
 from ..db_utilities.utils import create_connection
+from ..model.CLIPEmbeddings import ClipEmbeddings
 
 # Create connection
 create_connection(ROOT_USER, ROOT_PASSWD)
@@ -17,10 +17,14 @@ db.using_database(DEFAULT_DATABASE_NAME)
 
 # Create dependency objects
 dataset_collection_name_getter = DatasetCollectionNameGetter()
-zoom_level_collection_name_getter = ZoomLevelCollectionNameGetter()
-zoom_level_images_collection_name_getter = ZoomLevelImagesCollectionNameGetter()
+grid_collection_name_getter = GridCollectionNameGetter()
+map_collection_name_getter = MapCollectionNameGetter()
+clusters_collection_name_getter = ClustersCollectionNameGetter()
 dataset_collection_info_getter = DatasetCollectionInfoGetter()
-updater = Updater(dataset_collection_name_getter, zoom_level_collection_name_getter)
+updater = Updater(dataset_collection_name_getter,
+                  grid_collection_name_getter,
+                  map_collection_name_getter,
+                  clusters_collection_name_getter)
 embeddings = Embedder(ClipEmbeddings(DEVICE))
 
 # Create app
@@ -65,11 +69,11 @@ def get_image_from_text(collection: Collection = Depends(dataset_collection_name
         return {"path": path}
 
 
-@app.get("/api/tile-data")
+@app.get("/api/grid")
 def get_tile_data(zoom_level: int,
                   tile_x: int,
                   tile_y: int,
-                  collection: Collection = Depends(zoom_level_collection_name_getter)):
+                  collection: Collection = Depends(grid_collection_name_getter)):
     if collection is None:
         # Collection not found, return 404
         raise HTTPException(status_code=404, detail="Collection not found")
@@ -88,11 +92,11 @@ def get_tile_data(zoom_level: int,
             raise HTTPException(status_code=404, detail="Tile data not found")
 
 
-@app.get("/api/zoom-level-data")
+@app.get("/api/map")
 def get_zoom_level_data(zoom_level: int,
                         image_x: int,
                         image_y: int,
-                        collection: Collection = Depends(zoom_level_images_collection_name_getter)):
+                        collection: Collection = Depends(map_collection_name_getter)):
     if collection is None:
         # Collection not found, return 404
         raise HTTPException(status_code=404, detail="Collection not found")

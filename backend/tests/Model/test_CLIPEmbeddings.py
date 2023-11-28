@@ -4,7 +4,6 @@ import torch
 
 from backend.src.model.CLIPEmbeddings import ClipEmbeddings
 from backend.src.model.EmbeddingsModel import EmbeddingsModel
-import cv2
 
 
 class TestCLIPEmbeddings(unittest.TestCase):
@@ -20,7 +19,7 @@ class TestCLIPEmbeddings(unittest.TestCase):
 
     def test_shape_image_embeddings(self):
         clip = ClipEmbeddings("cpu")
-        img = cv2.imread("test_assets/mona_lisa.jpg")
+        img = torch.rand(3, 224, 224)
         self.assertEqual((1, 512), clip.getEmbeddings(clip.processData(img)).shape)
 
     def test_get_similarity_score(self):
@@ -29,7 +28,8 @@ class TestCLIPEmbeddings(unittest.TestCase):
         with self.assertRaises(AssertionError):
             clip.getSimilarityScore(torch.randn(100, 128), torch.randn(100, 126))
 
-        img = cv2.imread("test_assets/mona_lisa.jpg")
+        # Generate random image
+        img = torch.rand(3, 224, 224)
         img_embeddings = clip.getEmbeddings(clip.processData(img))
 
         text = "test shape _embeddings"

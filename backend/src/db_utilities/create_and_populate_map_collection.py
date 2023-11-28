@@ -7,7 +7,7 @@ from PIL import Image
 from dotenv import load_dotenv
 from pymilvus import db, Collection, utility
 
-from .collections import zoom_level_collection_with_images, ZOOM_LEVEL_VECTOR_FIELD_NAME
+from .collections import map_collection, ZOOM_LEVEL_VECTOR_FIELD_NAME
 from .create_and_populate_grid_collection import parsing, load_vectors_from_collection
 from .datasets import DatasetOptions
 from .utils import create_connection
@@ -31,7 +31,7 @@ def create_map_collection(zoom_levels_paths: dict[int, dict[tuple[int, int], dic
         return
 
     # Create collection and index
-    collection = zoom_level_collection_with_images(collection_name)
+    collection = map_collection(collection_name)
 
     # Populate collection
     index = 0
@@ -313,5 +313,5 @@ if __name__ == "__main__":
 
     # Create zoom levels
     if entities is not None:
-        create_zoom_levels(entities, collection, flags["collection"] + "_zoom_levels_images", zoom_levels,
+        create_zoom_levels(entities, collection, flags["collection"] + "_zoom_levels_map", zoom_levels,
                            flags["repopulate"])

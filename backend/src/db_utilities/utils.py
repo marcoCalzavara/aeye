@@ -1,8 +1,9 @@
 import os
-import dotenv
 import sys
 
+import dotenv
 from pymilvus import connections
+
 from ..CONSTANTS import MILVUS_IP, MILVUS_PORT, ENV_FILE_LOCATION
 
 

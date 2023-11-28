@@ -10,12 +10,12 @@ import torch
 from dotenv import load_dotenv
 from pymilvus import utility, db, Collection
 
-from ..CONSTANTS import *
-from .create_embeddings_collection import create_embeddings_collection
-from .utils import create_connection
-from ..model.CLIPEmbeddings import ClipEmbeddings
 from .DatasetPreprocessor import DatasetPreprocessor
+from .create_embeddings_collection import create_embeddings_collection
 from .datasets import DatasetOptions, get_dataset_object
+from .utils import create_connection
+from ..CONSTANTS import *
+from ..model.CLIPEmbeddings import ClipEmbeddings
 
 # Increase pixel limit
 PIL.Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
