@@ -365,6 +365,7 @@ export async function mapCellsToRealCoordinatePathPairs(
     const list_indexes_paths = await fetchImages(Array.from(real_coordinates_to_indexes.values()), host);
     // Map indexes to paths
     const indexes_to_paths = new Map();
+    // noinspection JSUnresolvedVariable
     list_indexes_paths.forEach((item) => indexes_to_paths.set(item["index"], item["path"]));
     // Map real coordinates to paths
     real_coordinates_to_indexes.forEach((value, key) => real_coordinates_to_images.set(key, indexes_to_paths.get(value)));

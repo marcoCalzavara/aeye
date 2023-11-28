@@ -96,6 +96,22 @@ class ZoomLevelCollectionNameGetter(CollectionNameGetter):
             return None
 
 
+class ZoomLevelImagesCollectionNameGetter(CollectionNameGetter):
+    def __init__(self):
+        super().__init__("_zoom_levels_images")
+
+    def __call__(self, collection: str = Query(...)) -> Collection | None:
+        if collection in self.collections.keys():
+            # Check if the collection must be loaded
+            self.check_counter(collection)
+            # Update counter for all collections
+            self.update_counters(collection)
+            # Return the requested collection
+            return self.collections[collection].collection
+        else:
+            return None
+
+
 class DatasetCollectionInfoGetter:
     def __init__(self):
         self.collections = {}
@@ -118,6 +134,7 @@ class Updater:
     Class for updating the collections. When the client requests the list of collections, it could become necessary to
     update the list of collections if a new collection has been created.
     """
+
     def __init__(self, dataset_collection_name_getter: DatasetCollectionNameGetter,
                  zoom_level_collection_name_getter: ZoomLevelCollectionNameGetter):
         self.dataset_collection_name_getter = dataset_collection_name_getter

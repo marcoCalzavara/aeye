@@ -12,6 +12,8 @@ const MAX_ZOOM_LEVEL = 5; // TODO get max zoom level from other component
 // rectangular. The real window is fixed, while the effective window changes by a factor of 4 (2 in each direction) when
 // moving from one zoom level to the next. The map scales by keeping the point where the pointer is fixed.
 export default function Grid() {
+    // Define boolean for first render
+    const [first_render, setFirstRender] = React.useState(true);
     // Define boolean for mouse down
     const [mouse_down, setMouseDown] = React.useState(false);
     // Define zoom level
@@ -49,14 +51,18 @@ export default function Grid() {
             const real_coordinates_to_image_paths = await mapCellsToRealCoordinatePathPairs(cells_to_be_displayed, zoom_level, "http://localhost:80"); // TODO remove localhost
             setRealCoordinatesToImagePaths(real_coordinates_to_image_paths);
         }
-        // noinspection JSIgnoredPromiseFromCall
-        fetchInitialData();
+        if (first_render) {
+            setFirstRender(false);
+            // noinspection JSIgnoredPromiseFromCall
+            fetchInitialData();
+        }
     }, []);
 
     // Define handler for wheel event. The handler is called when the user zooms in or out.
     const onWheel = async (event) => {
         // Update cumulative zoom level
         setCumulativeZoomLevel(cumulative_zoom_level + event.deltaY / 100);
+        console.log(event.deltaY)
         if (Math.round(cumulative_zoom_level) !== zoom_level) {
             let new_zoom_level = Math.round(cumulative_zoom_level);
             // Get position of pointer
@@ -104,9 +110,8 @@ export default function Grid() {
             return;
         }
         // Get the new location of the effective window
-        const new_x = x + event.movementX / 1.5;
-        const new_y = y + event.movementY / 1.5;
-        console.log(event.movementX, event.movementY)
+        const new_x = x - event.movementY / 3.;
+        const new_y = y - event.movementX / 3.;
         // First, check that the new location is valid. The new location is valid if the effective window is still
         // within the real window. The effective window is defined by the top left corner and the bottom right corner.
         // The top left corner is (x,y) and the bottom right corner is (x+width_effective, y+height_effective).
@@ -147,7 +152,7 @@ export default function Grid() {
     // are the tiles, and they are positioned as a grid inside the div component. Also define behavior of the component
     // when the user zooms in or out or drags the map.
     return (
-        <div className="w-2/3 h-1080px flex flex-col z-10 bg-black rounded-lg m-1 cursor-grab"
+        <div className="w-2/3 h-920px flex flex-col z-10 bg-black rounded-lg m-1 cursor-grab"
              onWheel={onWheel}
              onMouseDown={onMouseDown}
              onMouseUp={onMouseUp}

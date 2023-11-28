@@ -35,6 +35,9 @@ else
   echo "Milvus service is available at $MILVUS_IP:$MILVUS_PORT."
 fi
 
+# Sleep for 100 seconds to allow time for the container hosting the milvus service to become healthy
+sleep 100
+
 echo "Creating database and collections..."
 for var in $(compgen -e); do
   # Check if the variable ends with "COLLECTION"

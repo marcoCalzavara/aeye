@@ -64,7 +64,46 @@ def get_tile_data_for_zoom_level(zoom_level: int, tile_x: int, tile_y: int, coll
     #     }
     # }
 
-    return results[0][0].entity.to_dict()
+    return results[0][0].to_dict()
+
+
+def get_zoom_level_data(zoom_level: int, image_x: int, image_y: int, collection: Collection) -> dict:
+    """
+    Get the data for a zoom level from the collection.
+    @param zoom_level:
+    @param image_x:
+    @param image_y:
+    @param collection:
+    @return:
+    """
+    # Define search parameters
+    search_params = {
+        "metric_type": L2_METRIC,
+        "offset": 0
+    }
+    # Search image
+    results = collection.search(
+        data=[[zoom_level, image_x, image_y]],
+        anns_field=ZOOM_LEVEL_VECTOR_FIELD_NAME,
+        param=search_params,
+        limit=1,
+        output_fields=["images", "path_to_image", ZOOM_LEVEL_VECTOR_FIELD_NAME]
+    )
+    # The returned data point has the following format:
+    # {
+    #     "index": id_of_image,
+    #     "zoom_plus_tile": [zoom_level, tile_x, tile_y],
+    #     "images": {
+    #         "has_info": bool,
+    #         ?"artwork_width": artwork_width,
+    #         ?"artwork_height": artwork_height,
+    #         ?"images": [id_1, id_2, ...],
+    #         ?"x_cell": [x_1, x_2, ...],
+    #         ?"y_cell": [y_1, y_2, ...]
+    #     }
+    # }
+
+    return results[0][0].to_dict()
 
 
 def get_images_from_indexes(indexes: List[int], collection: Collection) -> dict:

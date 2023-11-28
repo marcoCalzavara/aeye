@@ -18,6 +18,7 @@ db.using_database(DEFAULT_DATABASE_NAME)
 # Create dependency objects
 dataset_collection_name_getter = DatasetCollectionNameGetter()
 zoom_level_collection_name_getter = ZoomLevelCollectionNameGetter()
+zoom_level_images_collection_name_getter = ZoomLevelImagesCollectionNameGetter()
 dataset_collection_info_getter = DatasetCollectionInfoGetter()
 updater = Updater(dataset_collection_name_getter, zoom_level_collection_name_getter)
 embeddings = Embedder(ClipEmbeddings(DEVICE))
@@ -85,6 +86,28 @@ def get_tile_data(zoom_level: int,
         except MilvusException:
             # Milvus error, return code 505
             raise HTTPException(status_code=404, detail="Tile data not found")
+
+
+@app.get("/api/zoom-level-data")
+def get_zoom_level_data(zoom_level: int,
+                        image_x: int,
+                        image_y: int,
+                        collection: Collection = Depends(zoom_level_images_collection_name_getter)):
+    if collection is None:
+        # Collection not found, return 404
+        raise HTTPException(status_code=404, detail="Collection not found")
+    else:
+        # Collection found, return zoom level data
+        try:
+            zoom_level_image_data = gets.get_zoom_level_data(zoom_level, image_x, image_y, collection)
+            if zoom_level_image_data["distance"] > 0.:
+                # In the required image is present in the database, the distance should be 0
+                raise HTTPException(status_code=404, detail="Zoom level data not found")
+            # Return zoom level image data
+            return zoom_level_image_data["entity"]
+        except MilvusException:
+            # Milvus error, return code 505
+            raise HTTPException(status_code=505, detail="Milvus error")
 
 
 @app.get("/api/images")

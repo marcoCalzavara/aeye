@@ -1,6 +1,6 @@
 import React from "react";
 import StickyBar from "./Navigation/StickyBar";
-import Grid from "./Grid/Grid";
+import Grid from "./Grid/Grid_v2";
 
 function App() {
     const [image, setImage] = React.useState(null);
@@ -12,7 +12,7 @@ function App() {
     return (
         <div className="flex justify-center">
             {/*<StickyBar onImageFetched={updateImage}/>*/}
-            <Grid/>
+            <Grid ></Grid>
         </div>
     );
 }
