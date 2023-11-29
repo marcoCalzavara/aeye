@@ -1,4 +1,5 @@
 import getpass
+import json
 import os
 import sys
 
@@ -8,7 +9,7 @@ from dotenv import load_dotenv
 from pymilvus import db, Collection, utility
 from sklearn.cluster import KMeans
 
-from .collections import map_collection, ZOOM_LEVEL_VECTOR_FIELD_NAME, EMBEDDING_VECTOR_FIELD_NAME
+from .collections import clusters_collection, ZOOM_LEVEL_VECTOR_FIELD_NAME, EMBEDDING_VECTOR_FIELD_NAME
 from .create_and_populate_grid_collection import parsing, load_vectors_from_collection
 # from .datasets import DatasetOptions
 from .utils import create_connection
@@ -18,11 +19,18 @@ from ..CONSTANTS import *
 
 
 MAX_IMAGES_PER_TILE = 40
-NUMBER_OF_CLUSTERS = 20
+NUMBER_OF_CLUSTERS = 30
 THRESHOLD = 0.8
 
 
-def create_clusters_collection(zoom_levels_paths: dict[int, dict[tuple[int, int], dict[str, dict]]],
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.float32):
+            return float(obj)
+        return json.JSONEncoder.default(self, obj)
+
+
+def create_clusters_collection(zoom_levels,
                                collection_name: str,
                                repopulate: bool) -> None:
     if utility.has_collection(collection_name) and repopulate:
@@ -36,30 +44,33 @@ def create_clusters_collection(zoom_levels_paths: dict[int, dict[tuple[int, int]
         return
 
     # Create collection and index
-    collection = map_collection(collection_name)
+    collection = clusters_collection(collection_name)
 
     # Populate collection
     index = 0
-    entities = []
-    for zoom_level in zoom_levels_paths:
-        for image_coordinates in zoom_levels_paths[zoom_level]:
+    entities_to_insert = []
+    for zoom_level in zoom_levels:
+        for tile in zoom_levels[zoom_level]:
             # Create entity
             entity = {
                 "index": index,
-                ZOOM_LEVEL_VECTOR_FIELD_NAME: [zoom_level, image_coordinates[0], image_coordinates[1]],
-                "images": zoom_levels_paths[zoom_level][image_coordinates]["image_info"],
-                "path_to_image": zoom_levels_paths[zoom_level][image_coordinates]["path"]
+                ZOOM_LEVEL_VECTOR_FIELD_NAME: [zoom_level, tile[0], tile[1]],
+                "clusters_representatives": {
+                    "entities": [json.dumps(representative, cls=NumpyEncoder) for representative in
+                                 zoom_levels[zoom_level][tile]["cluster_representatives"]],
+                },
+                "tile_coordinate_range": zoom_levels[zoom_level][tile]["tile_coordinate_range"]
             }
             # Insert entity
-            entities.append(entity)
+            entities_to_insert.append(entity)
             # Increment index
             index += 1
 
     # Insert entities in the collection
     # Insert entities in batches of INSERT_SIZE
-    for i in range(0, len(entities), INSERT_SIZE):
+    for i in range(0, len(entities_to_insert), INSERT_SIZE):
         try:
-            collection.insert(data=entities[i:i + INSERT_SIZE])
+            collection.insert(data=entities_to_insert[i:i + INSERT_SIZE])
             # Flush data to disk
             collection.flush()
         except Exception as e:
@@ -303,12 +314,13 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                         save_image(representative_entities, dataset_collection, zoom_level, tile_x_index, tile_y_index,
                                    x_min, x_max, y_min, y_max)
 
+                    assert (sum([cluster["number_of_entities"] + 1 for cluster in representative_entities])
+                            == len(entities_in_tile))
+
                     # Save information for tile in zoom_levels. Cluster representatives are the entities themselves.
                     zoom_levels[zoom_level][(tile_x_index, tile_y_index)] = {
                         "cluster_representatives": representative_entities,
-                        "number_of_entities": len(representative_entities),
-                        "x_range": (x_min, x_max),
-                        "y_range": (y_min, y_max)
+                        "tile_coordinate_range": {"x_min": x_min, "x_max": x_max, "y_min": y_min, "y_max": y_max}
                     }
 
                 else:
@@ -373,9 +385,10 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                             # Merge clusters
                             cluster_representatives_entities.append({
                                 "representative": temp_cluster_representatives_entities[i]["representative"],
-                                "number_of_entities": sum([cluster["number_of_entities"] + 1
-                                                           for cluster in
-                                                           temp_cluster_representatives_entities[i:i + window - 1]]) - 1
+                                "number_of_entities": int(sum([cluster["number_of_entities"] + 1
+                                                               for cluster in
+                                                               temp_cluster_representatives_entities[i:i + window - 1]])
+                                                          - 1)
                             })
                             # Update i
                             i += window - 1
@@ -387,15 +400,16 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                         save_image(cluster_representatives_entities, dataset_collection, zoom_level, tile_x_index,
                                    tile_y_index, x_min, x_max, y_min, y_max)
 
+                    assert (sum([cluster["number_of_entities"] + 1 for cluster in cluster_representatives_entities])
+                            == len(entities_in_tile))
+
                     # Save information for tile in zoom_levels.
                     zoom_levels[zoom_level][(tile_x_index, tile_y_index)] = {
                         "cluster_representatives": cluster_representatives_entities,
-                        "number_of_entities": len(entities_in_tile),
-                        "x_range": (x_min, x_max),
-                        "y_range": (y_min, y_max)
+                        "tile_coordinate_range": {"x_min": x_min, "x_max": x_max, "y_min": y_min, "y_max": y_max}
                     }
 
-    # create_collection_with_zoom_levels(zoom_levels, zoom_levels_collection_name, repopulate)
+    create_clusters_collection(zoom_levels, zoom_levels_collection_name, repopulate)
 
 
 if __name__ == "__main__":
@@ -450,5 +464,5 @@ if __name__ == "__main__":
 
     # Create zoom levels
     if entities is not None:
-        create_zoom_levels(entities, collection, flags["collection"] + "_clusters", flags["repopulate"],
+        create_zoom_levels(entities, collection, flags["collection"] + "_zoom_levels_clusters", flags["repopulate"],
                            flags["images"])

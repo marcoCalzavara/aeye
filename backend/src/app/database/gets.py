@@ -31,7 +31,7 @@ def get_image_embedding_from_text_embedding(collection: Collection, text_embeddi
     return results[0][0].entity.get("path")
 
 
-def get_tile_data_for_zoom_level(zoom_level: int, tile_x: int, tile_y: int, collection: Collection) -> dict:
+def get_grid_data(zoom_level: int, tile_x: int, tile_y: int, collection: Collection) -> dict:
     """
     Get the data for a tile at a specific zoom level from the collection.
     @param zoom_level:
@@ -67,7 +67,7 @@ def get_tile_data_for_zoom_level(zoom_level: int, tile_x: int, tile_y: int, coll
     return results[0][0].to_dict()
 
 
-def get_zoom_level_data(zoom_level: int, image_x: int, image_y: int, collection: Collection) -> dict:
+def get_map_data(zoom_level: int, image_x: int, image_y: int, collection: Collection) -> dict:
     """
     Get the data for a zoom level from the collection.
     @param zoom_level:
@@ -100,6 +100,46 @@ def get_zoom_level_data(zoom_level: int, image_x: int, image_y: int, collection:
     #         ?"images": [id_1, id_2, ...],
     #         ?"x_cell": [x_1, x_2, ...],
     #         ?"y_cell": [y_1, y_2, ...]
+    #     }
+    # }
+
+    return results[0][0].to_dict()
+
+
+def get_clusters_data(zoom_level: int, tile_x: int, tile_y: int, collection: Collection) -> dict:
+    """
+    Get the data for a tile at a specific zoom level from the collection.
+    @param zoom_level:
+    @param tile_x:
+    @param tile_y:
+    @param collection:
+    @return:
+    """
+    # Define search parameters
+    search_params = {
+        "metric_type": L2_METRIC,
+        "offset": 0
+    }
+    # Search image
+    results = collection.search(
+        data=[[zoom_level, tile_x, tile_y]],
+        anns_field=ZOOM_LEVEL_VECTOR_FIELD_NAME,
+        param=search_params,
+        limit=1,
+        output_fields=["*"]
+    )
+    # The returned data point has the following format:
+    # {
+    #     "index": id,
+    #     "zoom_plus_tile": [zoom_level, tile_x, tile_y],
+    #     "clusters_representatives": {
+    #        "entities": [e1, e2, ...],
+    #     },
+    #     "tile_coordinate_range": {
+    #         max_x: max_x,
+    #         min_x: min_x,
+    #         max_y: max_y,
+    #         min_y: min_y
     #     }
     # }
 

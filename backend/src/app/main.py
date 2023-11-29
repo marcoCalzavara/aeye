@@ -70,7 +70,7 @@ def get_image_from_text(collection: Collection = Depends(dataset_collection_name
 
 
 @app.get("/api/grid")
-def get_tile_data(zoom_level: int,
+def get_grid_data(zoom_level: int,
                   tile_x: int,
                   tile_y: int,
                   collection: Collection = Depends(grid_collection_name_getter)):
@@ -80,7 +80,7 @@ def get_tile_data(zoom_level: int,
     else:
         # Collection found, return tile data
         try:
-            tile_data = gets.get_tile_data_for_zoom_level(zoom_level, tile_x, tile_y, collection)
+            tile_data = gets.get_grid_data(zoom_level, tile_x, tile_y, collection)
             # Check distance in tile data
             if tile_data["distance"] > 0.:
                 # In the required tile is present in the database, the distance should be 0
@@ -93,17 +93,17 @@ def get_tile_data(zoom_level: int,
 
 
 @app.get("/api/map")
-def get_zoom_level_data(zoom_level: int,
-                        image_x: int,
-                        image_y: int,
-                        collection: Collection = Depends(map_collection_name_getter)):
+def get_map_data(zoom_level: int,
+                 image_x: int,
+                 image_y: int,
+                 collection: Collection = Depends(map_collection_name_getter)):
     if collection is None:
         # Collection not found, return 404
         raise HTTPException(status_code=404, detail="Collection not found")
     else:
         # Collection found, return zoom level data
         try:
-            zoom_level_image_data = gets.get_zoom_level_data(zoom_level, image_x, image_y, collection)
+            zoom_level_image_data = gets.get_map_data(zoom_level, image_x, image_y, collection)
             if zoom_level_image_data["distance"] > 0.:
                 # In the required image is present in the database, the distance should be 0
                 raise HTTPException(status_code=404, detail="Zoom level data not found")
@@ -112,6 +112,29 @@ def get_zoom_level_data(zoom_level: int,
         except MilvusException:
             # Milvus error, return code 505
             raise HTTPException(status_code=505, detail="Milvus error")
+
+
+@app.get("/api/clusters")
+def get_clusters_data(zoom_level: int,
+                      tile_x: int,
+                      tile_y: int,
+                      collection: Collection = Depends(clusters_collection_name_getter)):
+    if collection is None:
+        # Collection not found, return 404
+        raise HTTPException(status_code=404, detail="Collection not found")
+    else:
+        # Collection found, return tile data
+        try:
+            tile_data = gets.get_clusters_data(zoom_level, tile_x, tile_y, collection)
+            # Check distance in tile data
+            if tile_data["distance"] > 0.:
+                # In the required tile is present in the database, the distance should be 0
+                raise HTTPException(status_code=404, detail="Tile data not found")
+            # Return tile data
+            return tile_data["entity"]
+        except MilvusException:
+            # Milvus error, return code 505
+            raise HTTPException(status_code=404, detail="Tile data not found")
 
 
 @app.get("/api/images")

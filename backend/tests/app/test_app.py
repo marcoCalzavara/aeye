@@ -36,7 +36,7 @@ def test_get_image_from_text():
     assert response.json() == {"path": "2881-Henri_de_Toulouse-Lautrec.jpg"}
 
 
-def test_get_tile_data():
+def test_get_grid_data():
     response = client.get("/api/grid", params={"zoom_level": 0,
                                                "tile_x": 0,
                                                "tile_y": 0,
@@ -61,7 +61,7 @@ def test_get_tile_data():
     assert response.status_code == 404
 
 
-def test_get_zoom_level_data():
+def test_get_map_data():
     response = client.get("/api/map", params={"zoom_level": 0,
                                               "image_x": 0,
                                               "image_y": 0,
@@ -95,6 +95,32 @@ def test_get_zoom_level_data():
     assert response.json()["images"]["has_info"] is True
     assert (len(response.json()["images"]["indexes"]) == len(response.json()["images"]["x_cell"])
             == len(response.json()["images"]["y_cell"]))
+
+
+def test_get_clusters_data():
+    response = client.get("/api/clusters", params={"zoom_level": 0,
+                                                   "tile_x": 0,
+                                                   "tile_y": 0,
+                                                   "collection": "best_artworks_zoom_levels_clusters"})
+    assert response.status_code == 200
+    assert response.json().keys() == {"index", ZOOM_LEVEL_VECTOR_FIELD_NAME, "clusters_representatives",
+                                      "tile_coordinate_range"}
+    assert response.json()["clusters_representatives"].keys() == {"entities"}
+    assert list(response.json()["tile_coordinate_range"].keys()) == ['x_min', 'x_max', 'y_min', 'y_max']
+    assert response.json()[ZOOM_LEVEL_VECTOR_FIELD_NAME] == [0, 0, 0]
+
+    # Make second request to test that status code is 404 when collection is not found
+    response = client.get("/api/clusters", params={"zoom_level": 0,
+                                                   "tile_x": 0,
+                                                   "tile_y": 0,
+                                                   "collection": "test_collection"})
+    assert response.status_code == 404
+    # Check that the server returns 404 when the tile data is not found
+    response = client.get("/api/clusters", params={"zoom_level": 0,
+                                                   "tile_x": 1,
+                                                   "tile_y": 1,
+                                                   "collection": "best_artworks_zoom_levels_clusters"})
+    assert response.status_code == 404
 
 
 def test_get_images():

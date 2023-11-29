@@ -41,7 +41,7 @@ def embeddings_collection(collection_name: str):
     collection = Collection(
         name=collection_name,
         schema=schema,
-        shards_num=1
+        shards_num=1  # type: ignore
     )
 
     # Create index for embedding field to make similarity search faster
@@ -78,7 +78,7 @@ def grid_collection(collection_name: str):
     # Create collection schema
     schema = CollectionSchema(
         fields=[index, zoom_level, images],
-        description="zoom_levels",
+        description="zoom_levels_grid",
         enable_dynamic_field=True
     )
 
@@ -86,7 +86,7 @@ def grid_collection(collection_name: str):
     collection = Collection(
         name=collection_name,
         schema=schema,
-        shards_num=1
+        shards_num=1  # type: ignore
     )
 
     index_params = {
@@ -127,7 +127,7 @@ def map_collection(collection_name):
     # Create collection schema
     schema = CollectionSchema(
         fields=[index, zoom_level, images, path],
-        description="zoom_levels_paths",
+        description="zoom_levels_maps",
         enable_dynamic_field=True
     )
 
@@ -135,7 +135,7 @@ def map_collection(collection_name):
     collection = Collection(
         name=collection_name,
         schema=schema,
-        shards_num=1
+        shards_num=1  # type: ignore
     )
 
     index_params = {
@@ -153,6 +153,15 @@ def map_collection(collection_name):
 
 
 def clusters_collection(collection_name):
+    """
+    In the cluster collection, we save the following fields:
+    - index: the index of the cluster
+    - zoom_level: the zoom level of the cluster, with tile data information. Zoom level is a triplet
+        (zoom_level, tile_x, tile_y).
+    - tile_data: dictionary with fields entities (cluster representatives) and range of coordinates in the global
+        reference system.
+    @param collection_name: the name of the collection    @return: the collection
+    """
     # Create fields for collection
     index = FieldSchema(
         name="index",
@@ -164,19 +173,18 @@ def clusters_collection(collection_name):
         dtype=DataType.FLOAT_VECTOR,
         dim=3
     )
-    images = FieldSchema(
-        name="images",
+    clusters_representatives = FieldSchema(
+        name="clusters_representatives",
         dtype=DataType.JSON
     )
-    path = FieldSchema(
-        name="path_to_image",
-        dtype=DataType.VARCHAR,
-        max_length=65535
+    tile_coordinate_range = FieldSchema(
+        name="tile_coordinate_range",
+        dtype=DataType.JSON
     )
     # Create collection schema
     schema = CollectionSchema(
-        fields=[index, zoom_level, images, path],
-        description="zoom_levels_paths",
+        fields=[index, zoom_level, clusters_representatives, tile_coordinate_range],
+        description="zoom_levels_clusters",
         enable_dynamic_field=True
     )
 
@@ -184,7 +192,7 @@ def clusters_collection(collection_name):
     collection = Collection(
         name=collection_name,
         schema=schema,
-        shards_num=1
+        shards_num=1  # type: ignore
     )
 
     index_params = {

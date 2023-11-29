@@ -75,7 +75,8 @@ def load_vectors_from_collection(collection: Collection) -> list | None:
     # Load collection in memory
     collection.load()
     # Get low dimensional embeddings attributes
-    low_dim_attributes = ["index"] + ["low_dimensional_embedding_" + COORDINATES[i] for i in range(len(COORDINATES))]
+    low_dim_attributes = (["index", "author", "path"] +
+                          ["low_dimensional_embedding_" + COORDINATES[i] for i in range(len(COORDINATES))])
 
     # Get elements from collection
     entities = []
