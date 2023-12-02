@@ -1,6 +1,6 @@
 // Test cache
 
-import { Cache } from "../../Grid/Cache";
+import {Cache} from "../../Map/Cache";
 
 // Create cache object before each test
 const cache = new Cache(4, "http://localhost:80");

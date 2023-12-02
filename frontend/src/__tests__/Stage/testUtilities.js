@@ -7,7 +7,7 @@ const {
     getRealCoordinatesAndIndexesOfImagesToBeDisplayed,
     mapCellsToRealCoordinatePathPairs,
     updateZoomLevel
-} = require('../../Grid/utilities');
+} = require('../../Map/utilities');
 
 // Test fetchTileData
 // ----------------------------------------------------------------------------
@@ -342,8 +342,8 @@ test('updateZoomLevel', async () => {
     let window_size_in_cells_per_dim = 10;
     let res = await updateZoomLevel(new_zoom_level, zoom_level, pointer_x, pointer_y, x, y, width_effective,
         height_effective, width_real, height_real, window_size_in_cells_per_dim, "http://localhost:80");
-    expect(res.x).toEqual(1354+(1000/3.2)/2);
-    expect(res.y).toEqual(727+125);
+    expect(res.x).toEqual(1354 + (1000 / 3.2) / 2);
+    expect(res.y).toEqual(727 + 125);
     expect(res.width_effective).toEqual(500);
     expect(res.height_effective).toEqual(500);
     expect(res.real_coordinates_to_image_paths.size).toEqual(15);
@@ -355,8 +355,8 @@ test('updateZoomLevel', async () => {
     height_effective = 500;
     res = await updateZoomLevel(new_zoom_level, zoom_level, pointer_x, pointer_y, x, y, width_effective,
         height_effective, width_real, height_real, window_size_in_cells_per_dim, "http://localhost:80");
-    expect(res.x).toEqual(1354-(1250*500/4000));
-    expect(res.y).toEqual(727-(1000*500/4000));
+    expect(res.x).toEqual(1354 - (1250 * 500 / 4000));
+    expect(res.y).toEqual(727 - (1000 * 500 / 4000));
     expect(res.width_effective).toEqual(1000);
     expect(res.height_effective).toEqual(1000);
     expect(res.real_coordinates_to_image_paths.size).toEqual(61);

@@ -51,6 +51,7 @@ http {
             proxy_buffers 32 4k;
         }
         location /best_artworks/ {
+            add_header Access-Control-Allow-Origin *;
             alias /usr/share/nginx/best_artworks/;
         }
     }

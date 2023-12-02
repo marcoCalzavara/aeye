@@ -102,7 +102,6 @@ export default function Grid() {
     }
 
 
-
     // Define handler for drag event. The handler is called when the user drags the map.
     const onMouseMove = async (event) => {
         // If the mouse is not down, then return
@@ -159,11 +158,15 @@ export default function Grid() {
              onMouseMove={onMouseMove}>
             {
                 Array.from({length: WINDOW_SIZE_IN_CELLS_PER_DIM}).map((_, rowIndex) => (
-                    <div className={`h-1/10 flex border-t-4 border-black box-border ${rowIndex === WINDOW_SIZE_IN_CELLS_PER_DIM - 1 ? "border-b-4" : ""}`} key={rowIndex}>
+                    <div
+                        className={`h-1/10 flex border-t-4 border-black box-border ${rowIndex === WINDOW_SIZE_IN_CELLS_PER_DIM - 1 ? "border-b-4" : ""}`}
+                        key={rowIndex}>
                         {
                             Array.from({length: WINDOW_SIZE_IN_CELLS_PER_DIM}).map((_, colIndex) => (
                                 // Set ml-1 for all cells except the last one, which is set to mr-1
-                                <div className={`w-1/10 pointer-events-none select-none flex border-l-4 border-black box-border ${colIndex === WINDOW_SIZE_IN_CELLS_PER_DIM - 1 ? "border-r-4" : ""}`} key={colIndex}>
+                                <div
+                                    className={`w-1/10 pointer-events-none select-none flex border-l-4 border-black box-border ${colIndex === WINDOW_SIZE_IN_CELLS_PER_DIM - 1 ? "border-r-4" : ""}`}
+                                    key={colIndex}>
                                     {/* If the cell is among the cells to be displayed, then display the image. The image is in the
                                         cache, so it is fetched from the cache. */}
                                     {
