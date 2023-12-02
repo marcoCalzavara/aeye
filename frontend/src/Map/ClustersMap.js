@@ -157,7 +157,7 @@ const ClustersMap = (props) => {
             container.current.interactive = false;
             container.current.hitArea = null;
             // Create rectangle
-            const increase_factor = 5;
+            const increase_factor = 3.5;
             const rectangle = new PIXI.Graphics();
             rectangle.beginFill("rgb(39,39,42)");
             rectangle.drawRoundedRect(0, 0, sprite.width * increase_factor + props.width / 6 + 40,
@@ -190,13 +190,16 @@ const ClustersMap = (props) => {
             // TODO then remove the following line
             const stage_coordinates = mapGlobalCoordinatesToStageCoordinates(global_x, global_y);
             // Create text and add it to rectangle
-            const text = new PIXI.Text(
-                'The author of the artwork is ' + author + '.\n\n' + 'The artwork is ' + width + ' pixels wide and ' +
-                height + ' pixels high.\n\n' + 'The artwork is part of a cluster of ' + num_of_entities + ' artworks.',
-                {
-                    fontFamily: 'Arial', fontSize: 14, fill: 0xffffff, align: 'center',
-                    wordWrap: true, wordWrapWidth: props.width / 6 - 20, _align: "left"
-                });
+            let str = "The author of the artwork is " + author + ".\n\n" + "The artwork is " + width + " pixels wide and " +
+                height + " pixels high.\n\n";
+            if (num_of_entities !== 0)
+                str += "The artwork is part of a cluster of " + num_of_entities + " artworks.";
+            else
+                str += "The artwork is not part of any cluster.";
+            const text = new PIXI.Text(str,{
+                fontFamily: 'Arial', fontSize: 14, fill: 0xffffff, align: 'center',
+                wordWrap: true, wordWrapWidth: props.width / 6 - 20, _align: "left"
+            });
             text.x = 20;
             text.y = 20;
             rectangle.addChild(text);
