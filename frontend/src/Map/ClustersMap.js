@@ -155,6 +155,7 @@ const ClustersMap = (props) => {
         sprite.on('click', () => {
             // Make container not interactive
             container.current.interactive = false;
+            container.current.interactiveChildren = false;
             container.current.hitArea = null;
             // Create rectangle
             const increase_factor = 3.5;
@@ -171,9 +172,9 @@ const ClustersMap = (props) => {
             rectangle.cursor = 'pointer';
             // Define function for closing the rectangle
             rectangle.on('pointerdown', () => {
-                container.current.removeChild(rectangle);
-                container.current.removeChild(text);
+                app.stage.removeChild(rectangle);
                 container.current.interactive = true;
+                container.current.interactiveChildren = true;
                 container.current.hitArea = new PIXI.Rectangle(0, 0, props.width, props.height);
             });
             // Add sprite to rectangle
@@ -203,7 +204,7 @@ const ClustersMap = (props) => {
             text.x = 20;
             text.y = 20;
             rectangle.addChild(text);
-            container.current.addChild(rectangle);
+            app.stage.addChild(rectangle);
         });
 
         sprite.on('mouseover', () => {
@@ -431,8 +432,8 @@ const ClustersMap = (props) => {
         // If mouse is down, then move the stage
         if (mouseDown.current) {
             // Get mouse position. Transform movement of the mouse to movement in the embedding space.
-            const mouse_x = (event.movementX * effectiveWidth.current) / props.width;
-            const mouse_y = (event.movementY * effectiveHeight.current) / props.height;
+            const mouse_x = ((- event.movementX) * effectiveWidth.current) / props.width;
+            const mouse_y = ((- event.movementY) * effectiveHeight.current) / props.height;
             // Change the effective position of the stage. Make sure that it does not exceed the limits of the embedding space.
             const new_x = Math.max(
                 Math.min(effectivePosition.current.x + mouse_x, maxX.current - effectiveWidth.current), minX.current);
@@ -475,16 +476,18 @@ const ClustersMap = (props) => {
             // Invalidate everything when changing zoom level
             for (let tile of artworksInTiles.current.keys()) {
                 for (let index of artworksInTiles.current.get(tile)) {
-                    // Remove every event handler from sprite
-                    sprites.current.get(index).removeAllListeners();
-                    // Remove sprite from stage
-                    container.current.removeChild(sprites.current.get(index));
-                    // Add sprite back to sprite pool
-                    spritePool.current.push(sprites.current.get(index));
-                    // Remove sprite from sprites
-                    sprites.current.delete(index);
-                    // Remove sprite from spritesGlobalCoordinates
-                    spritesGlobalCoordinates.current.delete(index);
+                    if (sprites.current.has(index)) {
+                        // Remove every event handler from sprite
+                        sprites.current.get(index).removeAllListeners();
+                        // Remove sprite from stage
+                        container.current.removeChild(sprites.current.get(index));
+                        // Add sprite back to sprite pool
+                        spritePool.current.push(sprites.current.get(index));
+                        // Remove sprite from sprites
+                        sprites.current.delete(index);
+                        // Remove sprite from spritesGlobalCoordinates
+                        spritesGlobalCoordinates.current.delete(index);
+                    }
                 }
                 // Delete tile from artworksInTiles
                 artworksInTiles.current.delete(tile);
