@@ -76,10 +76,7 @@ const ClustersMap = (props) => {
     const zoomLevel = useRef(0);
     const depth = useRef(0);
     // Define state for the sprites. The sprites are reused. Whe keep a map from index of artwork to sprite for fast access.
-    // To know which sprites to remove from the stage, we also keep a map from index to boolean. If the boolean is true, then
-    // the sprite is on stage. If the boolean is false, then the sprite is not on stage and must be removed from the stage.
     const sprites = useRef(new Map());
-    const spritesOnStage = useRef(new Map());
     // Define map for sprites global coordinates
     const spritesGlobalCoordinates = useRef(new Map());
     // Define sprite pool of available sprites
@@ -106,8 +103,8 @@ const ClustersMap = (props) => {
 
     const mapGlobalCoordinatesToStageCoordinates = (global_x, global_y) => {
         // Map global coordinates to stage coordinates
-        const stage_x = ((global_x - effectivePosition.current.x) * (props.width)) / effectiveWidth.current;
-        const stage_y = ((global_y - effectivePosition.current.y) * (props.height)) / effectiveHeight.current;
+        const stage_x = ((global_x - effectivePosition.current.x) * (props.width - maxWidth.current)) / effectiveWidth.current;
+        const stage_y = ((global_y - effectivePosition.current.y) * (props.height - maxHeight.current)) / effectiveHeight.current;
         return {
             x: stage_x,
             y: stage_y
@@ -125,8 +122,7 @@ const ClustersMap = (props) => {
     }
 
 
-    const addSpriteToStage = (index, path, width, height, artwork_position, global_x, global_y,
-                              num_of_entities) => {
+    const addSpriteToStage = (index, path, width, height, global_x, global_y, num_of_entities) => {
         // Get sprite from sprite pool
         const sprite = spritePool.current.pop();
         // Update sprite
@@ -134,6 +130,8 @@ const ClustersMap = (props) => {
         // Save global coordinates of the artwork
         spritesGlobalCoordinates.current.set(index, {x: global_x, y: global_y});
 
+        // Get position of artwork in stage coordinates.
+        const artwork_position = mapGlobalCoordinatesToStageCoordinates(global_x, global_y);
         // Set position of sprite
         sprite.x = artwork_position.x;
         sprite.y = artwork_position.y;
@@ -152,6 +150,8 @@ const ClustersMap = (props) => {
         // such that the user has to click on the rectangle to close it. The rectangle should be at the center of the screen,
         // and it should appear smoothly on click on the sprite.
         sprite.interactive = true;
+        sprite.cursor = 'pointer';
+        sprite.anchor.set(0.5);
         sprite.on('click', () => {
             // Make container not interactive
             container.current.interactive = false;
@@ -166,8 +166,10 @@ const ClustersMap = (props) => {
             // Place it at the center of the screen
             rectangle.x = props.width / 2 - sprite.width * increase_factor / 2 - props.width / 12 - 20;
             rectangle.y = props.height / 2 - sprite.height * increase_factor / 2;
+            // Set mode and cursor type
             rectangle.interactive = true;
-            rectangle.buttonMode = true;
+            rectangle.cursor = 'pointer';
+            // Define function for closing the rectangle
             rectangle.on('pointerdown', () => {
                 container.current.removeChild(rectangle);
                 container.current.removeChild(text);
@@ -185,6 +187,9 @@ const ClustersMap = (props) => {
             // Extract author from path. The path has the form index-Name_separated_by_underscores.jpg. Remove jpg and initial and
             // trailing spaces.
             const author = path.split("-")[1].split(".")[0].replace(/_/g, " ").trim();
+            // TODO then remove the following line
+            const stage_coordinates = mapGlobalCoordinatesToStageCoordinates(global_x, global_y);
+            // Create text and add it to rectangle
             const text = new PIXI.Text(
                 'The author of the artwork is ' + author + '.\n\n' + 'The artwork is ' + width + ' pixels wide and ' +
                 height + ' pixels high.\n\n' + 'The artwork is part of a cluster of ' + num_of_entities + ' artworks.',
@@ -198,9 +203,26 @@ const ClustersMap = (props) => {
             container.current.addChild(rectangle);
         });
 
-        // Add sprite to sprites and then to the stage
+        sprite.on('mouseover', () => {
+            // Put image in front
+            sprite.zIndex = 10;
+            // Sort children
+            container.current.sortChildren();
+            // Increase size of sprite
+            sprite.width = sprite.width * 1.2;
+            sprite.height = sprite.height * 1.2;
+        });
+
+        sprite.on('mouseout', () => {
+            // Decrease size of sprite
+            sprite.width = sprite.width / 1.2;
+            sprite.height = sprite.height / 1.2;
+            // Put image back in place
+            sprite.zIndex = 0;
+        });
+
+        // Add sprite to sprites
         sprites.current.set(index, sprite);
-        spritesOnStage.current.set(index, true);
         // Add sprite to stage
         container.current.addChild(sprite);
     }
@@ -213,15 +235,16 @@ const ClustersMap = (props) => {
         }
         firstRender.current = false;
 
-        // Define properties of the app
-        app.renderer.events.cursorStyles.grab = 'grab';
-
         container.current = new PIXI.Container();
         app.stage.addChild(container.current);
+
+        // Define container pointer
+        container.current.cursor = 'grab';
 
         // Add handlers to stage
         container.current.hitArea = new PIXI.Rectangle(0, 0, props.width, props.height);
         container.current.interactive = true;
+        container.sortableChildren = true;
         container.current
             .on('pointerdown', handleMouseDown)
             .on('pointerup', handleMouseUp)
@@ -254,16 +277,11 @@ const ClustersMap = (props) => {
                 // noinspection JSUnresolvedVariable
                 for (let i = 0; i < data["clusters_representatives"]["entities"].length; i++) {
                     // Add sprite to stage
-                    const artwork_position = mapGlobalCoordinatesToStageCoordinates(
-                        data["clusters_representatives"]["entities"][i]["representative"]["low_dimensional_embedding_x"],
-                        data["clusters_representatives"]["entities"][i]["representative"]["low_dimensional_embedding_y"]
-                    );
                     addSpriteToStage(
                         data["clusters_representatives"]["entities"][i]["representative"]["index"],
                         data["clusters_representatives"]["entities"][i]["representative"]["path"],
                         data["clusters_representatives"]["entities"][i]["representative"]["width"],
                         data["clusters_representatives"]["entities"][i]["representative"]["height"],
-                        artwork_position,
                         data["clusters_representatives"]["entities"][i]["representative"]["low_dimensional_embedding_x"],
                         data["clusters_representatives"]["entities"][i]["representative"]["low_dimensional_embedding_y"],
                         data["clusters_representatives"]["entities"][i]["number_of_entities"]
@@ -280,7 +298,7 @@ const ClustersMap = (props) => {
             });
     }, []);
 
-    const updateStage = async () => {
+    const updateStage = () => {
         // Get tile coordinates of the visible tiles
         const number_of_tiles = 2 ** zoomLevel.current;
         const tile_step_x = (maxX.current - minX.current) / number_of_tiles;
@@ -319,61 +337,59 @@ const ClustersMap = (props) => {
             visible_tiles.push({x: tile_x, y: tile_y + 1});
         }
 
-        // Set all sprites as not being on stage
-        for (let index of spritesOnStage.current.keys()) {
-            spritesOnStage.current.set(index, false);
+        // Remove tiles and sprites of tiles that are not visible
+        for (let tile of artworksInTiles.current.keys()) {
+            if (!(zoomLevel.current === parseInt(tile.split("-")[0])) || !visible_tiles.some(visible_tile =>
+                visible_tile.x === parseInt(tile.split("-")[1]) && visible_tile.y === parseInt(tile.split("-")[2]))) {
+                for (let index of artworksInTiles.current.get(tile)) {
+                    if (sprites.current.has(index)) {
+                        // Remove every event handler from sprite
+                        sprites.current.get(index).removeAllListeners();
+                        // Remove sprite from stage
+                        container.current.removeChild(sprites.current.get(index));
+                        // Add sprite back to sprite pool
+                        spritePool.current.push(sprites.current.get(index));
+                        // Remove sprite from sprites
+                        sprites.current.delete(index);
+                        // Remove sprite from spritesGlobalCoordinates
+                        spritesGlobalCoordinates.current.delete(index);
+                    }
+                }
+                // Delete tile from artworksInTiles
+                artworksInTiles.current.delete(tile);
+            }
+        }
+
+        // Change position of all sprites that are on stage
+        for (let index of sprites.current.keys()) {
+            // Get position of artwork in stage coordinates.
+            const artwork_position = mapGlobalCoordinatesToStageCoordinates(
+                spritesGlobalCoordinates.current.get(index).x,
+                spritesGlobalCoordinates.current.get(index).y
+            );
+            // Update position of sprite
+            sprites.current.get(index).x = artwork_position.x;
+            sprites.current.get(index).y = artwork_position.y;
         }
 
         // Fetch data for the visible tiles
-        let fetchPromises = visible_tiles.map(tile => {
+        visible_tiles.map(tile => {
             // If tile is in previousTileCoordinates, then we do not need to fetch data for it.
-            if (artworksInTiles.current.has(zoomLevel.current + "-" + tile.x + "-" + tile.y)) {
-                // The tile is in previousTileCoordinates. We only need to update the position of the sprites.
-                return new Promise(() => {
-                    // Update position of sprites by looping over indexes in tile
-                    for (let index of artworksInTiles.current.get(zoomLevel.current + "-" + tile.x + "-" + tile.y)) {
-                        // Get position of artwork in stage coordinates.
-                        const artwork_position = mapGlobalCoordinatesToStageCoordinates(
-                            spritesGlobalCoordinates.current.get(index).x,
-                            spritesGlobalCoordinates.current.get(index).y
-                        );
-                        // Update position of sprite.
-                        sprites.current.get(index).x = artwork_position.x;
-                        sprites.current.get(index).y = artwork_position.y;
-                        // Set sprite as being on stage
-                        spritesOnStage.current.set(index, true);
-                    }
-                });
-            } else {
+            if (!artworksInTiles.current.has(zoomLevel.current + "-" + tile.x + "-" + tile.y)) {
                 // The tile is not in previousTileCoordinates. We need to fetch data for it.
-                return fetchClusterData(zoomLevel.current, tile.x, tile.y, props.host)
+                fetchClusterData(zoomLevel.current, tile.x, tile.y, props.host)
                     .then(data => {
                         // Loop over artworks in tile and add them to the stage.
                         // noinspection JSUnresolvedVariable
                         for (let j = 0; j < data["clusters_representatives"]["entities"].length; j++) {
-                            // Get position of artwork in stage coordinates.
-                            const artwork_position = mapGlobalCoordinatesToStageCoordinates(
-                                data["clusters_representatives"]["entities"][j]["representative"]["low_dimensional_embedding_x"],
-                                data["clusters_representatives"]["entities"][j]["representative"]["low_dimensional_embedding_y"]
-                            );
-                            // The artwork is within the visible area.
                             // Check if the artwork is already on stage. If it is, change its position. If it is not, add it to the stage.
-                            if (sprites.current.has(data["clusters_representatives"]["entities"][j]["representative"]["index"])) {
-                                // Get sprite from sprites
-                                const sprite = sprites.current.get(data["clusters_representatives"]["entities"][j]["representative"]["index"]);
-                                // Update position of sprite if the position has changed by one full pixel or more
-                                sprite.x = artwork_position.x;
-                                sprite.y = artwork_position.y;
-                                // Set sprite as being on stage
-                                spritesOnStage.current.set(data["clusters_representatives"]["entities"][j]["representative"]["index"], true);
-                            } else {
+                            if (!sprites.current.has(data["clusters_representatives"]["entities"][j]["representative"]["index"])) {
                                 // Add sprite to stage
                                 addSpriteToStage(
                                     data["clusters_representatives"]["entities"][j]["representative"]["index"],
                                     data["clusters_representatives"]["entities"][j]["representative"]["path"],
                                     data["clusters_representatives"]["entities"][j]["representative"]["width"],
                                     data["clusters_representatives"]["entities"][j]["representative"]["height"],
-                                    artwork_position,
                                     data["clusters_representatives"]["entities"][j]["representative"]["low_dimensional_embedding_x"],
                                     data["clusters_representatives"]["entities"][j]["representative"]["low_dimensional_embedding_y"],
                                     data["clusters_representatives"]["entities"][j]["number_of_entities"]
@@ -387,64 +403,33 @@ const ClustersMap = (props) => {
                     })
                     .catch(error => {
                         // Handle any errors that occur during the fetch operation
-                        console.log(spritePool.current.length)
                         console.error('Error:', error);
                     });
             }
         });
-        // Wait for all fetch promises to resolve
-        await Promise.all(fetchPromises);
-        // Remove sprites that are not on stage
-        for (let index of spritesOnStage.current.keys()) {
-            if (!spritesOnStage.current.get(index)) {
-                // Remove every event handler from sprite
-                sprites.current.get(index).removeAllListeners();
-                // Remove sprite from stage
-                container.current.removeChild(sprites.current.get(index));
-                // Add sprite back to sprite pool
-                spritePool.current.push(sprites.current.get(index));
-                // Remove sprite from sprites
-                sprites.current.delete(index);
-                // Remove sprite from spritesOnStage
-                spritesOnStage.current.delete(index);
-                // Remove sprite from spritesGlobalCoordinates
-                spritesGlobalCoordinates.current.delete(index);
-                // Remove sprite from spritesOnStage
-                spritesOnStage.current.delete(index);
-            }
-        }
-        // Update artworks in tiles by removing the tiles that are not visible anymore
-        for (let tile of artworksInTiles.current.keys()) {
-            if (!(zoomLevel.current === parseInt(tile.split("-")[0])) || !visible_tiles.some(visible_tile =>
-                visible_tile.x === parseInt(tile.split("-")[1]) && visible_tile.y === parseInt(tile.split("-")[2]))) {
-                // Remove tile from artworksInTiles
-                artworksInTiles.current.delete(tile);
-            }
-        }
-        console.assert(artworksInTiles.current.size <= 9, "artworksInTiles.current.size > 9")
     }
 
     // Create handler for mouse down
     const handleMouseDown = () => {
         // Set mouse down to true
-        app.renderer.plugins.interaction.cursor = 'grabbing';
+        container.current.cursor = 'grabbing';
         mouseDown.current = true;
     }
 
     // Create handler for mouse up
     const handleMouseUp = () => {
         // Set mouse down to false
-        app.renderer.plugins.interaction.cursor = 'grab';
+        container.current.cursor = 'grab';
         mouseDown.current = false;
     }
 
     // Create handler for mouse move
-    const handleMouseMove = async (event) => {
+    const handleMouseMove = (event) => {
         // If mouse is down, then move the stage
         if (mouseDown.current) {
             // Get mouse position. Transform movement of the mouse to movement in the embedding space.
-            const mouse_x = ((-event.movementX) * effectiveWidth.current) / props.width;
-            const mouse_y = ((-event.movementY) * effectiveHeight.current) / props.height;
+            const mouse_x = (event.movementX * effectiveWidth.current) / props.width;
+            const mouse_y = (event.movementY * effectiveHeight.current) / props.height;
             // Change the effective position of the stage. Make sure that it does not exceed the limits of the embedding space.
             const new_x = Math.max(
                 Math.min(effectivePosition.current.x + mouse_x, maxX.current - effectiveWidth.current), minX.current);
@@ -457,7 +442,7 @@ const ClustersMap = (props) => {
 
             // Update the data that is displayed on the stage. This consists of finding out the tiles that are visible,
             // fetching the data from the server and putting on stage the sprites that are visible.
-            await updateStage();
+            updateStage();
         }
     }
 
@@ -465,7 +450,7 @@ const ClustersMap = (props) => {
     // depth is reached. This is to avoid changing the zoom level too often. We use a transition which depends on the percentage
     // of the change in depth in order to make the transition smoother. When the new zoom level is reached, we update
     // everything on the stage.
-    const handleMouseWheel = async (event) => {
+    const handleMouseWheel = (event) => {
         // Define delta
         const delta = event.deltaY / 300;
         // Measure change in depth
@@ -495,12 +480,8 @@ const ClustersMap = (props) => {
                     spritePool.current.push(sprites.current.get(index));
                     // Remove sprite from sprites
                     sprites.current.delete(index);
-                    // Remove sprite from spritesOnStage
-                    spritesOnStage.current.delete(index);
                     // Remove sprite from spritesGlobalCoordinates
                     spritesGlobalCoordinates.current.delete(index);
-                    // Remove sprite from spritesOnStage
-                    spritesOnStage.current.delete(index);
                 }
                 // Delete tile from artworksInTiles
                 artworksInTiles.current.delete(tile);
@@ -527,7 +508,7 @@ const ClustersMap = (props) => {
             depth.current = 0;
 
             // Update stage
-            await updateStage();
+            updateStage();
         }
     }
 
