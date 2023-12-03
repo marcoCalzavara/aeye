@@ -126,7 +126,7 @@ const ClustersMap = (props) => {
         // Get sprite from sprite pool
         const sprite = spritePool.current.pop();
         // Update sprite
-        sprite.texture = PIXI.Texture.from(props.host + "/" + DATASET + "/" + path);
+        sprite.texture = PIXI.Texture.from(props.host + "/" + DATASET + "/resized_images/" + path);
         // Save global coordinates of the artwork
         spritesGlobalCoordinates.current.set(index, {x: global_x, y: global_y});
 
@@ -146,12 +146,18 @@ const ClustersMap = (props) => {
             sprite.width = maxHeight.current * aspect_ratio;
         }
 
+        // TODO modify this as some images disappear too early
+        // Make sprite not visible if outside the stage
+        sprite.visible = artwork_position.x >= -maxWidth.current
+            && artwork_position.x <= props.width
+            && artwork_position.y >= -maxHeight.current
+            && artwork_position.y <= props.height;
+
         // On click, create rectangle with the sprite inside on the right and some text on the left. Make everything unclickable,
         // such that the user has to click on the rectangle to close it. The rectangle should be at the center of the screen,
         // and it should appear smoothly on click on the sprite.
         sprite.interactive = true;
         sprite.cursor = 'pointer';
-        sprite.anchor.set(0.5);
         sprite.on('click', () => {
             // Make container not interactive
             container.current.interactive = false;
@@ -188,8 +194,6 @@ const ClustersMap = (props) => {
             // Extract author from path. The path has the form index-Name_separated_by_underscores.jpg. Remove jpg and initial and
             // trailing spaces.
             const author = path.split("-")[1].split(".")[0].replace(/_/g, " ").trim();
-            // TODO then remove the following line
-            const stage_coordinates = mapGlobalCoordinatesToStageCoordinates(global_x, global_y);
             // Create text and add it to rectangle
             let str = "The author of the artwork is " + author + ".\n\n" + "The artwork is " + width + " pixels wide and " +
                 height + " pixels high.\n\n";
@@ -212,15 +216,27 @@ const ClustersMap = (props) => {
             sprite.zIndex = 10;
             // Sort children
             container.current.sortChildren();
-            // Increase size of sprite
-            sprite.width = sprite.width * 1.2;
-            sprite.height = sprite.height * 1.2;
+            // Calculate the difference in size before and after scaling
+            const diffWidth = sprite.width * 0.2;
+            const diffHeight = sprite.height * 0.2;
+            // Adjust the x and y coordinates of the sprite by half of the difference in size
+            sprite.x -= diffWidth / 2;
+            sprite.y -= diffHeight / 2;
+            // Increase size of sprite from the center
+            sprite.width += diffWidth;
+            sprite.height += diffHeight;
         });
 
         sprite.on('mouseout', () => {
+            // Calculate the difference in size before and after scaling
+            const diffWidth = sprite.width * 0.2;
+            const diffHeight = sprite.height * 0.2;
+            // Adjust the x and y coordinates of the sprite by half of the difference in size
+            sprite.x += diffWidth / 2;
+            sprite.y += diffHeight / 2;
             // Decrease size of sprite
-            sprite.width = sprite.width / 1.2;
-            sprite.height = sprite.height / 1.2;
+            sprite.width -= diffWidth;
+            sprite.height -= diffHeight;
             // Put image back in place
             sprite.zIndex = 0;
         });
@@ -371,6 +387,12 @@ const ClustersMap = (props) => {
                 spritesGlobalCoordinates.current.get(index).x,
                 spritesGlobalCoordinates.current.get(index).y
             );
+            // Make sprite not visible if outside the stage
+            sprites.current.get(index).visible = artwork_position.x > -maxWidth.current
+                && artwork_position.x <= props.width
+                && artwork_position.y >= -maxHeight.current
+                && artwork_position.y <= props.height;
+
             // Update position of sprite
             sprites.current.get(index).x = artwork_position.x;
             sprites.current.get(index).y = artwork_position.y;
@@ -456,7 +478,7 @@ const ClustersMap = (props) => {
     // everything on the stage.
     const handleMouseWheel = (event) => {
         // Define delta
-        const delta = event.deltaY / 300;
+        const delta = event.deltaY / 200;
         // Measure change in depth
         if (zoomLevel.current === maxZoomLevel && depth.current + delta > 0) {
             // Keep depth at 0
