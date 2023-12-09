@@ -78,7 +78,7 @@ const ClustersMap = (props) => {
     // Define state for the sprites. The sprites are reused. Whe keep a map from index of artwork to sprite for fast access.
     const sprites = useRef(new Map());
     // Define map for sprites global coordinates
-    const spritesGlobalCoordinates = useRef(new Map());
+    const spritesGlobalInfo = useRef(new Map());
     // Define sprite pool of available sprites
     const spritePool = useRef(new Array(500));
     // Define max width and height of a sprite. These values depend on the size of the viewport.
@@ -95,6 +95,9 @@ const ClustersMap = (props) => {
     const firstRender = useRef(true);
     // Define state for artworks in tiles
     const artworksInTiles = useRef(new Map());
+    // Define width and height of the viewport
+    const viewportWidth = useRef(props.width);
+    const viewportHeight = useRef(props.height);
 
     // Define state for the app
     const app = useApp()
@@ -103,8 +106,8 @@ const ClustersMap = (props) => {
 
     const mapGlobalCoordinatesToStageCoordinates = (global_x, global_y) => {
         // Map global coordinates to stage coordinates
-        const stage_x = ((global_x - effectivePosition.current.x) * (props.width - maxWidth.current)) / effectiveWidth.current;
-        const stage_y = ((global_y - effectivePosition.current.y) * (props.height - maxHeight.current)) / effectiveHeight.current;
+        const stage_x = ((global_x - effectivePosition.current.x) * (viewportWidth.current - maxWidth.current)) / effectiveWidth.current;
+        const stage_y = ((global_y - effectivePosition.current.y) * (viewportHeight.current - maxHeight.current)) / effectiveHeight.current;
         return {
             x: stage_x,
             y: stage_y
@@ -113,12 +116,73 @@ const ClustersMap = (props) => {
 
     const mapStageCoordinatesToGlobalCoordinates = (stage_x, stage_y) => {
         // Map stage coordinates to global coordinates
-        const global_x = (stage_x * effectiveWidth.current) / props.width;
-        const global_y = (stage_y * effectiveHeight.current) / props.height;
+        const global_x = (stage_x * effectiveWidth.current) / viewportWidth.current;
+        const global_y = (stage_y * effectiveHeight.current) / viewportHeight.current;
         return {
             x: global_x + effectivePosition.current.x,
             y: global_y + effectivePosition.current.y
         }
+    }
+
+
+    const setSpriteOnPointerDown = (sprite, path, width, height, num_of_entities) => {
+        // Remove only the pointerdown event handler
+        sprite.removeAllListeners('pointerdown');
+
+        sprite.on('pointerdown', () => {
+            // Make container not interactive
+            container.current.interactive = false;
+            container.current.interactiveChildren = false;
+            container.current.hitArea = null;
+            // Create rectangle
+            const increase_factor = 3.5;
+            const rectangle = new PIXI.Graphics();
+            rectangle.beginFill("rgb(39,39,42)");
+            rectangle.drawRoundedRect(0, 0, sprite.width * increase_factor + viewportWidth.current / 6 + 40,
+                sprite.height * increase_factor + 40, 7);
+            rectangle.endFill();
+            // Place it at the center of the screen
+            rectangle.x = viewportWidth.current / 2 - sprite.width * increase_factor / 2 - viewportWidth.current / 12 - 20;
+            rectangle.y = viewportHeight.current / 2 - sprite.height * increase_factor / 2;
+            // Set mode and cursor type
+            rectangle.interactive = true;
+            rectangle.cursor = 'pointer';
+            // Define function for closing the rectangle
+            rectangle.on('pointerdown', () => {
+                app.stage.removeChild(rectangle);
+                container.current.interactive = true;
+                container.current.interactiveChildren = true;
+                container.current.hitArea = new PIXI.Rectangle(0, 0, viewportWidth.current, viewportHeight.current);
+            });
+            // Add sprite to rectangle
+            const sprite_inside = new PIXI.Sprite();
+            sprite_inside.texture = PIXI.Texture.from(props.host + "/" + DATASET + "/" + path);
+            sprite_inside.width = sprite.width * increase_factor;
+            sprite_inside.height = sprite.height * increase_factor;
+            sprite_inside.x = viewportWidth.current / 6 + 20;
+            sprite_inside.y = 20;
+            rectangle.addChild(sprite_inside);
+            // Extract author from path. The path has the form index-Name_separated_by_underscores.jpg. Remove jpg and initial and
+            // trailing spaces.
+            const author = path.split("-")[1].split(".")[0].replace(/_/g, " ").trim();
+            // Create text and add it to rectangle
+            let str = "The author of the artwork is " + author + ".\n\n" + "The artwork is " + width + " pixels wide and " +
+                height + " pixels high.\n\n";
+            if (num_of_entities !== 0)
+                str += "The artwork is part of a cluster of " + num_of_entities + " artworks.";
+            else
+                str += "The artwork is not part of any cluster.";
+            // Make fontsize depend on viewportWidth.current and viewportHeight.current
+            const fontsize = Math.ceil((14 * viewportWidth.current) / 1280);
+            const text = new PIXI.Text(str,{
+                fontFamily: 'Arial', fontSize: fontsize, fill: 0xffffff, align: 'center',
+                wordWrap: true, wordWrapWidth: viewportWidth.current / 6 - 20, _align: "left"
+            });
+            text.x = 20;
+            text.y = 20;
+            rectangle.addChild(text);
+            app.stage.addChild(rectangle);
+        });
     }
 
 
@@ -128,7 +192,8 @@ const ClustersMap = (props) => {
         // Update sprite
         sprite.texture = PIXI.Texture.from(props.host + "/" + DATASET + "/resized_images/" + path);
         // Save global coordinates of the artwork
-        spritesGlobalCoordinates.current.set(index, {x: global_x, y: global_y});
+        spritesGlobalInfo.current.set(index, {x: global_x, y: global_y, width: width, height: height, path: path,
+            num_of_entities: num_of_entities});
 
         // Get position of artwork in stage coordinates.
         const artwork_position = mapGlobalCoordinatesToStageCoordinates(global_x, global_y);
@@ -149,67 +214,16 @@ const ClustersMap = (props) => {
         // TODO modify this as some images disappear too early
         // Make sprite not visible if outside the stage
         sprite.visible = artwork_position.x >= -maxWidth.current
-            && artwork_position.x <= props.width
+            && artwork_position.x <= viewportWidth.current
             && artwork_position.y >= -maxHeight.current
-            && artwork_position.y <= props.height;
+            && artwork_position.y <= viewportHeight.current;
 
         // On click, create rectangle with the sprite inside on the right and some text on the left. Make everything unclickable,
         // such that the user has to click on the rectangle to close it. The rectangle should be at the center of the screen,
         // and it should appear smoothly on click on the sprite.
         sprite.interactive = true;
         sprite.cursor = 'pointer';
-        sprite.on('click', () => {
-            // Make container not interactive
-            container.current.interactive = false;
-            container.current.interactiveChildren = false;
-            container.current.hitArea = null;
-            // Create rectangle
-            const increase_factor = 3.5;
-            const rectangle = new PIXI.Graphics();
-            rectangle.beginFill("rgb(39,39,42)");
-            rectangle.drawRoundedRect(0, 0, sprite.width * increase_factor + props.width / 6 + 40,
-                sprite.height * increase_factor + 40, 7);
-            rectangle.endFill();
-            // Place it at the center of the screen
-            rectangle.x = props.width / 2 - sprite.width * increase_factor / 2 - props.width / 12 - 20;
-            rectangle.y = props.height / 2 - sprite.height * increase_factor / 2;
-            // Set mode and cursor type
-            rectangle.interactive = true;
-            rectangle.cursor = 'pointer';
-            // Define function for closing the rectangle
-            rectangle.on('pointerdown', () => {
-                app.stage.removeChild(rectangle);
-                container.current.interactive = true;
-                container.current.interactiveChildren = true;
-                container.current.hitArea = new PIXI.Rectangle(0, 0, props.width, props.height);
-            });
-            // Add sprite to rectangle
-            const sprite_inside = new PIXI.Sprite();
-            sprite_inside.texture = PIXI.Texture.from(props.host + "/" + DATASET + "/" + path);
-            sprite_inside.width = sprite.width * increase_factor;
-            sprite_inside.height = sprite.height * increase_factor;
-            sprite_inside.x = props.width / 6 + 20;
-            sprite_inside.y = 20;
-            rectangle.addChild(sprite_inside);
-            // Extract author from path. The path has the form index-Name_separated_by_underscores.jpg. Remove jpg and initial and
-            // trailing spaces.
-            const author = path.split("-")[1].split(".")[0].replace(/_/g, " ").trim();
-            // Create text and add it to rectangle
-            let str = "The author of the artwork is " + author + ".\n\n" + "The artwork is " + width + " pixels wide and " +
-                height + " pixels high.\n\n";
-            if (num_of_entities !== 0)
-                str += "The artwork is part of a cluster of " + num_of_entities + " artworks.";
-            else
-                str += "The artwork is not part of any cluster.";
-            const text = new PIXI.Text(str,{
-                fontFamily: 'Arial', fontSize: 14, fill: 0xffffff, align: 'center',
-                wordWrap: true, wordWrapWidth: props.width / 6 - 20, _align: "left"
-            });
-            text.x = 20;
-            text.y = 20;
-            rectangle.addChild(text);
-            app.stage.addChild(rectangle);
-        });
+        setSpriteOnPointerDown(sprite, path, width, height, num_of_entities);
 
         sprite.on('mouseover', () => {
             // Put image in front
@@ -262,7 +276,7 @@ const ClustersMap = (props) => {
         container.current.cursor = 'grab';
 
         // Add handlers to stage
-        container.current.hitArea = new PIXI.Rectangle(0, 0, props.width, props.height);
+        container.current.hitArea = new PIXI.Rectangle(0, 0, viewportWidth.current, viewportHeight.current);
         container.current.interactive = true;
         container.sortableChildren = true;
         container.current
@@ -318,6 +332,47 @@ const ClustersMap = (props) => {
             });
     }, []);
 
+    useEffect(() => {
+        // Update viewport width and height
+        viewportWidth.current = props.width;
+        viewportHeight.current = props.height;
+        // Resize container and set hit area
+        container.current.hitArea = new PIXI.Rectangle(0, 0, viewportWidth.current, viewportHeight.current);
+
+        // Update max width and height of a sprite and update all sprites
+        maxWidth.current = viewportWidth.current / 10;
+        maxHeight.current = viewportHeight.current / 10;
+
+        for (let index of sprites.current.keys()) {
+            // Get position of artwork in stage coordinates.
+            const artwork_position = mapGlobalCoordinatesToStageCoordinates(
+                spritesGlobalInfo.current.get(index).x,
+                spritesGlobalInfo.current.get(index).y
+            );
+            // Set position of sprite
+            sprites.current.get(index).x = artwork_position.x;
+            sprites.current.get(index).y = artwork_position.y;
+
+            // Update size of sprite
+            const width = spritesGlobalInfo.current.get(index).width;
+            const height = spritesGlobalInfo.current.get(index).height;
+            const aspect_ratio = width / height;
+            if (width > height) {
+                sprites.current.get(index).width = maxWidth.current;
+                sprites.current.get(index).height = maxWidth.current / aspect_ratio;
+            } else {
+                sprites.current.get(index).height = maxHeight.current;
+                sprites.current.get(index).width = maxHeight.current * aspect_ratio;
+            }
+            // Update set sprite on pointer down
+            setSpriteOnPointerDown(sprites.current.get(index),
+                spritesGlobalInfo.current.get(index).path,
+                spritesGlobalInfo.current.get(index).width,
+                spritesGlobalInfo.current.get(index).height,
+                spritesGlobalInfo.current.get(index).num_of_entities);
+        }
+    }, [props.width, props.height]);
+
     const updateStage = () => {
         // Get tile coordinates of the visible tiles
         const number_of_tiles = 2 ** zoomLevel.current;
@@ -371,8 +426,8 @@ const ClustersMap = (props) => {
                         spritePool.current.push(sprites.current.get(index));
                         // Remove sprite from sprites
                         sprites.current.delete(index);
-                        // Remove sprite from spritesGlobalCoordinates
-                        spritesGlobalCoordinates.current.delete(index);
+                        // Remove sprite from spritesGlobalInfo
+                        spritesGlobalInfo.current.delete(index);
                     }
                 }
                 // Delete tile from artworksInTiles
@@ -384,14 +439,14 @@ const ClustersMap = (props) => {
         for (let index of sprites.current.keys()) {
             // Get position of artwork in stage coordinates.
             const artwork_position = mapGlobalCoordinatesToStageCoordinates(
-                spritesGlobalCoordinates.current.get(index).x,
-                spritesGlobalCoordinates.current.get(index).y
+                spritesGlobalInfo.current.get(index).x,
+                spritesGlobalInfo.current.get(index).y
             );
             // Make sprite not visible if outside the stage
             sprites.current.get(index).visible = artwork_position.x > -maxWidth.current
-                && artwork_position.x <= props.width
+                && artwork_position.x <= viewportWidth.current
                 && artwork_position.y >= -maxHeight.current
-                && artwork_position.y <= props.height;
+                && artwork_position.y <= viewportHeight.current;
 
             // Update position of sprite
             sprites.current.get(index).x = artwork_position.x;
@@ -454,8 +509,8 @@ const ClustersMap = (props) => {
         // If mouse is down, then move the stage
         if (mouseDown.current) {
             // Get mouse position. Transform movement of the mouse to movement in the embedding space.
-            const mouse_x = ((- event.movementX) * effectiveWidth.current) / props.width;
-            const mouse_y = ((- event.movementY) * effectiveHeight.current) / props.height;
+            const mouse_x = ((- event.movementX) * effectiveWidth.current) / viewportWidth.current;
+            const mouse_y = ((- event.movementY) * effectiveHeight.current) / viewportHeight.current;
             // Change the effective position of the stage. Make sure that it does not exceed the limits of the embedding space.
             const new_x = Math.max(
                 Math.min(effectivePosition.current.x + mouse_x, maxX.current - effectiveWidth.current), minX.current);
@@ -507,8 +562,8 @@ const ClustersMap = (props) => {
                         spritePool.current.push(sprites.current.get(index));
                         // Remove sprite from sprites
                         sprites.current.delete(index);
-                        // Remove sprite from spritesGlobalCoordinates
-                        spritesGlobalCoordinates.current.delete(index);
+                        // Remove sprite from spritesGlobalInfo
+                        spritesGlobalInfo.current.delete(index);
                     }
                 }
                 // Delete tile from artworksInTiles

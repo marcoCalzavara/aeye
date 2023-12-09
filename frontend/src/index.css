@@ -29,6 +29,27 @@
     height: 920px;
 }
 
+
+.h-search {
+        height: 180px;
+}
+
+.h-searchbar {
+    height: 37px;
+}
+
+@media (min-width: 100px) {
+    .w-searchbar {
+        width: 50%;
+    }
+}
+
+@media (min-width: 768px) {
+    .w-searchbar {
+        width: 400px;
+    }
+}
+
 .w-2\/19 {
     width: 10%;
 }
@@ -50,6 +71,6 @@
     width: 98%;
 }
 
-.pl-1\% {
-    padding-left: 1%;
+.pl-3 {
+    padding-left: 1rem;
 }

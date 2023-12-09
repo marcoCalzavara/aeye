@@ -1,147 +1,119 @@
-import React from "react";
+import React, { useRef, useState } from "react";
 import IconButton from '@mui/material/IconButton';
 import SearchIcon from '@mui/icons-material/Search';
 import {InputBase} from "@mui/material";
+import {DATASET} from "../Map/Cache";
 
+export default function SearchBar(props) {
+    const [searchHistory, setSearchHistory] = useState([]);
+    const [shownSearchHistory, setShownSearchHistory] = useState([]);
+    const [inputValue, setInputValue] = useState("");
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [open, setOpen] = useState(false);
+    const host = useRef(props.host);
+    const max_state_length = 20;
+    const max_history_shown = 5;
 
-export class SearchBar extends React.Component {
-    // Props are objects used by components to communicate with each other
-    constructor({onImageFetched, ...props}) {
-        super(props);
-        this.state = {
-            searchHistory: [],
-            shownSearchHistory: [],
-            inputValue: "",
-            anchorEl: null,
-            open: false
-        };
-        this.onImageFetched = onImageFetched;
-        this.max_state_length = 20;
-        this.max_history_shown = 5
-    }
+    const updateSearchHistory = () => {
+        let updatedSearchHistory = []
+        if (!searchHistory.includes(inputValue))
+            updatedSearchHistory = [inputValue, ...searchHistory];
+        else
+            updatedSearchHistory = searchHistory;
 
-    // Save the input of the user. The state is then used to show the latest things that have been searched.
-    updateSearchHistory = () => {
-        this.setState((prevState) => {
-            let updatedSearchHistory = []
-            if (!prevState.searchHistory.includes(prevState.inputValue))
-                updatedSearchHistory = [prevState.inputValue, ...prevState.searchHistory];
-            else
-                updatedSearchHistory = prevState.searchHistory;
-
-            if (updatedSearchHistory.length > this.max_state_length) {
-                updatedSearchHistory = updatedSearchHistory.slice(0, this.max_state_length);
-            }
-            // Update searchText
-            this.setState({searchHistory: updatedSearchHistory});
-        });
+        if (updatedSearchHistory.length > max_state_length) {
+            updatedSearchHistory = updatedSearchHistory.slice(0, max_state_length);
+        }
+        setSearchHistory(updatedSearchHistory);
     };
 
-    sendText = (text) => {
-        const url = '/api/image-text';
+    const sendText = async (text) => {
+        console.log("Sending text: " + text);
+        const url = host.current + '/api/image-text?collection=' + DATASET + '&text=' + text;
 
-        fetch(url, {
-            method: 'GET',
-            body: JSON.stringify({text: text}),
+        const path = await fetch(url, {
+            method: 'GET'
         })
             .then(response => {
-                if (!response.ok) {
-                    throw new Error('Image from text could not be retrieved from the server.' +
-                        ' Please try again later. Status: ' + response.status + ' ' + response.statusText);
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Get the corresponding image
-
-
-                this.onImageFetched()
-            })
+            if (!response.ok) {
+                throw new Error('Image could not be retrieved. Status: ' + response.status + ' ' + response.statusText);
+            }
+            return response.json();
+        })
             .catch(error => {
                 // Handle any errors that occur during the fetch operation
                 console.error('Error:', error);
             });
+
+        // Generate complete path
+        const image_path = host.current + "/" + DATASET + "/" + path;
+
+        // TODO add image to screen
     };
 
-    // Handle changes in input to the search bar.
-    handleInputChange = (event) => {
+    const handleInputChange = (event) => {
         let search = event.target.value;
-        // Filter out from possible search result those that don't match the current string
         let newShownSearchHistory = [];
-        for (let str of this.state.searchHistory) {
+        for (let str of searchHistory) {
             if (!(search === "") && str.toLowerCase().startsWith(search.toLowerCase())) {
                 newShownSearchHistory.push(str);
             }
-            if (newShownSearchHistory.length === this.max_history_shown)
+            if (newShownSearchHistory.length === max_history_shown)
                 break;
         }
 
-        this.setState({shownSearchHistory: newShownSearchHistory, inputValue: search});
-
+        setShownSearchHistory(newShownSearchHistory);
+        setInputValue(search);
     };
 
-    handleEnter = (event) => {
+    const handleEnter = (event) => {
         if (event.key === 'Enter') {
-            this.handleClickSearch(event);
+            handleClickSearch(event);
         }
     }
 
-    handleMouseLeave = (event) => {
-        this.setState({shownSearchHistory: [], open: false});
+    const handleMouseLeave = (event) => {
+        setShownSearchHistory([]);
+        setOpen(false);
     }
 
-    handleClickSearch = (event) => {
-        // The search history is updated only when the user clicks on the search icon
-        this.updateSearchHistory();
-        // Clear inputValue and currentSearchText
-        this.setState({shownSearchHistory: [], inputValue: "", open: false});
-        // Send the text in this.state.inputValue to the server
-        this.sendText();
+    const handleClickSearch = (event) => {
+        updateSearchHistory();
+        setShownSearchHistory([]);
+        setOpen(false);
+        // noinspection JSIgnoredPromiseFromCall
+        sendText(inputValue);
+        setInputValue("");
     };
 
-    handleClickHistory = (text) => {
-        this.setState({inputValue: text});
+    const handleClickHistory = (text) => {
+        setInputValue(text);
     }
 
-    handleClick = (event) => {
-        this.setState((prevState) => {
-            return {anchorEl: event.currentTarget, open: !prevState.open};
-        })
+    const handleClick = (event) => {
+        setAnchorEl(event.currentTarget);
+        setOpen(!open);
     }
 
-    searchBar = () => {
-        return (
-            /* Take */
-            <div className="w-full h-full flex justify-between items-center z-10 bg-white rounded-lg">
-                {/*98% for input, 2% for search icon */}
+    return (
+        <div className="h-search w-full flex flex-col justify-evenly items-center flex-none bg-zinc-900">
+            <b className="text-white text-4xl">AiPlusArt</b>
+            <div className="w-searchbar h-searchbar flex justify-between items-center z-10 bg-white rounded-full">
                 <InputBase
-                    className="w-98 h-full pl-1% text-sm md:text-xl lg:text-4xl"
+                    className="w-98 h-full pl-3"
                     label={"Search Images by Text"}
                     placeholder={"\"A painting of a dog\""}
-                    value={this.state.inputValue}
-                    onChange={this.handleInputChange}
-                    onKeyDown={this.handleEnter}
-                    onClick={this.handleClick}
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    onKeyDown={handleEnter}
+                    onClick={handleClick}
+                    style={{ fontSize: '15px' }}
                 />
-                <IconButton type="button" onClick={this.handleClickSearch}>
+                <IconButton type="button" onClick={handleClickSearch}>
                     <SearchIcon/>
                 </IconButton>
             </div>
-        )
-    }
+        </div>
 
-
-    render() {
-        return (
-            this.searchBar()
-        );
-    }
+    );
 }
-
-/*
-* {this.state.shownSearchHistory && this.state.shownSearchHistory.map((item, index) => (
-                            <MenuItem key={index} onClick={() => this.handleClickHistory(item)}>
-                                {item}
-                            </MenuItem>
-                        ))}
-* */

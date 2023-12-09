@@ -7,10 +7,10 @@ import numpy as np
 from PIL import Image
 from dotenv import load_dotenv
 from pymilvus import db, Collection, utility
-from sklearn.cluster import KMeans
 
 from .collections import clusters_collection, ZOOM_LEVEL_VECTOR_FIELD_NAME, EMBEDDING_VECTOR_FIELD_NAME
 from .create_and_populate_grid_collection import parsing, load_vectors_from_collection
+from .utils import ModifiedKMeans
 # from .datasets import DatasetOptions
 from .utils import create_connection
 from ..CONSTANTS import *
@@ -243,6 +243,109 @@ def add_width_and_height_information(representative_entities, dataset_collection
         entity["representative"]["height"] = artwork.size[1]
 
 
+def split_block(i, window, representative_entities, temp_cluster_representatives_entities,
+                indexes_of_entities_already_in_representative_entities):
+    # Calculate the integer portion and the remainder. There are window - 1 elements in the block to distribute among
+    # the elements in indexes_of_entities_already_in_representative_entities
+    portion, remainder = divmod(window - 1, len(indexes_of_entities_already_in_representative_entities))
+
+    # Create an array where each element receives the integer portion
+    portions = [portion] * len(indexes_of_entities_already_in_representative_entities)
+
+    # Distribute the remainder
+    for j in range(remainder):
+        portions[j] += 1
+
+    assert sum(portions) == window - 1
+
+    # Subtract 1 from each element
+    portions = [portion - 1 for portion in portions]
+
+    index = i
+    for sub_block in range(len(indexes_of_entities_already_in_representative_entities)):
+        elements_block = 0
+        while elements_block < portions[sub_block] and index < i + window - 1:
+            # We still have to add elements to the block
+            is_representative = False
+            for j in indexes_of_entities_already_in_representative_entities:
+                if (temp_cluster_representatives_entities[index]["representative"]["index"] ==
+                        representative_entities[j]["representative"]["index"]):
+                    is_representative = True
+                    break
+            # If is_representative is True, then the current entity is already in representative_entities and cannot be
+            # added to the current sub-block.
+            if not is_representative:
+                representative_entities[indexes_of_entities_already_in_representative_entities[sub_block]] \
+                    ["number_of_entities"] += temp_cluster_representatives_entities[index]["number_of_entities"] + 1
+                # Increment elements_block as one element has been added to the block
+                elements_block += 1
+
+            # Increment index
+            index += 1
+
+
+def merge_clusters(old_cluster_representatives_in_current_tile, temp_cluster_representatives_entities,
+                   cosine_similarity_matrix):
+    # Find square blocks with True values on main diagonal of cosine_similarity_matrix
+    # and merge the clusters corresponding to the blocks
+    i = 0
+    window = 1
+    # Initialize representative_entities with old_cluster_representatives_in_current_tile
+    representative_entities = [
+        {
+            "representative": old_cluster_representatives_in_current_tile[k],
+            "number_of_entities": 0
+        }
+        for k in range(len(old_cluster_representatives_in_current_tile))
+    ]
+
+    while i < len(temp_cluster_representatives_entities):
+        if (i + window <= len(temp_cluster_representatives_entities) and
+                cosine_similarity_matrix[i:i + window, i:i + window].all()):
+            # Update window
+            window += 1
+        else:
+            # From current block, choose as cluster representative one of the already existing
+            # entities in representative_entities. If there are more than one, split the block
+            # into one block for each entity.
+            # If there are no entities in representative_entities, then choose the entity at the
+            # beginning of the block.
+            indexes_of_entities_already_in_representative_entities = []
+            if len(old_cluster_representatives_in_current_tile) > 0:
+                for k in range(i, i + window - 1):
+                    # If the index of the entity is in representative_entities, then add it to
+                    # indexes_of_entities_already_in_representative_entities
+                    for j in range(len(old_cluster_representatives_in_current_tile)):
+                        if (temp_cluster_representatives_entities[k]["representative"]["index"] ==
+                                representative_entities[j]["representative"]["index"]):
+                            representative_entities[j]["number_of_entities"] = temp_cluster_representatives_entities[k][
+                                "number_of_entities"]
+                            indexes_of_entities_already_in_representative_entities.append(j)
+                            break
+
+            if len(indexes_of_entities_already_in_representative_entities) == 0:
+                # The current block does not contain any entity that is in old_cluster_representatives_in_current_tile.
+                representative_entities.append(
+                    {
+                        "representative": temp_cluster_representatives_entities[i]["representative"],
+                        "number_of_entities": sum([cluster["number_of_entities"] + 1
+                                                   for cluster in
+                                                   temp_cluster_representatives_entities[i:i + window - 1]]) - 1
+                    }
+                )
+            else:
+                # Split block into one block for each element in indexes_of_entities_already_in_representative_entities
+                split_block(i, window, representative_entities, temp_cluster_representatives_entities,
+                            indexes_of_entities_already_in_representative_entities)
+
+            # Update i
+            i += window - 1
+            # Reset window
+            window = 1
+
+    return representative_entities
+
+
 def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name, repopulate, save_images):
     # Take entire embedding space for zoom level 0, then divide each dimension into 2^zoom_levels intervals.
     # Each interval is a tile. For each tile, find clusters and cluster representatives. Keep track of
@@ -288,7 +391,27 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                 tile_x_index = int(tile_x / 2 ** (max_zoom_level - zoom_level))
                 tile_y_index = int(tile_y / 2 ** (max_zoom_level - zoom_level))
 
-                # If the number of entities in the tile is less than MAX_IMAGES_PER_TILE, skip the tile.
+                # Get cluster representatives that where selected in the previous zoom level and are in the current tile
+                # First, get index of tile from the previous zoom level which contains the current tile
+                previous_zoom_level_tile_x_index = int(tile_x_index / 2)
+                previous_zoom_level_tile_y_index = int(tile_y_index / 2)
+                # Get cluster representatives from previous zoom level
+                old_cluster_representatives_in_current_tile = []
+                if zoom_level != 0:
+                    previous_zoom_level_cluster_representatives = [representative["representative"] for representative
+                                                                   in
+                                                                   zoom_levels[zoom_level - 1][
+                                                                       (previous_zoom_level_tile_x_index,
+                                                                        previous_zoom_level_tile_y_index)][
+                                                                       "cluster_representatives"]]
+                    # Get cluster representatives that are in the current tile.
+                    # old_cluster_representatives_in_current_tile must be cluster representatives in the current tile.
+                    for representative in previous_zoom_level_cluster_representatives:
+                        if (x_min <= representative["low_dimensional_embedding_x"] <= x_max
+                                and y_min <= representative["low_dimensional_embedding_y"] <= y_max):
+                            old_cluster_representatives_in_current_tile.append(representative)
+
+                # Check if there are less than MAX_IMAGES_PER_TILE images in the tile.
                 if len(entities_in_tile) <= MAX_IMAGES_PER_TILE:
                     if zoom_level != max_zoom_level and len(entities_in_tile) > 1:
                         # Merge clusters if the embeddings of the representatives are too similar in terms of cosine
@@ -307,24 +430,15 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
 
                         # Find square blocks with True values on main diagonal of cosine_similarity_matrix
                         # and merge the clusters corresponding to the blocks
-                        i = 0
-                        window = 1
-                        representative_entities = []
-                        while i < len(entities_in_tile):
-                            if (i + window <= len(entities_in_tile) and
-                                    cosine_similarity_matrix[i:i + window, i:i + window].all()):
-                                # Update window
-                                window += 1
-                            else:
-                                # Merge clusters
-                                representative_entities.append({
-                                    "representative": entities_in_tile[i],
-                                    "number_of_entities": len(entities_in_tile[i:i + window - 1]) - 1
-                                })
-                                # Update i
-                                i += window - 1
-                                # Reset window
-                                window = 1
+                        representative_entities = merge_clusters(old_cluster_representatives_in_current_tile,
+                                                                 [
+                                                                     {
+                                                                         "representative": entity,
+                                                                         "number_of_entities": 0
+                                                                     }
+                                                                     for entity in entities_in_tile],
+                                                                 cosine_similarity_matrix)
+
                     else:
                         # Create entities list with same structure as cluster_representatives_entities
                         representative_entities = []
@@ -356,11 +470,27 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                                             for entity in entities_in_tile])
 
                     # Perform clustering
-                    kmeans = KMeans(n_clusters=NUMBER_OF_CLUSTERS, random_state=0, n_init=10, max_iter=1000)
-                    kmeans.fit(coordinates)
+                    kmeans = ModifiedKMeans(n_clusters=NUMBER_OF_CLUSTERS, random_state=0, n_init=1, max_iter=1000)
+
+                    if len(old_cluster_representatives_in_current_tile) > 0:
+                        fixed_centers = np.array([[entity["low_dimensional_embedding_x"],
+                                                   entity["low_dimensional_embedding_y"]]
+                                                  for entity in old_cluster_representatives_in_current_tile])
+                    else:
+                        fixed_centers = None
+
+                    kmeans.fit(coordinates, fixed_centers=fixed_centers)
 
                     # Get the coordinates of the cluster representatives
-                    cluster_representatives = kmeans.cluster_centers_.astype(np.float64)
+                    cluster_representatives = kmeans.cluster_centers_
+
+                    # It is worth noting that cluster_representatives contains all cluster representatives that were
+                    # selected in the previous zoom level and are in the current tile.
+                    if len(old_cluster_representatives_in_current_tile) > 0:
+                        assert (cluster_representatives[0][0] == old_cluster_representatives_in_current_tile[0][
+                            "low_dimensional_embedding_x"] and
+                                cluster_representatives[0][1] == old_cluster_representatives_in_current_tile[0][
+                                    "low_dimensional_embedding_y"])
 
                     # Find the entity closest to the centroid of each cluster
                     temp_cluster_representatives_entities = []
@@ -371,17 +501,29 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                                                                             entity["low_dimensional_embedding_y"]]]))[0]
                                                == cluster]
 
-                        # Get the entity closest to the centroid of the cluster
-                        def l2(entity):
-                            return ((entity["low_dimensional_embedding_x"]
-                                     - cluster_representatives[cluster][0]) ** 2
-                                    + (entity["low_dimensional_embedding_y"]
-                                       - cluster_representatives[cluster][1]) ** 2)
+                        if cluster < len(old_cluster_representatives_in_current_tile):
+                            # Add old cluster representative to temp_cluster_representatives_entities
+                            temp_cluster_representatives_entities.append(
+                                {
+                                    "representative": old_cluster_representatives_in_current_tile[cluster],
+                                    "number_of_entities": len(entities_in_cluster) - 1
+                                }
+                            )
 
-                        temp_cluster_representatives_entities.append({"representative": min(entities_in_cluster,
-                                                                                            key=l2),
-                                                                      "number_of_entities": len(
-                                                                          entities_in_cluster) - 1})
+                        else:
+                            # Get the entity closest to the centroid of the cluster
+                            def l2(entity):
+                                return ((entity["low_dimensional_embedding_x"]
+                                         - cluster_representatives[cluster][0]) ** 2
+                                        + (entity["low_dimensional_embedding_y"]
+                                           - cluster_representatives[cluster][1]) ** 2)
+
+                            temp_cluster_representatives_entities.append(
+                                {
+                                    "representative": min(entities_in_cluster, key=l2),
+                                    "number_of_entities": len(entities_in_cluster) - 1
+                                }
+                            )
 
                     # Merge clusters if the embeddings of the representatives are too similar in terms of cosine
                     # similarity
@@ -398,45 +540,28 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                                                 >= THRESHOLD)
 
                     # Find square blocks with True values on main diagonal of cosine_similarity_matrix
-                    # and merge the clusters corresponding to the blocks
-                    i = 0
-                    window = 1
-                    cluster_representatives_entities = []
-                    while i < NUMBER_OF_CLUSTERS:
-                        if (i + window <= NUMBER_OF_CLUSTERS and
-                                cosine_similarity_matrix[i:i + window, i:i + window].all()):
-                            # Update window
-                            window += 1
-                        else:
-                            # Merge clusters
-                            cluster_representatives_entities.append({
-                                "representative": temp_cluster_representatives_entities[i]["representative"],
-                                "number_of_entities": int(sum([cluster["number_of_entities"] + 1
-                                                               for cluster in
-                                                               temp_cluster_representatives_entities[i:i + window - 1]])
-                                                          - 1)
-                            })
-                            # Update i
-                            i += window - 1
-                            # Reset window
-                            window = 1
+                    # and merge the clusters corresponding to the blocks. Keep all entities that were in the previous
+                    # zoom level.
+                    representative_entities = merge_clusters(old_cluster_representatives_in_current_tile,
+                                                             temp_cluster_representatives_entities,
+                                                             cosine_similarity_matrix)
 
                     # Save result as images for visualization
                     if save_images:
-                        save_image(cluster_representatives_entities, dataset_collection, zoom_level, tile_x_index,
+                        save_image(representative_entities, dataset_collection, zoom_level, tile_x_index,
                                    tile_y_index, x_min, x_max, y_min, y_max)
 
-                    assert (sum([cluster["number_of_entities"] + 1 for cluster in cluster_representatives_entities])
+                    assert (sum([cluster["number_of_entities"] + 1 for cluster in representative_entities])
                             == len(entities_in_tile))
 
                     # Add width and height information to cluster_representatives_entities. Do it only if save_images
                     # is False, because otherwise the information is already there.
                     if not save_images:
-                        add_width_and_height_information(cluster_representatives_entities, dataset_collection)
+                        add_width_and_height_information(representative_entities, dataset_collection)
 
                     # Save information for tile in zoom_levels.
                     zoom_levels[zoom_level][(tile_x_index, tile_y_index)] = {
-                        "cluster_representatives": cluster_representatives_entities,
+                        "cluster_representatives": representative_entities,
                         "tile_coordinate_range": {"x_min": x_min, "x_max": x_max, "y_min": y_min, "y_max": y_max}
                     }
 
