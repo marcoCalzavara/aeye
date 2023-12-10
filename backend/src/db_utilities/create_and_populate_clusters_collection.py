@@ -294,7 +294,8 @@ def merge_clusters(old_cluster_representatives_in_current_tile, temp_cluster_rep
     representative_entities = [
         {
             "representative": old_cluster_representatives_in_current_tile[k],
-            "number_of_entities": 0
+            "number_of_entities": 0,
+            "is_in_previous_zoom_level": True
         }
         for k in range(len(old_cluster_representatives_in_current_tile))
     ]
@@ -330,7 +331,8 @@ def merge_clusters(old_cluster_representatives_in_current_tile, temp_cluster_rep
                         "representative": temp_cluster_representatives_entities[i]["representative"],
                         "number_of_entities": sum([cluster["number_of_entities"] + 1
                                                    for cluster in
-                                                   temp_cluster_representatives_entities[i:i + window - 1]]) - 1
+                                                   temp_cluster_representatives_entities[i:i + window - 1]]) - 1,
+                        "is_in_previous_zoom_level": False
                     }
                 )
             else:
@@ -506,7 +508,8 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                             temp_cluster_representatives_entities.append(
                                 {
                                     "representative": old_cluster_representatives_in_current_tile[cluster],
-                                    "number_of_entities": len(entities_in_cluster) - 1
+                                    "number_of_entities": len(entities_in_cluster) - 1,
+                                    "is_in_previous_zoom_level": True
                                 }
                             )
 
@@ -521,7 +524,8 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                             temp_cluster_representatives_entities.append(
                                 {
                                     "representative": min(entities_in_cluster, key=l2),
-                                    "number_of_entities": len(entities_in_cluster) - 1
+                                    "number_of_entities": len(entities_in_cluster) - 1,
+                                    "is_in_previous_zoom_level": False
                                 }
                             )
 

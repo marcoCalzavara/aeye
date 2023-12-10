@@ -1,93 +1,101 @@
 {
-    "/api/collection-names": {
-        "url_example": "/api/collection-names",
-        "response_example": {
-            "collections": [
-                "best_artworks"
-            ]
-        }
-    },
-    "/api/image-text": {
-        "url_example": "/api/image-text?collection=best_artworks&text=A%20picture%20of%20a%20dog",
-        "response_example": {
-            "path": "2876-Henri_de_Toulouse-Lautrec.jpg"
-        }
-    },
-    "/api/grid": {
-        "url_example": "/api/tile-data?zoom_level=5&tile_x=12&tile_y=7&collection=best_artworks_zoom_levels_grid",
-        "response_example": {
-            "zoom_plus_tile": [
-                5.0,
-                12.0,
-                7.0
-            ],
-            "images": {
-                "indexes": [
-                    6363,
-                    3299
-                ],
-                "x_cell": [
-                    3,
-                    3
-                ],
-                "y_cell": [
-                    0,
-                    8
-                ]
-            }
-        }
-    },
-    "/api/clusters": {
-        "url_example": "/api/clusters?zoom_level=5&tile_x=13&tile_y=7&collection=best_artworks_zoom_levels_clusters",
-        "response_example": {
-            "index": 50,
-            "zoom_plus_tile": [
-                3.0,
-                3.0,
-                5.0
-            ],
-            "clusters_representatives": {
-                "entities": [
-                    "{\"representative\": {\"index\": 1959, \"author\": \"Edvard Munch\", \"path\": \"1959-Edvard_Munch.jpg\", \"low_dimensional_embedding_x\": 5.615362644195557, \"low_dimensional_embedding_y\": 9.445841789245605, \"width\": 800, \"height\": 492}, \"number_of_entities\": 7}",
-                    "{\"representative\": {\"index\": 5491, \"author\": \"Pierre\", \"path\": \"5491-Pierre-Auguste_Renoir.jpg\", \"low_dimensional_embedding_x\": 5.129238128662109, \"low_dimensional_embedding_y\": 8.843449592590332, \"width\": 868, \"height\": 1049}, \"number_of_entities\": 11}",
-                    "{\"representative\": {\"index\": 1562, \"author\": \"Edgar Degas\", \"path\": \"1562-Edgar_Degas.jpg\", \"low_dimensional_embedding_x\": 5.608336925506592, \"low_dimensional_embedding_y\": 8.943900108337402, \"width\": 1066, \"height\": 1048}, \"number_of_entities\": 77}",
-                    "{\"representative\": {\"index\": 2800, \"author\": \"Gustav Klimt\", \"path\": \"2800-Gustav_Klimt.jpg\", \"low_dimensional_embedding_x\": 5.124948978424072, \"low_dimensional_embedding_y\": 8.566717147827148, \"width\": 864, \"height\": 1216}, \"number_of_entities\": 15}",
-                    "{\"representative\": {\"index\": 2784, \"author\": \"Gustav Klimt\", \"path\": \"2784-Gustav_Klimt.jpg\", \"low_dimensional_embedding_x\": 5.993173122406006, \"low_dimensional_embedding_y\": 9.364704132080078, \"width\": 800, \"height\": 699}, \"number_of_entities\": 8}",
-                    "{\"representative\": {\"index\": 4865, \"author\": \"Paul Gauguin\", \"path\": \"4865-Paul_Gauguin.jpg\", \"low_dimensional_embedding_x\": 6.13788366317749, \"low_dimensional_embedding_y\": 8.942566871643066, \"width\": 821, \"height\": 1024}, \"number_of_entities\": 4}",
-                    "{\"representative\": {\"index\": 2950, \"author\": \"Henri de Toulouse\", \"path\": \"2950-Henri_de_Toulouse-Lautrec.jpg\", \"low_dimensional_embedding_x\": 5.2001471519470215, \"low_dimensional_embedding_y\": 9.22363567352295, \"width\": 696, \"height\": 524}, \"number_of_entities\": 14}",
-                    "{\"representative\": {\"index\": 7617, \"author\": \"Vincent van Gogh\", \"path\": \"7617-Vincent_van_Gogh.jpg\", \"low_dimensional_embedding_x\": 5.4328484535217285, \"low_dimensional_embedding_y\": 8.696889877319336, \"width\": 623, \"height\": 1024}, \"number_of_entities\": 2}",
-                    "{\"representative\": {\"index\": 1603, \"author\": \"Edgar Degas\", \"path\": \"1603-Edgar_Degas.jpg\", \"low_dimensional_embedding_x\": 5.540654182434082, \"low_dimensional_embedding_y\": 9.261733055114746, \"width\": 1052, \"height\": 560}, \"number_of_entities\": 18}",
-                    "{\"representative\": {\"index\": 1811, \"author\": \"Edgar Degas\", \"path\": \"1811-Edgar_Degas.jpg\", \"low_dimensional_embedding_x\": 5.52589750289917, \"low_dimensional_embedding_y\": 9.055535316467285, \"width\": 669, \"height\": 1024}, \"number_of_entities\": 20}",
-                    "{\"representative\": {\"index\": 1243, \"author\": \"Edgar Degas\", \"path\": \"1243-Edgar_Degas.jpg\", \"low_dimensional_embedding_x\": 5.863893985748291, \"low_dimensional_embedding_y\": 9.234400749206543, \"width\": 1053, \"height\": 718}, \"number_of_entities\": 6}",
-                    "{\"representative\": {\"index\": 7555, \"author\": \"Vincent van Gogh\", \"path\": \"7555-Vincent_van_Gogh.jpg\", \"low_dimensional_embedding_x\": 5.019519329071045, \"low_dimensional_embedding_y\": 9.38194465637207, \"width\": 658, \"height\": 1024}, \"number_of_entities\": 7}",
-                    "{\"representative\": {\"index\": 4515, \"author\": \"Pablo Picasso\", \"path\": \"4515-Pablo_Picasso.jpg\", \"low_dimensional_embedding_x\": 5.337195873260498, \"low_dimensional_embedding_y\": 9.36196231842041, \"width\": 1000, \"height\": 781}, \"number_of_entities\": 22}",
-                    "{\"representative\": {\"index\": 5549, \"author\": \"Pierre\", \"path\": \"5549-Pierre-Auguste_Renoir.jpg\", \"low_dimensional_embedding_x\": 5.071287631988525, \"low_dimensional_embedding_y\": 9.00537395477295, \"width\": 1547, \"height\": 2000}, \"number_of_entities\": 5}",
-                    "{\"representative\": {\"index\": 5292, \"author\": \"Pierre\", \"path\": \"5292-Pierre-Auguste_Renoir.jpg\", \"low_dimensional_embedding_x\": 5.305675983428955, \"low_dimensional_embedding_y\": 8.866462707519531, \"width\": 1223, \"height\": 1022}, \"number_of_entities\": 21}",
-                    "{\"representative\": {\"index\": 1371, \"author\": \"Edgar Degas\", \"path\": \"1371-Edgar_Degas.jpg\", \"low_dimensional_embedding_x\": 5.402594089508057, \"low_dimensional_embedding_y\": 8.98167896270752, \"width\": 962, \"height\": 731}, \"number_of_entities\": 13}",
-                    "{\"representative\": {\"index\": 983, \"author\": \"Diego Rivera\", \"path\": \"983-Diego_Rivera.jpg\", \"low_dimensional_embedding_x\": 5.657083988189697, \"low_dimensional_embedding_y\": 8.790716171264648, \"width\": 800, \"height\": 605}, \"number_of_entities\": 4}",
-                    "{\"representative\": {\"index\": 4795, \"author\": \"Paul Gauguin\", \"path\": \"4795-Paul_Gauguin.jpg\", \"low_dimensional_embedding_x\": 5.9879536628723145, \"low_dimensional_embedding_y\": 9.142091751098633, \"width\": 847, \"height\": 1024}, \"number_of_entities\": 5}",
-                    "{\"representative\": {\"index\": 274, \"author\": \"Amedeo Modigliani\", \"path\": \"274-Amedeo_Modigliani.jpg\", \"low_dimensional_embedding_x\": 5.814750671386719, \"low_dimensional_embedding_y\": 9.486464500427246, \"width\": 638, \"height\": 807}, \"number_of_entities\": 4}"
-                ]
-            },
-            "tile_coordinate_range": {
-                "x_min": 5.018047571182251,
-                "x_max": 6.19255530834198,
-                "y_min": 8.433067560195923,
-                "y_max": 9.504261016845703
-            }
-        }
-    },
-    "/api/images": {
-        "url_example": "/api/images?indexes=1&indexes=2&collection=best_artworks",
-        "response_example": [
-            {
-                "path": "1-Alfred_Sisley.jpg",
-                "index": 1
-            },
-            {
-                "path": "2-Alfred_Sisley.jpg",
-                "index": 2
-            }
-        ]
+  "/api/collection-names": {
+    "url_example": "/api/collection-names",
+    "response_example": {
+      "collections": [
+        "best_artworks"
+      ]
     }
+  },
+  "/api/image-text": {
+    "url_example": "/api/image-text?collection=best_artworks&text=A%20picture%20of%20a%20dog",
+    "response_example": {
+      "path": "2876-Henri_de_Toulouse-Lautrec.jpg"
+    }
+  },
+  "/api/grid": {
+    "url_example": "/api/tile-data?zoom_level=5&tile_x=12&tile_y=7&collection=best_artworks_zoom_levels_grid",
+    "response_example": {
+      "zoom_plus_tile": [
+        5.0,
+        12.0,
+        7.0
+      ],
+      "images": {
+        "indexes": [
+          6363,
+          3299
+        ],
+        "x_cell": [
+          3,
+          3
+        ],
+        "y_cell": [
+          0,
+          8
+        ]
+      }
+    }
+  },
+  "/api/clusters": {
+    "url_example": "/api/clusters?zoom_level=5&tile_x=13&tile_y=7&collection=best_artworks_zoom_levels_clusters",
+    "response_example": {
+      "tile_coordinate_range": {
+        "x_min": 6.19255530834198,
+        "x_max": 8.541570782661438,
+        "y_min": 9.504261016845703,
+        "y_max": 11.646647930145264
+      },
+      "index": 16,
+      "zoom_plus_tile": [
+        2.0,
+        2.0,
+        3.0
+      ],
+      "clusters_representatives": {
+        "entities": [
+          "{\"representative\": {\"author\": \"Paul Klee\", \"path\": \"4966-Paul_Klee.jpg\", \"low_dimensional_embedding_x\": 8.322982788085938, \"low_dimensional_embedding_y\": 11.148053169250488, \"index\": 4966, \"width\": 800, \"height\": 932}, \"number_of_entities\": 64, \"is_in_previous_zoom_level\": true}",
+          "{\"representative\": {\"author\": \"Kazimir Malevich\", \"path\": \"3573-Kazimir_Malevich.jpg\", \"low_dimensional_embedding_x\": 6.643280982971191, \"low_dimensional_embedding_y\": 10.719618797302246, \"index\": 3573, \"width\": 772, \"height\": 1000}, \"number_of_entities\": 28, \"is_in_previous_zoom_level\": true}",
+          "{\"representative\": {\"author\": \"Vasiliy Kandinskiy\", \"path\": \"6999-Vasiliy_Kandinskiy.jpg\", \"low_dimensional_embedding_x\": 7.587277889251709, \"low_dimensional_embedding_y\": 11.273571014404297, \"index\": 6999, \"width\": 757, \"height\": 650}, \"number_of_entities\": 46, \"is_in_previous_zoom_level\": true}",
+          "{\"representative\": {\"author\": \"Andy Warhol\", \"path\": \"626-Andy_Warhol.jpg\", \"low_dimensional_embedding_x\": 7.849257469177246, \"low_dimensional_embedding_y\": 10.162381172180176, \"index\": 626, \"width\": 477, \"height\": 480}, \"number_of_entities\": 29, \"is_in_previous_zoom_level\": true}",
+          "{\"representative\": {\"author\": \"Kazimir Malevich\", \"path\": \"3565-Kazimir_Malevich.jpg\", \"low_dimensional_embedding_x\": 6.4776153564453125, \"low_dimensional_embedding_y\": 10.04422664642334, \"index\": 3565, \"width\": 823, \"height\": 1000}, \"number_of_entities\": 15, \"is_in_previous_zoom_level\": true}",
+          "{\"representative\": {\"author\": \"Andy Warhol\", \"path\": \"612-Andy_Warhol.jpg\", \"low_dimensional_embedding_x\": 8.179347038269043, \"low_dimensional_embedding_y\": 10.205183982849121, \"index\": 612, \"width\": 420, \"height\": 434}, \"number_of_entities\": 36, \"is_in_previous_zoom_level\": true}",
+          "{\"representative\": {\"author\": \"Marc Chagall\", \"path\": \"4053-Marc_Chagall.jpg\", \"low_dimensional_embedding_x\": 7.004617691040039, \"low_dimensional_embedding_y\": 10.108259201049805, \"index\": 4053, \"width\": 577, \"height\": 768}, \"number_of_entities\": 33, \"is_in_previous_zoom_level\": true}",
+          "{\"representative\": {\"author\": \"Paul Klee\", \"path\": \"5029-Paul_Klee.jpg\", \"low_dimensional_embedding_x\": 7.252322673797607, \"low_dimensional_embedding_y\": 10.808267593383789, \"index\": 5029, \"width\": 800, \"height\": 1022}, \"number_of_entities\": 27, \"is_in_previous_zoom_level\": true}",
+          "{\"representative\": {\"author\": \"Pablo Picasso\", \"path\": \"4218-Pablo_Picasso.jpg\", \"low_dimensional_embedding_x\": 6.769758224487305, \"low_dimensional_embedding_y\": 11.111062049865723, \"index\": 4218, \"width\": 738, \"height\": 1107}, \"number_of_entities\": 74, \"is_in_previous_zoom_level\": true}",
+          "{\"representative\": {\"author\": \"Joan Miro\", \"path\": \"3465-Joan_Miro.jpg\", \"low_dimensional_embedding_x\": 7.998959541320801, \"low_dimensional_embedding_y\": 10.81875228881836, \"index\": 3465, \"width\": 600, \"height\": 402}, \"number_of_entities\": 16, \"is_in_previous_zoom_level\": true}",
+          "{\"representative\": {\"author\": \"Rene Magritte\", \"path\": \"6271-Rene_Magritte.jpg\", \"low_dimensional_embedding_x\": 7.426227569580078, \"low_dimensional_embedding_y\": 9.745226860046387, \"index\": 6271, \"width\": 518, \"height\": 807}, \"number_of_entities\": 16, \"is_in_previous_zoom_level\": false}",
+          "{\"representative\": {\"author\": \"Marc Chagall\", \"path\": \"4042-Marc_Chagall.jpg\", \"low_dimensional_embedding_x\": 6.7913641929626465, \"low_dimensional_embedding_y\": 9.629499435424805, \"index\": 4042, \"width\": 561, \"height\": 768}, \"number_of_entities\": 21, \"is_in_previous_zoom_level\": false}",
+          "{\"representative\": {\"author\": \"Pablo Picasso\", \"path\": \"4337-Pablo_Picasso.jpg\", \"low_dimensional_embedding_x\": 6.313107013702393, \"low_dimensional_embedding_y\": 9.673227310180664, \"index\": 4337, \"width\": 782, \"height\": 1000}, \"number_of_entities\": 14, \"is_in_previous_zoom_level\": false}",
+          "{\"representative\": {\"author\": \"Pablo Picasso\", \"path\": \"4192-Pablo_Picasso.jpg\", \"low_dimensional_embedding_x\": 6.452337741851807, \"low_dimensional_embedding_y\": 11.012544631958008, \"index\": 4192, \"width\": 552, \"height\": 699}, \"number_of_entities\": 47, \"is_in_previous_zoom_level\": false}",
+          "{\"representative\": {\"author\": \"Joan Miro\", \"path\": \"3468-Joan_Miro.jpg\", \"low_dimensional_embedding_x\": 7.613461494445801, \"low_dimensional_embedding_y\": 11.469310760498047, \"index\": 3468, \"width\": 705, \"height\": 1417}, \"number_of_entities\": 84, \"is_in_previous_zoom_level\": false}",
+          "{\"representative\": {\"author\": \"Andy Warhol\", \"path\": \"609-Andy_Warhol.jpg\", \"low_dimensional_embedding_x\": 7.4209442138671875, \"low_dimensional_embedding_y\": 10.379823684692383, \"index\": 609, \"width\": 394, \"height\": 480}, \"number_of_entities\": 15, \"is_in_previous_zoom_level\": false}",
+          "{\"representative\": {\"author\": \"Joan Miro\", \"path\": \"3546-Joan_Miro.jpg\", \"low_dimensional_embedding_x\": 7.212695121765137, \"low_dimensional_embedding_y\": 11.206198692321777, \"index\": 3546, \"width\": 376, \"height\": 480}, \"number_of_entities\": 82, \"is_in_previous_zoom_level\": false}",
+          "{\"representative\": {\"author\": \"Marc Chagall\", \"path\": \"3928-Marc_Chagall.jpg\", \"low_dimensional_embedding_x\": 6.986388206481934, \"low_dimensional_embedding_y\": 10.49290943145752, \"index\": 3928, \"width\": 576, \"height\": 768}, \"number_of_entities\": 18, \"is_in_previous_zoom_level\": false}",
+          "{\"representative\": {\"author\": \"Andy Warhol\", \"path\": \"676-Andy_Warhol.jpg\", \"low_dimensional_embedding_x\": 7.1467413902282715, \"low_dimensional_embedding_y\": 9.831883430480957, \"index\": 676, \"width\": 508, \"height\": 733}, \"number_of_entities\": 16, \"is_in_previous_zoom_level\": false}",
+          "{\"representative\": {\"author\": \"Salvador Dali\", \"path\": \"6450-Salvador_Dali.jpg\", \"low_dimensional_embedding_x\": 7.835739612579346, \"low_dimensional_embedding_y\": 9.81396484375, \"index\": 6450, \"width\": 972, \"height\": 800}, \"number_of_entities\": 9, \"is_in_previous_zoom_level\": false}",
+          "{\"representative\": {\"author\": \"Joan Miro\", \"path\": \"3459-Joan_Miro.jpg\", \"low_dimensional_embedding_x\": 7.658123016357422, \"low_dimensional_embedding_y\": 10.982369422912598, \"index\": 3459, \"width\": 520, \"height\": 446}, \"number_of_entities\": 54, \"is_in_previous_zoom_level\": false}",
+          "{\"representative\": {\"author\": \"Andy Warhol\", \"path\": \"599-Andy_Warhol.jpg\", \"low_dimensional_embedding_x\": 8.327269554138184, \"low_dimensional_embedding_y\": 10.072749137878418, \"index\": 599, \"width\": 340, \"height\": 525}, \"number_of_entities\": 11, \"is_in_previous_zoom_level\": false}",
+          "{\"representative\": {\"author\": \"Marc Chagall\", \"path\": \"3939-Marc_Chagall.jpg\", \"low_dimensional_embedding_x\": 6.743211269378662, \"low_dimensional_embedding_y\": 10.344934463500977, \"index\": 3939, \"width\": 576, \"height\": 768}, \"number_of_entities\": 53, \"is_in_previous_zoom_level\": false}",
+          "{\"representative\": {\"author\": \"Paul Klee\", \"path\": \"5095-Paul_Klee.jpg\", \"low_dimensional_embedding_x\": 8.00063419342041, \"low_dimensional_embedding_y\": 11.323454856872559, \"index\": 5095, \"width\": 800, \"height\": 584}, \"number_of_entities\": 89, \"is_in_previous_zoom_level\": false}",
+          "{\"representative\": {\"author\": \"Pablo Picasso\", \"path\": \"4259-Pablo_Picasso.jpg\", \"low_dimensional_embedding_x\": 7.862504959106445, \"low_dimensional_embedding_y\": 10.613825798034668, \"index\": 4259, \"width\": 754, \"height\": 1000}, \"number_of_entities\": 16, \"is_in_previous_zoom_level\": false}",
+          "{\"representative\": {\"author\": \"Andy Warhol\", \"path\": \"624-Andy_Warhol.jpg\", \"low_dimensional_embedding_x\": 7.6377997398376465, \"low_dimensional_embedding_y\": 10.108826637268066, \"index\": 624, \"width\": 208, \"height\": 300}, \"number_of_entities\": 62, \"is_in_previous_zoom_level\": false}",
+          "{\"representative\": {\"author\": \"Salvador Dali\", \"path\": \"6453-Salvador_Dali.jpg\", \"low_dimensional_embedding_x\": 6.785452842712402, \"low_dimensional_embedding_y\": 9.866985321044922, \"index\": 6453, \"width\": 597, \"height\": 800}, \"number_of_entities\": 20, \"is_in_previous_zoom_level\": false}"
+        ]
+      }
+    }
+  },
+  "/api/images": {
+    "url_example": "/api/images?indexes=1&indexes=2&collection=best_artworks",
+    "response_example": [
+      {
+        "path": "1-Alfred_Sisley.jpg",
+        "index": 1
+      },
+      {
+        "path": "2-Alfred_Sisley.jpg",
+        "index": 2
+      }
+    ]
+  }
 }
