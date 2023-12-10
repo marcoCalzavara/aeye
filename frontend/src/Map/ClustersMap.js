@@ -126,6 +126,7 @@ const ClustersMap = (props) => {
 
 
     const setSpriteOnPointerDown = (sprite, path, width, height, num_of_entities) => {
+        // TODO modify this
         // Remove only the pointerdown event handler
         sprite.removeAllListeners('pointerdown');
 
@@ -175,8 +176,8 @@ const ClustersMap = (props) => {
             // Make fontsize depend on viewportWidth.current and viewportHeight.current
             const fontsize = Math.ceil((14 * viewportWidth.current) / 1280);
             const text = new PIXI.Text(str,{
-                fontFamily: 'Arial', fontSize: fontsize, fill: 0xffffff, align: 'center',
-                wordWrap: true, wordWrapWidth: viewportWidth.current / 6 - 20, _align: "left"
+                fontFamily: 'Arial', fontSize: fontsize, fill: 0xffffff, align: 'left',
+                wordWrap: true, wordWrapWidth: viewportWidth.current / 6 - 20
             });
             text.x = 20;
             text.y = 20;
@@ -527,6 +528,38 @@ const ClustersMap = (props) => {
         }
     }
 
+    const testContains = (sprite, mouse_position) => {
+        return mouse_position.x >= sprite.x && mouse_position.x <= sprite.x + sprite.width
+            && mouse_position.y >= sprite.y && mouse_position.y <= sprite.y + sprite.height;
+    }
+
+    // Method for finding which image is under the mouse
+    const getGlobalCoordinatesOfSpriteUnderMouse = (mouse_position) => {
+        let coordinates_to_return = null;
+        let z_index = -100;
+        // Iterate over all sprites in the container
+        for (let index of sprites.current.keys()) {
+            // Check if mouse is over the sprite
+            if (testContains(sprites.current.get(index), mouse_position)) {
+                // Mouse is over the sprite
+                // If the z index of the sprite is higher than the z index of the previous sprite, then update the sprite
+                // and the z index
+                if (sprites.current.get(index).zIndex > z_index) {
+                    z_index = sprites.current.get(index).zIndex;
+                    // Get global coordinates of sprite from spritesGlobalInfo
+                    const info = spritesGlobalInfo.current.get(index);
+                    coordinates_to_return = {
+                        x: info.x,
+                        y: info.y,
+                        width: info.width,
+                        height: info.height
+                    }
+                }
+            }
+        }
+        return coordinates_to_return;
+    };
+
     // Create handler for mouse wheel. We change the zoom level only if the user scrolls until a certain value of change in
     // depth is reached. This is to avoid changing the zoom level too often. We use a transition which depends on the percentage
     // of the change in depth in order to make the transition smoother. When the new zoom level is reached, we update
@@ -550,6 +583,22 @@ const ClustersMap = (props) => {
         if (Math.abs(depth.current) < 1) {
             // TODO - implement transition
         } else {
+            // Get mouse position with respect to container
+            const position = event.data.getLocalPosition(container.current);
+            // Get sprite under mouse
+            const global_coordinates_sprite_under_mouse = getGlobalCoordinatesOfSpriteUnderMouse(position);
+
+            // Fix zoom on top left corner of the sprite under the mouse
+            let global_mouse_position;
+            if (global_coordinates_sprite_under_mouse == null)
+                global_mouse_position = mapStageCoordinatesToGlobalCoordinates(position.x, position.y);
+            else {
+                global_mouse_position = {
+                    x: global_coordinates_sprite_under_mouse.x,
+                    y: global_coordinates_sprite_under_mouse.y
+                }
+            }
+
             // Invalidate everything when changing zoom level
             for (let tile of artworksInTiles.current.keys()) {
                 for (let index of artworksInTiles.current.get(tile)) {
@@ -569,10 +618,10 @@ const ClustersMap = (props) => {
                 // Delete tile from artworksInTiles
                 artworksInTiles.current.delete(tile);
             }
+
             // Change zoom level
             zoomLevel.current += Math.sign(depth.current);
-            // Get global coordinates of the mouse
-            const global_mouse_position = mapStageCoordinatesToGlobalCoordinates(event.clientX, event.clientY);
+
             // Get translation of the mouse position from the upper left corner of the stage in global coordinates
             const translation_x = global_mouse_position.x - effectivePosition.current.x
             const translation_y = global_mouse_position.y - effectivePosition.current.y;
