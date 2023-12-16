@@ -33,7 +33,10 @@ def test_get_image_from_text():
     text = "A painting of a dog."
     response = client.get("/api/image-text", params={"text": text, "collection": "best_artworks"})
     assert response.status_code == 200
-    assert response.json() == {"path": "2881-Henri_de_Toulouse-Lautrec.jpg"}
+    assert response.json().keys() == {"index", "author", "path", "low_dimensional_embedding_x",
+                                      "low_dimensional_embedding_y", "width", "height"}
+    assert response.json()["path"] == "2881-Henri_de_Toulouse-Lautrec.jpg"
+    assert response.json()["author"] == "Henri de Toulouse"
 
 
 def test_get_grid_data():
@@ -120,6 +123,23 @@ def test_get_clusters_data():
                                                    "tile_x": 1,
                                                    "tile_y": 1,
                                                    "collection": "best_artworks_zoom_levels_clusters"})
+    assert response.status_code == 404
+
+
+def test_get_tile_from_image():
+    response = client.get("/api/image-to-tile", params={"index": 1,
+                                                        "collection": "best_artworks_image_to_tile"})
+    assert response.status_code == 200
+    assert response.json().keys() == {"index", ZOOM_LEVEL_VECTOR_FIELD_NAME}
+    assert response.json()[ZOOM_LEVEL_VECTOR_FIELD_NAME] == [7, 112, 22]
+
+    # Make second request to test that status code is 404 when collection is not found
+    response = client.get("/api/image-to-tile", params={"index": 2881,
+                                                        "collection": "test_collection"})
+    assert response.status_code == 404
+    # Check that the server returns 404 when the tile data is not found
+    response = client.get("/api/image-to-tile", params={"index": 8000,
+                                                        "collection": "best_artworks_image_to_tile"})
     assert response.status_code == 404
 
 

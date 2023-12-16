@@ -207,3 +207,44 @@ def clusters_collection(collection_name):
     )
 
     return collection
+
+
+def image_to_tile_collection(collection_name: str):
+    # Create fields for collection
+    index = FieldSchema(
+        name="index",
+        dtype=DataType.INT64,
+        is_primary=True
+    )
+    zoom_level = FieldSchema(
+        name=ZOOM_LEVEL_VECTOR_FIELD_NAME,
+        dtype=DataType.FLOAT_VECTOR,
+        dim=3
+    )
+
+    # Create collection schema
+    schema = CollectionSchema(
+        fields=[index, zoom_level],
+        description="image_to_tile",
+        enable_dynamic_field=True
+    )
+
+    # Create collection
+    collection = Collection(
+        name=collection_name,
+        schema=schema,
+        shards_num=1  # type: ignore
+    )
+
+    index_params = {
+        "metric_type": L2_METRIC,
+        "index_type": INDEX_TYPE,
+        "params": {}
+    }
+
+    collection.create_index(
+        field_name=ZOOM_LEVEL_VECTOR_FIELD_NAME,
+        index_params=index_params
+    )
+
+    return collection

@@ -38,13 +38,13 @@
     height: 37px;
 }
 
-@media (min-width: 100px) {
+@media (max-width: 100px) {
     .w-searchbar {
         width: 50%;
     }
 }
 
-@media (min-width: 768px) {
+@media (max-width: 768px) {
     .w-searchbar {
         width: 400px;
     }

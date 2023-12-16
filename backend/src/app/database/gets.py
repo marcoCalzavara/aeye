@@ -7,7 +7,7 @@ from ...CONSTANTS import *
 from ...db_utilities.collections import EMBEDDING_VECTOR_FIELD_NAME, ZOOM_LEVEL_VECTOR_FIELD_NAME
 
 
-def get_image_embedding_from_text_embedding(collection: Collection, text_embeddings: torch.Tensor) -> str:
+def get_image_info_from_text_embedding(collection: Collection, text_embeddings: torch.Tensor) -> str:
     """
     Get the image embedding from the collection for a given text.
     @param collection:
@@ -25,10 +25,11 @@ def get_image_embedding_from_text_embedding(collection: Collection, text_embeddi
         anns_field=EMBEDDING_VECTOR_FIELD_NAME,
         param=search_params,
         limit=1,
-        output_fields=["path"]
+        output_fields=["index", "author", "path", "width", "height",
+                       "low_dimensional_embedding_x", "low_dimensional_embedding_y"]
     )
     # Return image path
-    return results[0][0].entity.get("path")
+    return results[0][0].to_dict()["entity"]
 
 
 def get_grid_data(zoom_level: int, tile_x: int, tile_y: int, collection: Collection) -> dict:
@@ -144,6 +145,31 @@ def get_clusters_data(zoom_level: int, tile_x: int, tile_y: int, collection: Col
     # }
 
     return results[0][0].to_dict()
+
+
+def get_tile_from_image(index: int, collection: Collection) -> dict:
+    """
+    Get the tile data from the collection for a given image.
+    @param index:
+    @param collection:
+    @return:
+    """
+    # Search image
+    results = collection.query(
+        expr=f"index in [{index}]",
+        output_fields=["*"]
+    )
+    # The returned data point has the following format:
+    # {
+    #     "index": image_index,
+    #     "zoom_plus_tile": [zoom_level, tile_x, tile_y]
+    # }
+    # Transform results[0][ZOOM_LEVEL_VECTOR_FIELD_NAME] to a list of integers
+    if len(results) > 0:
+        results[0][ZOOM_LEVEL_VECTOR_FIELD_NAME] = [int(x) for x in results[0][ZOOM_LEVEL_VECTOR_FIELD_NAME]]
+        return results[0]
+    else:
+        return {}
 
 
 def get_images_from_indexes(indexes: List[int], collection: Collection) -> dict:

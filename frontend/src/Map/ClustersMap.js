@@ -5,10 +5,11 @@ import {DATASET} from "./Cache";
 
 
 const maxZoomLevel = 7;
+const DURATION = 4; // seconds
 
 
-export function fetchClusterData(zoom_level, image_x, image_y, host = "") {
-    const url = `${host}/api/clusters?zoom_level=${zoom_level}&tile_x=${image_x}&tile_y=${image_y}&collection=${DATASET}_zoom_levels_clusters`;
+export function fetchClusterData(zoom_level, tile_x, tile_y, host = "") {
+    const url = `${host}/api/clusters?zoom_level=${zoom_level}&tile_x=${tile_x}&tile_y=${tile_y}&collection=${DATASET}_zoom_levels_clusters`;
     return fetch(url,
         {
             method: 'GET',
@@ -32,6 +33,40 @@ export function fetchClusterData(zoom_level, image_x, image_y, host = "") {
             // Handle any errors that occur during the fetch operation
             console.error('Error:', error);
         });
+}
+
+function makeSpritePulse(sprite) {
+    // Make the image pulse for 4 seconds
+    const ticker = new PIXI.Ticker();
+    const originalWidth = sprite.width;
+    const originalHeight = sprite.height;
+    const originalX = sprite.x;
+    const originalY = sprite.y;
+    const startTime = performance.now();
+
+    ticker.add(() => {
+        const now = performance.now();
+        const elapsed = (now - startTime) / 1000; // convert to seconds
+
+        if (elapsed > DURATION) {
+            // Stop the ticker after 5 seconds
+            ticker.stop();
+        } else {
+            // Calculate scale factor using a sine function
+            const scaleFactor = 1 + Math.abs(Math.sin(elapsed / (0.2 * Math.PI)));
+
+            // Calculate the difference in size before and after scaling
+            const diffWidth = originalWidth * scaleFactor - originalWidth;
+            const diffHeight = originalHeight * scaleFactor - originalHeight;
+            // Adjust the x and y coordinates of the sprite by half of the difference in size
+            sprite.x = originalX - diffWidth / 2;
+            sprite.y = originalY - diffHeight / 2;
+            // Increase size of sprite from the center
+            sprite.width = originalWidth * scaleFactor;
+            sprite.height = originalHeight * scaleFactor;
+        }
+    });
+    ticker.start();
 }
 
 
@@ -104,6 +139,12 @@ const ClustersMap = (props) => {
     // Create container for the stage
     const container = useRef(null);
 
+    // Define search data
+    const searchData = useRef(props.searchData);
+    // Define constant for transition steps and depth steps
+    const transitionSteps = 500;
+    const depthStep = 0.015;
+
     const mapGlobalCoordinatesToStageCoordinates = (global_x, global_y) => {
         // Map global coordinates to stage coordinates
         const stage_x = ((global_x - effectivePosition.current.x) * (viewportWidth.current - maxWidth.current)) / effectiveWidth.current;
@@ -130,7 +171,7 @@ const ClustersMap = (props) => {
         // Remove only the pointerdown event handler
         sprite.removeAllListeners('pointerdown');
 
-        sprite.on('pointerdown', () => {
+        /*sprite.on('pointerdown', () => {
             // Make container not interactive
             container.current.interactive = false;
             container.current.interactiveChildren = false;
@@ -183,7 +224,7 @@ const ClustersMap = (props) => {
             text.y = 20;
             rectangle.addChild(text);
             app.stage.addChild(rectangle);
-        });
+        });*/
     }
 
 
@@ -229,7 +270,6 @@ const ClustersMap = (props) => {
             sprite.interactive = false;
         }
 
-        // TODO modify this as some images disappear too early
         // Make sprite not visible if outside the stage
         /*sprite.visible = artwork_position.x >= -2*maxWidth.current
             && artwork_position.x <= viewportWidth.current + 2*maxWidth.current
@@ -392,7 +432,14 @@ const ClustersMap = (props) => {
         }
     }, [props.width, props.height]);
 
-    // TODO Check this code
+    useEffect(() => {
+        // This effect is called when the search data changes. This means that the user has searched something using the
+        // search bar.
+        if (Object.keys(props.searchData).length !== 0) {
+            moveToImage(props.searchData.tile, props.searchData.image);
+        }
+    }, [props.searchData]);
+
     const updateStage = () => {
         // Get tile coordinates of the visible tiles. The number of tiles is not computed on the current zoom level, but
         // on Math.ceil(zoomLevel.current + depth.current). This is because we want to fetch data for the next zoom level
@@ -454,8 +501,7 @@ const ClustersMap = (props) => {
         for (let tile of artworksInTiles.current.keys()) {
             // If the tile is from the previous zoom level, delete the entry from artworksInTiles but do not delete all
             // the sprites. This is because some of the sprites might still be visible.
-            if (effective_zoom_level - 1 === parseInt(tile.split("-")[0])) {
-                // For all sprites in the tile, set is_in_previous_zoom_level to true
+            if (effective_zoom_level === parseInt(tile.split("-")[0]) + 1) {
                 for (let index of artworksInTiles.current.get(tile)) {
                     // Check the tile the sprite is in. If the sprite is not among the tiles in visible_tiles, then
                     // remove it, else set is_in_previous_zoom_level to true.
@@ -484,6 +530,12 @@ const ClustersMap = (props) => {
             }
             else if (!(effective_zoom_level === parseInt(tile.split("-")[0])) || !visible_tiles.some(visible_tile =>
                 visible_tile.x === parseInt(tile.split("-")[1]) && visible_tile.y === parseInt(tile.split("-")[2]))) {
+
+                // Deal with case where the zoom level of the tile is equal to the current zoom level - 1. In this case,
+                // the sprites that are still visible
+
+
+                // The tile is not among the visible ones.
                 for (let index of artworksInTiles.current.get(tile)) {
                     if (sprites.current.has(index)) {
                         // Remove every event handler from sprite
@@ -538,15 +590,15 @@ const ClustersMap = (props) => {
 
         // Fetch data for the visible tiles
         visible_tiles.map(tile => {
-            // If tile is in previousTileCoordinates, then we do not need to fetch data for it.
+            // If tile is in artworksInTiles, then we do not need to fetch data for it.
             if (!artworksInTiles.current.has(effective_zoom_level + "-" + tile.x + "-" + tile.y)) {
-                // The tile is not in previousTileCoordinates. We need to fetch data for it.
+                // The tile is not in artworksInTiles. We need to fetch data for it.
                 fetchClusterData(effective_zoom_level, tile.x, tile.y, props.host)
                     .then(data => {
                         // Loop over artworks in tile and add them to the stage.
                         // noinspection JSUnresolvedVariable
                         for (let j = 0; j < data["clusters_representatives"]["entities"].length; j++) {
-                            // Check if the artwork is already on stage. If it is, change its position. If it is not, add it to the stage.
+                            // Check if the artwork is already on stage. If it is not, add it to the stage.
                             if (!sprites.current.has(data["clusters_representatives"]["entities"][j]["representative"]["index"])) {
                                 // Add sprite to stage
                                 addSpriteToStage(
@@ -577,6 +629,132 @@ const ClustersMap = (props) => {
         console.assert(sprites.current.size === spritesGlobalInfo.current.size);
         console.assert(sprites.current.size + spritePool.current.length === 800);
         console.assert(artworksInTiles.current.size <= 14);
+    }
+
+    // Create function for handling click on image or search
+    const moveToImage = async (tile, image) => {
+        // 1. Transition to the new location in the embedding space without changing the zoom level.
+
+        // Compute translation such that at the end of the translation the tile is perfectly centered. The translation is
+        // computed in global coordinates.
+        let final_effective_position_x = image.x - effectiveWidth.current / 2;
+        let final_effective_position_y = image.y - effectiveHeight.current / 2;
+
+        // Make sure the final position is within the limits of the embedding space
+        final_effective_position_x = Math.max(Math.min(final_effective_position_x, maxX.current - effectiveWidth.current), minX.current);
+        final_effective_position_y = Math.max(Math.min(final_effective_position_y, maxY.current - effectiveHeight.current), minY.current);
+
+        // Define steps
+        const step_x = (final_effective_position_x - effectivePosition.current.x) / transitionSteps;
+        const step_y = (final_effective_position_y - effectivePosition.current.y) / transitionSteps;
+
+        function awaitTranslationTicker() {
+            return new Promise((resolve) => {
+                const translation_ticker = new PIXI.Ticker();
+
+                translation_ticker.add(() => {
+                    // Check if position is super close to the target position
+                    if (effectivePosition.current.x === final_effective_position_x
+                        && effectivePosition.current.y === final_effective_position_y) {
+                        console.log("Translation ticker stopped");
+                        // Stop ticker
+                        translation_ticker.stop();
+                        resolve();
+                    } else {
+                        effectivePosition.current.x += step_x;
+                        effectivePosition.current.y += step_y;
+                        // Check if we have gone too far. If so, set the position to the target position.
+                        if (Math.sign(step_x) === Math.sign(effectivePosition.current.x - final_effective_position_x)
+                            && Math.sign(step_y) === Math.sign(effectivePosition.current.y - final_effective_position_y)) {
+                            effectivePosition.current.x = final_effective_position_x;
+                            effectivePosition.current.y = final_effective_position_y;
+                        }
+                        // Update stage
+                        updateStage();
+                    }
+                });
+
+                translation_ticker.start();
+            });
+        }
+        // Wait for translation ticker to finish
+        await awaitTranslationTicker();
+
+        function awaitZoomTicker() {
+            return new Promise((resolve) => {
+                const zoom_ticker = new PIXI.Ticker();
+
+                zoom_ticker.add(() => {
+                    if (zoomLevel.current === tile[0] && depth.current === 0) {
+                        // Stop ticker
+                        console.log("Zoom ticker stopped");
+                        zoom_ticker.stop();
+                        resolve();
+                    }
+                    else {
+                        // Change depth by 0.05. If the depth is -1 or 1, then change zoom level by 1 and reset depth sum or
+                        // subtract 1 from delta.
+                        let delta;
+                        if (zoomLevel.current !== tile[0]) {
+                            delta = Math.sign(tile[0] - zoomLevel.current) * depthStep;
+                        } else {
+                            delta = -Math.sign(depth.current) * depthStep; // If depth is greater than 0, then we have to reduce
+                            // depth by 0.05, hence we have to subtract 0.05 from delta. If depth is smaller than 0, then we have
+                            // to increase depth by 0.05, hence we have to add 0.05 to delta.
+                        }
+
+                        // Update depth
+                        depth.current = Math.min(Math.max(depth.current + delta, -1), 1);
+
+                        const position = {
+                            x: image.x,
+                            y: image.y
+                        }
+
+                        // First, compute the new effective position and effective size of the stage.
+                        // Get translation of the mouse position from the upper left corner of the stage in global coordinates
+                        const translation_x = position.x - effectivePosition.current.x
+                        const translation_y = position.y - effectivePosition.current.y;
+                        // Change the effective size of the stage.
+                        effectiveWidth.current = (maxX.current - minX.current) / (2 ** (zoomLevel.current + depth.current));
+                        effectiveHeight.current = (maxY.current - minY.current) / (2 ** (zoomLevel.current + depth.current));
+
+                        // Change the effective position of the stage. Make sure that it does not exceed the limits of the embedding space.
+                        // The translation of the mouse is adjusted so that the mouse position in global coordinates remains the same.
+                        effectivePosition.current.x = Math.max(
+                            Math.min(position.x - translation_x * 2 ** (-delta), maxX.current -
+                                effectiveWidth.current), minX.current);
+                        effectivePosition.current.y = Math.max(
+                            Math.min(position.y - translation_y * 2 ** (-delta), maxY.current -
+                                effectiveHeight.current), minY.current);
+
+                        // Check if we have reached a new zoom level. If so, update zoom level and reset depth.
+                        if (Math.abs(depth.current) === 1) {
+                            // Change zoom level
+                            zoomLevel.current += Math.sign(depth.current);
+                            // Reset depth
+                            depth.current = 0;
+                        }
+
+                        // Update stage
+                        updateStage();
+                    }
+                });
+                zoom_ticker.start();
+            });
+        }
+        // Wait for zoom ticker to finish
+        await awaitZoomTicker();
+
+        // TODO problem with getting sprite when transitioning back because the sprites are removed and added again, hence the sprite could not be available here
+
+/*        // Get sprite for the image and put it in the foreground
+        const sprite = sprites.current.get(image.index);
+        sprite.zIndex = 30;
+        // Sort children
+        container.current.sortChildren();
+        // Make sprite pulse
+        makeSpritePulse(sprite);*/
     }
 
     // Create handler for mouse down
@@ -692,7 +870,7 @@ const ClustersMap = (props) => {
         // Change measures after zooming in/out
 
         // When |depth| < 1, we are in an intermediate state between zoom levels, but the data shown always belongs to
-        // the finer grained zoom level. Hence, as soon as the delta becomes bigger than 0, get the data from the next
+        // the finer grained zoom level. Hence, as soon as delta becomes bigger than 0, get the data from the next
         // zoom level. If on the other hand delta becomes smaller than 0, keep current data and start transitioning to
         // the next zoom level.
         // Observation: the position of the mouse in global coordinates must remain the same after zooming in/out.
@@ -714,35 +892,12 @@ const ClustersMap = (props) => {
             Math.min(global_mouse_position.y - translation_y * 2 ** (-delta), maxY.current -
                 effectiveHeight.current), minY.current);
 
-        // If the zoom level has decreased by 1, then we can remove some sprites from the stage as the transition is complete.
-        // TODO deal with this case
-
-        /*
-        // Invalidate everything when changing zoom level
-            for (let tile of artworksInTiles.current.keys()) {
-                for (let index of artworksInTiles.current.get(tile)) {
-                    if (sprites.current.has(index)) {
-                        // Remove every event handler from sprite
-                        sprites.current.get(index).removeAllListeners();
-                        // Remove sprite from stage
-                        container.current.removeChild(sprites.current.get(index));
-                        // Add sprite back to sprite pool
-                        spritePool.current.push(sprites.current.get(index));
-                        // Remove sprite from sprites
-                        sprites.current.delete(index);
-                        // Remove sprite from spritesGlobalInfo
-                        spritesGlobalInfo.current.delete(index);
-                    }
-                }
-                // Delete tile from artworksInTiles
-                artworksInTiles.current.delete(tile);
-            }
-         */
-
         // Check if we have reached a new zoom level. If so, update zoom level and reset depth.
         if (Math.abs(depth.current) === 1) {
             // Change zoom level
             zoomLevel.current += Math.sign(depth.current);
+            // Make sure the zoom level is within the limits
+            zoomLevel.current = Math.min(Math.max(zoomLevel.current, 0), maxZoomLevel);
             // Reset depth
             depth.current = 0;
         }

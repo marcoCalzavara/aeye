@@ -80,7 +80,9 @@ def best_artworks_collate_fn(batch):
                        for key in batch[0]["images"].keys()},
             "index": [x["index"] for x in batch],
             "author": [x["author"] for x in batch],
-            "path": [x["path"] for x in batch]
+            "path": [x["path"] for x in batch],
+            "width": [x["width"] for x in batch],
+            "height": [x["height"] for x in batch]
         }
     except Exception as e:
         print(e.__str__())
@@ -92,13 +94,19 @@ def best_artworks_collate_fn(batch):
 class SupportDatasetForImages(TorchDataset):
     def __init__(self, root_dir):
         self.root_dir = root_dir
-        self.file_list = os.listdir(root_dir)
+        self.file_list = []
+
+        for file in os.listdir(root_dir):
+            if not os.path.isdir(os.path.join(self.root_dir, file)):
+                self.file_list.append(file)
+
         # Check that filenames start with a number, and that the indexes go from 0 to len(file_list) - 1
         for file in self.file_list:
             if not file.split("-")[0].isdigit():
                 raise Exception("Filenames must start with a number.")
             elif int(file.split("-")[0]) >= len(self.file_list) or int(file.split("-")[0]) < 0:
                 raise Exception("Indexes must go from 0 to len(file_list) - 1.")
+
         # Sort file list by index
         self.file_list.sort(key=lambda x: int(x.split("-")[0]))
         self.transform = None
@@ -111,12 +119,19 @@ class SupportDatasetForImages(TorchDataset):
 
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir, self.file_list[idx])
-        image = self.transform(Image.open(img_name))
+        # Get image height and width
+        image = Image.open(img_name)
+        width, height = image.size
+        image = self.transform(image)
 
-        return {'images': image,
-                'index': idx,
-                'author': " ".join(self.file_list[idx].split("-")[1].removesuffix(".jpg").split("_")),
-                'path': self.file_list[idx]}
+        return {
+            'images': image,
+            'index': idx,
+            'author': " ".join(self.file_list[idx].split("-")[1].removesuffix(".jpg").split("_")),
+            'path': self.file_list[idx],
+            'width': width,
+            'height': height
+        }
 
 
 class SupportSamplerForImages(Sampler):

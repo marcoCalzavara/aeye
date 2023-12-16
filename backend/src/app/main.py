@@ -20,11 +20,13 @@ dataset_collection_name_getter = DatasetCollectionNameGetter()
 grid_collection_name_getter = GridCollectionNameGetter()
 map_collection_name_getter = MapCollectionNameGetter()
 clusters_collection_name_getter = ClustersCollectionNameGetter()
+image_to_tile_collection_name_getter = ImageToTileCollectionNameGetter()
 dataset_collection_info_getter = DatasetCollectionInfoGetter()
 updater = Updater(dataset_collection_name_getter,
                   grid_collection_name_getter,
                   map_collection_name_getter,
-                  clusters_collection_name_getter)
+                  clusters_collection_name_getter,
+                  image_to_tile_collection_name_getter)
 embeddings = Embedder(ClipEmbeddings(DEVICE))
 
 # Create app
@@ -64,9 +66,13 @@ def get_image_from_text(collection: Collection = Depends(dataset_collection_name
         # Collection not found, return 404
         raise HTTPException(status_code=404, detail="Collection not found")
     else:
-        # Collection found, return image path
-        path = gets.get_image_embedding_from_text_embedding(collection, text_embedding)
-        return {"path": path}
+        try:
+            # Collection found, return image path
+            data = gets.get_image_info_from_text_embedding(collection, text_embedding)
+            return data
+        except MilvusException:
+            # Milvus error, return code 505
+            raise HTTPException(status_code=505, detail="Milvus error")
 
 
 @app.get("/api/grid")
@@ -132,6 +138,26 @@ def get_clusters_data(zoom_level: int,
                 raise HTTPException(status_code=404, detail="Tile data not found")
             # Return tile data
             return tile_data["entity"]
+        except MilvusException:
+            # Milvus error, return code 505
+            raise HTTPException(status_code=404, detail="Tile data not found")
+
+
+@app.get("/api/image-to-tile")
+def get_tile_from_image(index: int,
+                        collection: Collection = Depends(image_to_tile_collection_name_getter)):
+    if collection is None:
+        # Collection not found, return 404
+        raise HTTPException(status_code=404, detail="Collection not found")
+    else:
+        # Collection found, return tile data
+        try:
+            tile_data = gets.get_tile_from_image(index, collection)
+            if len(tile_data) == 0:
+                # In the required image is present in the database, the distance should be 0
+                raise HTTPException(status_code=404, detail="Tile data not found")
+            else:
+                return tile_data
         except MilvusException:
             # Milvus error, return code 505
             raise HTTPException(status_code=404, detail="Tile data not found")

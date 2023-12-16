@@ -8,7 +8,8 @@ from PIL import Image
 from dotenv import load_dotenv
 from pymilvus import db, Collection, utility
 
-from .collections import clusters_collection, ZOOM_LEVEL_VECTOR_FIELD_NAME, EMBEDDING_VECTOR_FIELD_NAME
+from .collections import (clusters_collection, image_to_tile_collection, ZOOM_LEVEL_VECTOR_FIELD_NAME,
+                          EMBEDDING_VECTOR_FIELD_NAME)
 from .create_and_populate_grid_collection import parsing, load_vectors_from_collection
 from .utils import ModifiedKMeans
 # from .datasets import DatasetOptions
@@ -67,6 +68,52 @@ def create_clusters_collection(zoom_levels,
             entities_to_insert.append(entity)
             # Increment index
             index += 1
+
+    # Insert entities in the collection
+    # Insert entities in batches of INSERT_SIZE
+    for i in range(0, len(entities_to_insert), INSERT_SIZE):
+        try:
+            collection.insert(data=entities_to_insert[i:i + INSERT_SIZE])
+            # Flush data to disk
+            collection.flush()
+        except Exception as e:
+            print(e.__str__())
+            print("Error in create_collection_with_zoom_levels.")
+            # Drop collection to avoid inconsistencies
+            utility.drop_collection(collection_name)
+            return
+
+    # Success
+    print(f"Successfully created collection {collection_name}.")
+
+
+def create_image_to_tile_collection(images_to_tile: dict, collection_name: str, repopulate: bool) -> None:
+    if utility.has_collection(collection_name) and repopulate:
+        # Get number of entities in the collection
+        num_entities = Collection(collection_name).num_entities
+        print(f"Found collection {collection_name}. It has {num_entities} entities. Dropping it.")
+        utility.drop_collection(collection_name)
+    elif utility.has_collection(collection_name) and not repopulate:
+        # Get number of entities in the collection
+        num_entities = Collection(collection_name).num_entities
+        print(f"Found collection {collection_name}. It has {num_entities} entities."
+              f" Not dropping it. Set repopulate to True to drop it.")
+        return
+
+    # Create collection and index
+    collection = image_to_tile_collection(collection_name)
+
+    # Populate collection
+    entities_to_insert = []
+    for index in images_to_tile.keys():
+        assert len(images_to_tile[index]) == 3 and isinstance(index, int)
+        # Create entity
+        entity = {
+            "index": index,
+            ZOOM_LEVEL_VECTOR_FIELD_NAME: images_to_tile[index]
+        }
+        # Insert entity
+        entities_to_insert.append(entity)
 
     # Insert entities in the collection
     # Insert entities in batches of INSERT_SIZE
@@ -348,7 +395,8 @@ def merge_clusters(old_cluster_representatives_in_current_tile, temp_cluster_rep
     return representative_entities
 
 
-def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name, repopulate, save_images):
+def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name,
+                       images_to_tile_collection_name, repopulate, save_images):
     # Take entire embedding space for zoom level 0, then divide each dimension into 2^zoom_levels intervals.
     # Each interval is a tile. For each tile, find clusters and cluster representatives. Keep track of
     # the number of entities in each cluster. For the last zoom level, show all the entities in each tile.
@@ -364,6 +412,8 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
 
     # Define dictionary for zoom levels
     zoom_levels = {}
+    # Define dictionary for mapping from images to coarser zoom level (and tile)
+    images_to_tile = {}
 
     if save_images:
         if not os.path.exists(os.getenv(BEST_ARTWORKS_DIR) + "/zoom_levels_clusters/"):
@@ -464,6 +514,12 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                         "cluster_representatives": representative_entities,
                         "tile_coordinate_range": {"x_min": x_min, "x_max": x_max, "y_min": y_min, "y_max": y_max}
                     }
+                    # Save mapping from images to tile
+                    for representative in representative_entities:
+                        if representative["representative"]["index"] not in images_to_tile:
+                            images_to_tile[representative["representative"]["index"]] = [
+                                zoom_level, tile_x_index, tile_y_index
+                            ]
 
                 else:
                     # Get the coordinates of the entities in the tile
@@ -568,8 +624,15 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                         "cluster_representatives": representative_entities,
                         "tile_coordinate_range": {"x_min": x_min, "x_max": x_max, "y_min": y_min, "y_max": y_max}
                     }
+                    # Save mapping from images to tile
+                    for representative in representative_entities:
+                        if representative["representative"]["index"] not in images_to_tile:
+                            images_to_tile[representative["representative"]["index"]] = [
+                                zoom_level, tile_x_index, tile_y_index
+                            ]
 
     create_clusters_collection(zoom_levels, zoom_levels_collection_name, repopulate)
+    create_image_to_tile_collection(images_to_tile, images_to_tile_collection_name, repopulate)
 
 
 if __name__ == "__main__":
@@ -624,5 +687,5 @@ if __name__ == "__main__":
 
     # Create zoom levels
     if entities is not None:
-        create_zoom_levels(entities, collection, flags["collection"] + "_zoom_levels_clusters", flags["repopulate"],
-                           flags["images"])
+        create_zoom_levels(entities, collection, flags["collection"] + "_zoom_levels_clusters",
+                           flags["collection"] + "_image_to_tile", flags["repopulate"], flags["images"])

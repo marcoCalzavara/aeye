@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, {useRef, useState} from "react";
 import IconButton from '@mui/material/IconButton';
 import SearchIcon from '@mui/icons-material/Search';
 import {InputBase} from "@mui/material";
@@ -11,6 +11,7 @@ export default function SearchBar(props) {
     const [anchorEl, setAnchorEl] = useState(null);
     const [open, setOpen] = useState(false);
     const host = useRef(props.host);
+    const setSearchData = props.setSearchData;
     const max_state_length = 20;
     const max_history_shown = 5;
 
@@ -29,26 +30,54 @@ export default function SearchBar(props) {
 
     const sendText = async (text) => {
         console.log("Sending text: " + text);
-        const url = host.current + '/api/image-text?collection=' + DATASET + '&text=' + text;
 
-        const path = await fetch(url, {
+        let url = host.current + '/api/image-text?collection=' + DATASET + '&text=' + text + '&page=1';
+
+        const result = await fetch(url, {
             method: 'GET'
         })
             .then(response => {
-            if (!response.ok) {
-                throw new Error('Image could not be retrieved. Status: ' + response.status + ' ' + response.statusText);
-            }
-            return response.json();
-        })
-            .catch(error => {
-                // Handle any errors that occur during the fetch operation
-                console.error('Error:', error);
-            });
+                if (!response.ok) {
+                    throw new Error('Data could not be retrieved. Status: ' + response.status + ' ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(firstGet => {
+                url = host.current + '/api/image-to-tile?index=' + firstGet.index + '&collection=' + DATASET + "_image_to_tile";
 
-        // Generate complete path
-        const image_path = host.current + "/" + DATASET + "/" + path;
+                return fetch(url, {
+                    method: 'GET'
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Data could not be retrieved. Status: ' + response.status + ' ' + response.statusText);
+                        }
+                        return response.json();
+                    })
+                    .then(secondGet => {
+                        return {
+                            firstGet: firstGet,
+                            secondGet: secondGet
+                        };
+                    });
+            }).catch(error => {
+            // Handle any errors that occur during the fetch operation
+            console.error('Error:', error);
+        });
 
-        // TODO add image to screen
+        // Group result into object with fields tile and image. Tile is an array of three elements, while image contains
+        // the global position of the image, and its width and height.
+        let groupedResult = {};
+        groupedResult.tile = result.secondGet.zoom_plus_tile;
+        groupedResult.image = {};
+        groupedResult.image.x = result.firstGet.low_dimensional_embedding_x;
+        groupedResult.image.y = result.firstGet.low_dimensional_embedding_y;
+        groupedResult.image.width = result.firstGet.width;
+        groupedResult.image.height = result.firstGet.height;
+        groupedResult.image.index = result.firstGet.index;
+
+        // Set result in parent component
+        setSearchData(groupedResult);
     };
 
     const handleInputChange = (event) => {
@@ -107,13 +136,12 @@ export default function SearchBar(props) {
                     onChange={handleInputChange}
                     onKeyDown={handleEnter}
                     onClick={handleClick}
-                    style={{ fontSize: '15px' }}
+                    style={{fontSize: '15px'}}
                 />
                 <IconButton type="button" onClick={handleClickSearch}>
                     <SearchIcon/>
                 </IconButton>
             </div>
         </div>
-
     );
 }

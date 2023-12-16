@@ -244,9 +244,12 @@ if __name__ == "__main__":
 
     # Get the collection object
     collection_name = "temp_" + flags["dataset"]
+    did_not_exist = False
     if collection_name not in utility.list_collections():
-        print(f"The collection {collection_name} does not exist.")
-        sys.exit(1)
+        print(f"The collection {collection_name} does not exist. Creating it...")
+        collection, collection_name = create_embeddings_collection(collection_name=collection_name,
+                                                                   choose_database=False)
+        did_not_exist = True
     else:
         collection = Collection(collection_name)
 
@@ -267,10 +270,11 @@ if __name__ == "__main__":
     dataset = get_dataset_object(flags["dataset"])
 
     # Evaluate flags["repopulate"]
-    if flags["repopulate"]:
+    if flags["repopulate"] and start != dataset.get_size():
         # Delete all vectors in the collection and define start point for dataloader
-        collection.drop()
-        collection, _ = create_embeddings_collection(ROOT_PASSWD, collection_name)
+        if did_not_exist:
+            collection.drop()
+            collection, _ = create_embeddings_collection(collection_name=collection_name, choose_database=False)
         missing_indexes = []
         start = 0
     else:
