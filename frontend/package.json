@@ -3,27 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@emotion/react": "^11.11.1",
-    "@emotion/styled": "^11.11.0",
-    "@mui/icons-material": "^5.14.14",
-    "@mui/material": "^5.14.14",
-    "@pixi/react": "^7.1.1",
-    "@testing-library/jest-dom": "^5.17.0",
-    "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^13.5.0",
-    "jest-canvas-mock": "^2.5.2",
-    "material-ui-popup-state": "^5.0.9",
-    "pixi.js": "^7.3.2",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-multi-carousel": "^2.8.4",
-    "react-router-dom": "^6.17.0",
+    "@emotion/react": "latest",
+    "@emotion/styled": "latest",
+    "@mui/icons-material": "latest",
+    "@mui/material": "latest",
+    "@mui/system": "latest",
+    "@pixi/react": "latest",
+    "pixi.js": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-multi-carousel": "latest",
+    "react-router-dom": "latest",
     "react-scripts": "^5.0.1",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "latest"
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build:css": "postcss src/index.css -o public/index.css",
+    "build": "npm run build:css && react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -41,7 +38,14 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
-    "jest": "^29.7.0",
-    "tailwindcss": "^3.3.5"
+    "@testing-library/jest-dom": "latest",
+    "@testing-library/react": "latest",
+    "@testing-library/user-event": "latest",
+    "autoprefixer": "^10.4.16",
+    "jest": "latest",
+    "jest-canvas-mock": "latest",
+    "postcss": "^8.4.32",
+    "postcss-cli": "^11.0.0",
+    "tailwindcss": "^3.3.6"
   }
 }

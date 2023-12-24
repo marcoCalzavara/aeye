@@ -2,6 +2,7 @@ import * as React from 'react';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
+import 'tailwindcss/tailwind.css'
 
 
 export default function SelectDataset() {

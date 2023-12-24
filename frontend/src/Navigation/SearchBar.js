@@ -1,7 +1,6 @@
 import React, {useRef, useState} from "react";
-import IconButton from '@mui/material/IconButton';
 import SearchIcon from '@mui/icons-material/Search';
-import {InputBase} from "@mui/material";
+import {IconButton, InputBase} from "@mui/material";
 import {DATASET} from "../Map/Cache";
 
 export default function SearchBar(props) {
@@ -29,8 +28,6 @@ export default function SearchBar(props) {
     };
 
     const sendText = async (text) => {
-        console.log("Sending text: " + text);
-
         let url = host.current + '/api/image-text?collection=' + DATASET + '&text=' + text + '&page=1';
 
         const result = await fetch(url, {
@@ -61,9 +58,9 @@ export default function SearchBar(props) {
                         };
                     });
             }).catch(error => {
-            // Handle any errors that occur during the fetch operation
-            console.error('Error:', error);
-        });
+                // Handle any errors that occur during the fetch operation
+                console.error('Error:', error);
+            });
 
         // Group result into object with fields tile and image. Tile is an array of three elements, while image contains
         // the global position of the image, and its width and height.
@@ -75,6 +72,9 @@ export default function SearchBar(props) {
         groupedResult.image.width = result.firstGet.width;
         groupedResult.image.height = result.firstGet.height;
         groupedResult.image.index = result.firstGet.index;
+
+        // Move to the top of the window
+        window.scrollTo(0, 0);
 
         // Set result in parent component
         setSearchData(groupedResult);
@@ -125,23 +125,20 @@ export default function SearchBar(props) {
     }
 
     return (
-        <div className="h-search w-full flex flex-col justify-evenly items-center flex-none bg-zinc-900">
-            <b className="text-white text-4xl">AiPlusArt</b>
-            <div className="w-searchbar h-searchbar flex justify-between items-center z-10 bg-white rounded-full">
-                <InputBase
-                    className="w-98 h-full pl-3"
-                    label={"Search Images by Text"}
-                    placeholder={"\"A painting of a dog\""}
-                    value={inputValue}
-                    onChange={handleInputChange}
-                    onKeyDown={handleEnter}
-                    onClick={handleClick}
-                    style={{fontSize: '15px'}}
-                />
-                <IconButton type="button" onClick={handleClickSearch}>
-                    <SearchIcon/>
-                </IconButton>
-            </div>
+        <div className="w-searchbar h-searchbar flex justify-between items-center z-10 bg-white rounded-full">
+            <InputBase
+                className="w-98 h-full pl-3"
+                label={"Search Images by Text"}
+                placeholder={"\"A painting of a dog\""}
+                value={inputValue}
+                onChange={handleInputChange}
+                onKeyDown={handleEnter}
+                onClick={handleClick}
+                sx={{fontSize: '15px'}}
+            />
+            <IconButton type="button" onClick={handleClickSearch}>
+                <SearchIcon/>
+            </IconButton>
         </div>
     );
 }

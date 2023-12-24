@@ -2,7 +2,7 @@ import {useEffect, useRef} from 'react';
 import * as PIXI from "pixi.js";
 import {useApp} from "@pixi/react";
 import {DATASET} from "./Cache";
-
+import 'tailwindcss/tailwind.css'
 
 const maxZoomLevel = 7;
 const DURATION = 4; // seconds
@@ -142,8 +142,12 @@ const ClustersMap = (props) => {
     // Define search data
     const searchData = useRef(props.searchData);
     // Define constant for transition steps and depth steps
-    const transitionSteps = 500;
-    const depthStep = 0.015;
+    const transitionSteps = 100;
+    const depthStep = 0.02;
+
+    // Define variables to store setters from the parent component
+    const setShowCarousel = props.setShowCarousel;
+    const setClickedImageIndex = props.setClickedImageIndex;
 
     const mapGlobalCoordinatesToStageCoordinates = (global_x, global_y) => {
         // Map global coordinates to stage coordinates
@@ -166,65 +170,14 @@ const ClustersMap = (props) => {
     }
 
 
-    const setSpriteOnPointerDown = (sprite, path, width, height, num_of_entities) => {
-        // TODO modify this
+    const setSpriteOnPointerDown = (sprite, index) => {
         // Remove only the pointerdown event handler
         sprite.removeAllListeners('pointerdown');
 
-        /*sprite.on('pointerdown', () => {
-            // Make container not interactive
-            container.current.interactive = false;
-            container.current.interactiveChildren = false;
-            container.current.hitArea = null;
-            // Create rectangle
-            const increase_factor = 3.5;
-            const rectangle = new PIXI.Graphics();
-            rectangle.beginFill("rgb(39,39,42)");
-            rectangle.drawRoundedRect(0, 0, sprite.width * increase_factor + viewportWidth.current / 6 + 40,
-                sprite.height * increase_factor + 40, 7);
-            rectangle.endFill();
-            // Place it at the center of the screen
-            rectangle.x = viewportWidth.current / 2 - sprite.width * increase_factor / 2 - viewportWidth.current / 12 - 20;
-            rectangle.y = viewportHeight.current / 2 - sprite.height * increase_factor / 2;
-            // Set mode and cursor type
-            rectangle.interactive = true;
-            rectangle.cursor = 'pointer';
-            // Define function for closing the rectangle
-            rectangle.on('pointerdown', () => {
-                app.stage.removeChild(rectangle);
-                container.current.interactive = true;
-                container.current.interactiveChildren = true;
-                container.current.hitArea = new PIXI.Rectangle(0, 0, viewportWidth.current, viewportHeight.current);
-            });
-            // Add sprite to rectangle
-            const sprite_inside = new PIXI.Sprite();
-            sprite_inside.texture = PIXI.Texture.from(props.host + "/" + DATASET + "/" + path);
-            sprite_inside.width = sprite.width * increase_factor;
-            sprite_inside.height = sprite.height * increase_factor;
-            sprite_inside.x = viewportWidth.current / 6 + 20;
-            sprite_inside.y = 20;
-            rectangle.addChild(sprite_inside);
-            // Extract author from path. The path has the form index-Name_separated_by_underscores.jpg. Remove jpg and initial and
-            // trailing spaces.
-            const author = path.split("-")[1].split(".")[0].replace(/_/g, " ").trim();
-            // Create text and add it to rectangle
-            let str = "The author of the artwork is " + author + ".\n\n" + "The artwork is " + width + " pixels wide and " +
-                height + " pixels high.\n\n";
-            if (num_of_entities !== 0)
-                str += "The artwork is part of a cluster of " + num_of_entities + " artworks.";
-            else
-                str += "The artwork is not part of any cluster.";
-            // Make fontsize depend on viewportWidth.current and viewportHeight.current
-            const fontsize = Math.ceil((14 * viewportWidth.current) / 1280);
-            const text = new PIXI.Text(str, {
-                fontFamily: 'Arial', fontSize: fontsize, fill: 0xffffff, align: 'left',
-                wordWrap: true, wordWrapWidth: viewportWidth.current / 6 - 20
-            });
-            text.x = 20;
-            text.y = 20;
-            rectangle.addChild(text);
-            app.stage.addChild(rectangle);
-        });*/
+        sprite.on('pointerdown', () => {
+            setClickedImageIndex(index);
+            setShowCarousel(true);
+        });
     }
 
 
@@ -280,7 +233,7 @@ const ClustersMap = (props) => {
         // such that the user has to click on the rectangle to close it. The rectangle should be at the center of the screen,
         // and it should appear smoothly on click on the sprite.
         sprite.cursor = 'pointer';
-        setSpriteOnPointerDown(sprite, path, width, height, num_of_entities);
+        setSpriteOnPointerDown(sprite, index);
 
         sprite.on('mouseover', () => {
             // Put image in front
@@ -424,11 +377,7 @@ const ClustersMap = (props) => {
                 sprites.current.get(index).width = maxHeight.current * aspect_ratio;
             }
             // Update set sprite on pointer down
-            setSpriteOnPointerDown(sprites.current.get(index),
-                spritesGlobalInfo.current.get(index).path,
-                spritesGlobalInfo.current.get(index).width,
-                spritesGlobalInfo.current.get(index).height,
-                spritesGlobalInfo.current.get(index).num_of_entities);
+            setSpriteOnPointerDown(sprites.current.get(index), spritesGlobalInfo.current.get(index).index);
         }
     }, [props.width, props.height]);
 

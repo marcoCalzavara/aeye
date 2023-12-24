@@ -1,13 +1,16 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useRef} from 'react';
+import SearchBar from "./SearchBar";
 
 
-const StickyBar = () => {
+const StickyBar = (props) => {
     // Define height in pixels
     const heightNavBar = 150;
+    const setSearchData = useRef(props.setSearchData);
 
     useEffect(() => {
         window.addEventListener('scroll', function () {
             let element = document.getElementById('sticky-bar'); // Replace with the ID of your element
+            if (!element) return;
             let scrollPosition = window.scrollY;
             if (scrollPosition > heightNavBar) { // Adjust the value as needed
                 element.classList.add('opacity-10');
@@ -29,7 +32,8 @@ const StickyBar = () => {
                     DISCOLab
                 </a>
             </div>
-            /*TODO add pages here*/
+            <SearchBar host="http://localhost:80" setSearchData={setSearchData.current}/>
+
         </div>
     );
 }

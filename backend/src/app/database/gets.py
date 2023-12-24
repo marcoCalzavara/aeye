@@ -172,7 +172,7 @@ def get_tile_from_image(index: int, collection: Collection) -> dict:
         return {}
 
 
-def get_images_from_indexes(indexes: List[int], collection: Collection) -> dict:
+def get_paths_from_indexes(indexes: List[int], collection: Collection) -> dict:
     """
     Get images from their indexes.
     @param indexes:
@@ -187,3 +187,33 @@ def get_images_from_indexes(indexes: List[int], collection: Collection) -> dict:
 
     # Return results
     return results
+
+
+def get_neighbors(index: int, collection: Collection, top_k: int) -> List[dict]:
+    """
+    Get the neighbors of a given image.
+    @param index:
+    @param collection:
+    @param top_k:
+    @return:
+    """
+    # First, query the index to find the embedding vector
+    results = collection.query(
+        expr=f"index in [{index}]",
+        output_fields=[EMBEDDING_VECTOR_FIELD_NAME]
+    )
+
+    # Define search parameters
+    search_params = {
+        "metric_type": COSINE_METRIC
+    }
+    # Search image
+    results = collection.search(
+        data=[results[0][EMBEDDING_VECTOR_FIELD_NAME]],
+        anns_field=EMBEDDING_VECTOR_FIELD_NAME,
+        param=search_params,
+        limit=top_k,
+        output_fields=["index", "author", "path", "width", "height"]
+    )
+    # Return results
+    return [hit.to_dict()["entity"] for hit in results[0]]

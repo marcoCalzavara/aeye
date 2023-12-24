@@ -41,7 +41,6 @@ async def add_access_control_allow_origin_header(request: Request, call_next):
     return response
 
 
-# Define routes
 @app.get("/api/collection-names")
 def get_collection_names(collections: list[str] = Depends(updater)):
     # Return collection names as a list
@@ -172,8 +171,24 @@ def get_images(indexes: List[int] = Query(...), collection: Collection = Depends
     else:
         # Collection found, return images
         try:
-            images = gets.get_images_from_indexes(indexes, collection)
+            images = gets.get_paths_from_indexes(indexes, collection)
             return images
+        except MilvusException:
+            # Milvus error, return code 505
+            raise HTTPException(status_code=505, detail="Milvus error")
+
+
+@app.get("/api/neighbors")
+def get_neighbours(index: int, k: int, collection: Collection = Depends(dataset_collection_name_getter)):
+    # Both index and collection are query parameters
+    if collection is None:
+        # Collection not found, return 404
+        raise HTTPException(status_code=404, detail="Collection not found")
+    else:
+        # Collection found, return neighbours
+        try:
+            neighbours = gets.get_neighbors(index, collection, k)
+            return neighbours
         except MilvusException:
             # Milvus error, return code 505
             raise HTTPException(status_code=505, detail="Milvus error")

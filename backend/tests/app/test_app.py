@@ -151,3 +151,14 @@ def test_get_images():
     # Make second request to test that status code is 404 when collection is not found
     response = client.get("/api/images", params={"indexes": [2881, 5432], "collection": "test_collection"})
     assert response.status_code == 404
+
+
+def test_get_neighbours():
+    response = client.get("/api/neighbors", params={"index": 2881, "k": 10, "collection": "best_artworks"})
+    assert response.status_code == 200
+    assert len(response.json()) == 10
+    assert response.json()[0].keys() == {"index", "author", "path", "width", "height"}
+
+    # Make second request to test that status code is 404 when collection is not found
+    response = client.get("/api/neighbours", params={"index": 2881, "collection": "test_collection"})
+    assert response.status_code == 404
