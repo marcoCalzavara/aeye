@@ -4,9 +4,22 @@ import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import 'tailwindcss/tailwind.css'
 
+function cleanText(text) {
+    // Split text on underscore
+    let split_text = text.split('_');
+    // Create a new string with the first letter of each word capitalized
+    let cleaned_text = '';
+    for (let i = 0; i < split_text.length; i++) {
+        cleaned_text += split_text[i].charAt(0).toUpperCase() + split_text[i].slice(1) + ' ';
+    }
+    // Remove last space
+    cleaned_text = cleaned_text.slice(0, -1);
+    return cleaned_text;
+}
 
-export default function SelectDataset() {
-    const [dataset, setDataset] = React.useState("Dataset1");
+export default function SelectDataset(props) {
+    console.log(props.datasets);
+    const [dataset, setDataset] = React.useState(props.datasets[0]);
 
     const handleChange = (event) => {
         setDataset(event.target.value);
@@ -14,16 +27,16 @@ export default function SelectDataset() {
     };
 
     return (
-        <FormControl sx={{"width": "100%", "height": "100%"}}>
-            <Select
+        <Select
                 value={dataset}
                 onChange={handleChange}
-                sx={{height: "100%", backgroundColor: "white"}}
+                className="w-selector h-searchbar bg-white font-bar"
             >
-                <MenuItem value={"Dataset1"}>Dataset1</MenuItem>
-                <MenuItem value={"Dataset2"}>Dataset2</MenuItem>
-                <MenuItem value={"Dataset3"}>Dataset3</MenuItem>
+                {props.datasets.map((dataset) => (
+                    <MenuItem key={dataset} value={dataset}>
+                        {cleanText(dataset)}
+                    </MenuItem>
+                ))}
             </Select>
-        </FormControl>
     );
 }

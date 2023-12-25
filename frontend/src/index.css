@@ -7,57 +7,166 @@ body, #root {
     padding: 0;
 }
 
-.h-1\/20 {
-    height: 5%;
-}
-
-.h-11\/2vh {
-    height: 5.5vh;
-}
-
 .h-1\/10 {
     height: 10%;
 }
 
-.h-1\/16 {
-    height: 6.25%;
-}
+/* Media queries for the height of the sticky bar */
 
-.h-50px {
-    height: 400px;
-}
-
-.h-30px {
-    height: 30px;
-}
-.h-920px {
-    height: 920px;
-}
-
-
-.h-search {
-        height: 180px;
-}
-
-.h-searchbar {
-    height: 37px;
-}
-
-@media (max-width: 100px) {
-    .w-searchbar {
-        width: 50%;
+@media (min-width: 320px) and (max-width: 480px) {
+    .h-sticky {
+        height: 32px;
     }
 }
 
-@media (max-width: 768px) {
+@media (min-width: 481px) and (max-width: 768px) {
+    .h-sticky {
+        height: 40px;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .h-sticky {
+        height: 48px;
+    }
+}
+
+@media (min-width: 1025px) and (max-width: 1200px) {
+    .h-sticky {
+        height: 56px;
+    }
+}
+
+@media (min-width: 1201px) {
+    .h-sticky {
+        height: 64px;
+    }
+}
+
+/* Media queries for the height of the searchbar */
+
+@media (min-width: 320px) and (max-width: 480px) {
+    .h-searchbar {
+        height: 22px;
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    .h-searchbar {
+        height: 24px;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .h-searchbar {
+        height: 28px;
+    }
+}
+
+@media (min-width: 1025px) and (max-width: 1200px) {
+    .h-searchbar {
+        height: 30px;
+    }
+}
+
+@media (min-width: 1201px) {
+    .h-searchbar {
+        height: 34px;
+    }
+}
+
+/* Media queries for the width of the searchbar */
+
+@media (min-width: 320px) and (max-width: 480px) {
+    .w-searchbar {
+        width: 100px;
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    .w-searchbar {
+        width: 200px;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .w-searchbar {
+        width: 300px;
+    }
+}
+
+@media (min-width: 1025px) and (max-width: 1200px) {
+    .w-searchbar {
+        width: 300px;
+    }
+}
+
+@media (min-width: 1201px) {
     .w-searchbar {
         width: 400px;
     }
 }
 
-@media (max-width: 3200px) {
-    .w-searchbar {
-        width: 500px;
+/* Media queries for the width of the dataset selector */
+
+@media (min-width: 320px) and (max-width: 480px) {
+    .font-bar {
+        font-size: 12px !important;
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    .font-bar {
+        font-size: 12px !important;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .font-bar {
+        font-size: 14px !important;
+    }
+}
+
+@media (min-width: 1025px) and (max-width: 1200px) {
+    .font-bar {
+        font-size: 15px !important;
+    }
+}
+
+@media (min-width: 1201px) {
+    .font-bar {
+        font-size: 15px !important;
+    }
+}
+
+/* Media queries for the font size of the sticky header */
+@media (min-width: 320px) and (max-width: 480px) {
+    .w-selector {
+        width: 40px;
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    .w-selector {
+        width: 120px;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .w-selector {
+        width: 120px;
+    }
+}
+
+@media (min-width: 1025px) and (max-width: 1200px) {
+    .w-selector {
+        width: 140px;
+    }
+}
+
+@media (min-width: 1201px) {
+    .w-selector {
+        width: 160px;
     }
 }
 
@@ -67,10 +176,6 @@ body, #root {
 
 .w-1\/10 {
     width: 10%;
-}
-
-.min-w-screen {
-    min-width: 100vw;
 }
 
 .px-1\/80 {

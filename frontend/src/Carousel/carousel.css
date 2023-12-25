@@ -1,34 +1,68 @@
 .carousel {
     background: #000;
-    margin-top: 20px;
+    margin-top: 40px;
     margin-bottom: 20px;
     width: 85%;
 }
 
-@media (max-width: 600px) {
-    .height-carousel {
+/* Media queries for the height of the carousel */
+@media (min-width: 320px) and (max-width: 480px) {
+    .h-carousel {
+        height: 75px;
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    .h-carousel {
         height: 100px;
     }
 }
 
-@media (max-width: 900px) {
-    .height-carousel {
+@media (min-width: 769px) and (max-width: 1024px) {
+    .h-carousel {
         height: 150px;
     }
 }
 
-@media (max-width: 1200px) {
-    .height-carousel {
+@media (min-width: 1025px) and (max-width: 1200px) {
+    .h-carousel {
         height: 200px;
     }
 }
 
-@media (max-width: 1536px) {
-    .height-carousel {
-        height: 250px;
+@media (min-width: 1201px) {
+    .h-carousel {
+        height: 300px;
     }
 }
 
-.height-carousel {
-    height: 300px;
+/* Media queries for the font-size of the carousel */
+@media (min-width: 320px) and (max-width: 480px) {
+    .font-carousel {
+        font-size: 8px !important;
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    .font-carousel {
+        font-size: 10px !important;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .font-carousel {
+        font-size: 10px !important;
+    }
+}
+
+@media (min-width: 1025px) and (max-width: 1200px) {
+    .font-carousel {
+        font-size: 12px !important;
+    }
+}
+
+@media (min-width: 1201px) {
+    .font-carousel {
+        font-size: 16px !important;
+    }
 }

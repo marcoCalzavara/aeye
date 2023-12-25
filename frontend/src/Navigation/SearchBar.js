@@ -11,6 +11,7 @@ export default function SearchBar(props) {
     const [open, setOpen] = useState(false);
     const host = useRef(props.host);
     const setSearchData = props.setSearchData;
+    const setShowCarousel = props.setShowCarousel;
     const max_state_length = 20;
     const max_history_shown = 5;
 
@@ -29,7 +30,6 @@ export default function SearchBar(props) {
 
     const sendText = async (text) => {
         let url = host.current + '/api/image-text?collection=' + DATASET + '&text=' + text + '&page=1';
-
         const result = await fetch(url, {
             method: 'GET'
         })
@@ -73,10 +73,8 @@ export default function SearchBar(props) {
         groupedResult.image.height = result.firstGet.height;
         groupedResult.image.index = result.firstGet.index;
 
-        // Move to the top of the window
-        window.scrollTo(0, 0);
-
         // Set result in parent component
+        setShowCarousel(false);
         setSearchData(groupedResult);
     };
 
@@ -127,14 +125,13 @@ export default function SearchBar(props) {
     return (
         <div className="w-searchbar h-searchbar flex justify-between items-center z-10 bg-white rounded-full">
             <InputBase
-                className="w-98 h-full pl-3"
+                className="w-98 h-full pl-3 font-bar"
                 label={"Search Images by Text"}
                 placeholder={"\"A painting of a dog\""}
                 value={inputValue}
                 onChange={handleInputChange}
                 onKeyDown={handleEnter}
                 onClick={handleClick}
-                sx={{fontSize: '15px'}}
             />
             <IconButton type="button" onClick={handleClickSearch}>
                 <SearchIcon/>

@@ -1,4 +1,5 @@
 import threading
+from typing import Callable
 
 import torch
 from fastapi import Query
@@ -31,7 +32,7 @@ class HelperCollection:
 
 class CollectionNameGetter:
     def __init__(self, suffix: str = ""):
-        # TODO probably a lock is necessary for the collections object
+        self.lock = threading.Lock()
         self.collections = {}
         # Get collections from DatasetOptions
         for dataset in DatasetOptions:
@@ -40,6 +41,14 @@ class CollectionNameGetter:
                 self.collections[name] = HelperCollection(name)
 
     def __call__(self, collection: str = Query(...)) -> Collection | None:
+        self.lock.acquire()
+        try:
+            value = self._call(collection)
+        finally:
+            self.lock.release()
+        return value
+
+    def _call(self, collection: str = Query(...)) -> Collection | None:
         pass
 
     def check_counter(self, collection_name: str):
@@ -68,7 +77,7 @@ class DatasetCollectionNameGetter(CollectionNameGetter):
     def __init__(self):
         super().__init__()
 
-    def __call__(self, collection: str = Query(...)) -> Collection | None:
+    def _call(self, collection: str = Query(...)) -> Collection | None:
         if collection in self.collections.keys():
             # Check if the collection must be loaded
             self.check_counter(collection)
@@ -84,7 +93,7 @@ class GridCollectionNameGetter(CollectionNameGetter):
     def __init__(self):
         super().__init__("_zoom_levels_grid")
 
-    def __call__(self, collection: str = Query(...)) -> Collection | None:
+    def _call(self, collection: str = Query(...)) -> Collection | None:
         if collection in self.collections.keys():
             # Check if the collection must be loaded
             self.check_counter(collection)
@@ -100,7 +109,7 @@ class MapCollectionNameGetter(CollectionNameGetter):
     def __init__(self):
         super().__init__("_zoom_levels_map")
 
-    def __call__(self, collection: str = Query(...)) -> Collection | None:
+    def _call(self, collection: str = Query(...)) -> Collection | None:
         if collection in self.collections.keys():
             # Check if the collection must be loaded
             self.check_counter(collection)
@@ -116,7 +125,7 @@ class ClustersCollectionNameGetter(CollectionNameGetter):
     def __init__(self):
         super().__init__("_zoom_levels_clusters")
 
-    def __call__(self, collection: str = Query(...)) -> Collection | None:
+    def _call(self, collection: str = Query(...)) -> Collection | None:
         if collection in self.collections.keys():
             # Check if the collection must be loaded
             self.check_counter(collection)
@@ -132,7 +141,7 @@ class ImageToTileCollectionNameGetter(CollectionNameGetter):
     def __init__(self):
         super().__init__("_image_to_tile")
 
-    def __call__(self, collection: str = Query(...)) -> Collection | None:
+    def _call(self, collection: str = Query(...)) -> Collection | None:
         if collection in self.collections.keys():
             # Check if the collection must be loaded
             self.check_counter(collection)
@@ -177,48 +186,56 @@ class Updater:
         self.map_collection_name_getter = map_collection_name_getter
         self.clusters_collection_name_getter = clusters_collection_name_getter
         self.image_to_tile_collection_name_getter = image_to_tile_collection_name_getter
+        # Define lock for the updater
+        self.lock = threading.Lock()
 
     def __call__(self):
-        # First, update the list of collections if necessary
-        for dataset in DatasetOptions:
-            name = dataset.value["name"]
-            if (name in utility.list_collections() and
-                    name not in self.dataset_collection_name_getter.collections.keys()):
-                # The collection is in the database, but not in the list of collections. Add it to the list.
-                self.dataset_collection_name_getter.collections[name] = HelperCollection(name)
-        # Second, update the list of zoom level collections if necessary
-        for dataset in DatasetOptions:
-            name = dataset.value["name"] + "_zoom_levels_grid"
-            # Check if name is the suffix of one of the elements of the list of collections
-            if (name in utility.list_collections() and
-                    name not in self.grid_collection_name_getter.collections.keys()):
-                # The collection is in the database, but not in the list of collections. Add it to the list.
-                self.grid_collection_name_getter.collections[name] = HelperCollection(name)
+        # Acquire lock
+        self.lock.acquire()
+        try:
+            # First, update the list of collections if necessary
+            for dataset in DatasetOptions:
+                name = dataset.value["name"]
+                if (name in utility.list_collections() and
+                        name not in self.dataset_collection_name_getter.collections.keys()):
+                    # The collection is in the database, but not in the list of collections. Add it to the list.
+                    self.dataset_collection_name_getter.collections[name] = HelperCollection(name)
+            # Second, update the list of zoom level collections if necessary
+            for dataset in DatasetOptions:
+                name = dataset.value["name"] + "_zoom_levels_grid"
+                # Check if name is the suffix of one of the elements of the list of collections
+                if (name in utility.list_collections() and
+                        name not in self.grid_collection_name_getter.collections.keys()):
+                    # The collection is in the database, but not in the list of collections. Add it to the list.
+                    self.grid_collection_name_getter.collections[name] = HelperCollection(name)
 
-            name = dataset.value["name"] + "_zoom_levels_map"
-            # Check if name is the suffix of one of the elements of the list of collections
-            if (name in utility.list_collections() and
-                    name not in self.map_collection_name_getter.collections.keys()):
-                # The collection is in the database, but not in the list of collections. Add it to the list.
-                self.map_collection_name_getter.collections[name] = HelperCollection(name)
+                name = dataset.value["name"] + "_zoom_levels_map"
+                # Check if name is the suffix of one of the elements of the list of collections
+                if (name in utility.list_collections() and
+                        name not in self.map_collection_name_getter.collections.keys()):
+                    # The collection is in the database, but not in the list of collections. Add it to the list.
+                    self.map_collection_name_getter.collections[name] = HelperCollection(name)
 
-            name = dataset.value["name"] + "_zoom_levels_clusters"
-            # Check if name is the suffix of one of the elements of the list of collections
-            if (name in utility.list_collections() and
-                    name not in self.clusters_collection_name_getter.collections.keys()):
-                # The collection is in the database, but not in the list of collections. Add it to the list.
-                self.clusters_collection_name_getter.collections[name] = HelperCollection(name)
+                name = dataset.value["name"] + "_zoom_levels_clusters"
+                # Check if name is the suffix of one of the elements of the list of collections
+                if (name in utility.list_collections() and
+                        name not in self.clusters_collection_name_getter.collections.keys()):
+                    # The collection is in the database, but not in the list of collections. Add it to the list.
+                    self.clusters_collection_name_getter.collections[name] = HelperCollection(name)
 
-            name = dataset.value["name"] + "_image_to_tile"
-            # Check if name is the suffix of one of the elements of the list of collections
-            if (name in utility.list_collections() and
-                    name not in self.image_to_tile_collection_name_getter.collections.keys()):
-                # The collection is in the database, but not in the list of collections. Add it to the list.
-                self.image_to_tile_collection_name_getter.collections[name] = HelperCollection(name)
+                name = dataset.value["name"] + "_image_to_tile"
+                # Check if name is the suffix of one of the elements of the list of collections
+                if (name in utility.list_collections() and
+                        name not in self.image_to_tile_collection_name_getter.collections.keys()):
+                    # The collection is in the database, but not in the list of collections. Add it to the list.
+                    self.image_to_tile_collection_name_getter.collections[name] = HelperCollection(name)
 
-        # Now, return the list of collections
-        return [dataset.value["name"] for dataset in DatasetOptions
-                if dataset.value["name"] in utility.list_collections()]
+            # Now, return the list of collections
+            return [dataset.value["name"] for dataset in DatasetOptions
+                    if dataset.value["name"] in utility.list_collections()]
+        finally:
+            # Release lock
+            self.lock.release()
 
 
 class Embedder:

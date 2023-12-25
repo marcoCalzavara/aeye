@@ -22,7 +22,7 @@ const responsive = {
             max: 464,
             min: 0
         },
-        items: 4
+        items: 3
     },
     tablet: {
         breakpoint: {
@@ -33,7 +33,7 @@ const responsive = {
     }
 };
 
-export function fetchNeighbors(index, k, host, setImages) {
+export function fetchNeighbors(index, k, host) {
     // The function takes in an index of an image, and fetches the nearest neighbors of the image from the server.
     // Then it populates the state images with the fetched images.
     const url = `${host}/api/neighbors?index=${index}&k=${k}&collection=${DATASET}`;
@@ -94,10 +94,10 @@ const NeighborsCarousel = (props) => {
             arrows
             autoPlaySpeed={3000}
             centerMode={false}
-            className="carousel height-carousel"
+            className="carousel h-carousel"
             containerClass="container"
             dotListClass=""
-            draggable
+            draggable={false}
             focusOnSelect={false}
             infinite={false}
             itemClass=""

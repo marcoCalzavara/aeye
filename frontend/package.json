@@ -12,9 +12,11 @@
     "pixi.js": "latest",
     "react": "latest",
     "react-dom": "latest",
+    "react-loading": "^2.0.3",
     "react-multi-carousel": "latest",
     "react-router-dom": "latest",
     "react-scripts": "^5.0.1",
+    "react-zoom-pan-pinch": "^3.3.0",
     "web-vitals": "latest"
   },
   "scripts": {

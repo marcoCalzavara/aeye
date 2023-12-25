@@ -1,15 +1,14 @@
 import {useEffect, useRef} from 'react';
 import * as PIXI from "pixi.js";
 import {useApp} from "@pixi/react";
-import {DATASET} from "./Cache";
 import 'tailwindcss/tailwind.css'
 
 const maxZoomLevel = 7;
 const DURATION = 4; // seconds
 
 
-export function fetchClusterData(zoom_level, tile_x, tile_y, host = "") {
-    const url = `${host}/api/clusters?zoom_level=${zoom_level}&tile_x=${tile_x}&tile_y=${tile_y}&collection=${DATASET}_zoom_levels_clusters`;
+export function fetchClusterData(zoom_level, tile_x, tile_y, dataset, host = "") {
+    const url = `${host}/api/clusters?zoom_level=${zoom_level}&tile_x=${tile_x}&tile_y=${tile_y}&collection=${dataset}_zoom_levels_clusters`;
     return fetch(url,
         {
             method: 'GET',
@@ -126,33 +125,23 @@ const ClustersMap = (props) => {
     const maxY = useRef(0);
     // Define boolean for mouse down
     const mouseDown = useRef(false);
-    // Define boolean for useEffect to make sure that it is called only once
-    const firstRender = useRef(true);
     // Define state for artworks in tiles
     const artworksInTiles = useRef(new Map());
     // Define width and height of the viewport
-    const viewportWidth = useRef(props.width);
-    const viewportHeight = useRef(props.height);
 
     // Define state for the app
     const app = useApp()
     // Create container for the stage
     const container = useRef(null);
 
-    // Define search data
-    const searchData = useRef(props.searchData);
     // Define constant for transition steps and depth steps
     const transitionSteps = 100;
     const depthStep = 0.02;
 
-    // Define variables to store setters from the parent component
-    const setShowCarousel = props.setShowCarousel;
-    const setClickedImageIndex = props.setClickedImageIndex;
-
     const mapGlobalCoordinatesToStageCoordinates = (global_x, global_y) => {
         // Map global coordinates to stage coordinates
-        const stage_x = ((global_x - effectivePosition.current.x) * (viewportWidth.current - maxWidth.current)) / effectiveWidth.current;
-        const stage_y = ((global_y - effectivePosition.current.y) * (viewportHeight.current - maxHeight.current)) / effectiveHeight.current;
+        const stage_x = ((global_x - effectivePosition.current.x) * (props.width - maxWidth.current)) / effectiveWidth.current;
+        const stage_y = ((global_y - effectivePosition.current.y) * (props.height - maxHeight.current)) / effectiveHeight.current;
         return {
             x: stage_x,
             y: stage_y
@@ -161,8 +150,8 @@ const ClustersMap = (props) => {
 
     const mapStageCoordinatesToGlobalCoordinates = (stage_x, stage_y) => {
         // Map stage coordinates to global coordinates
-        const global_x = (stage_x * effectiveWidth.current) / viewportWidth.current;
-        const global_y = (stage_y * effectiveHeight.current) / viewportHeight.current;
+        const global_x = (stage_x * effectiveWidth.current) / props.width;
+        const global_y = (stage_y * effectiveHeight.current) / props.height;
         return {
             x: global_x + effectivePosition.current.x,
             y: global_y + effectivePosition.current.y
@@ -175,8 +164,8 @@ const ClustersMap = (props) => {
         sprite.removeAllListeners('pointerdown');
 
         sprite.on('pointerdown', () => {
-            setClickedImageIndex(index);
-            setShowCarousel(true);
+            props.setClickedImageIndex(index);
+            props.setShowCarousel(true);
         });
     }
 
@@ -186,7 +175,7 @@ const ClustersMap = (props) => {
         // Get sprite from sprite pool
         const sprite = spritePool.current.pop();
         // Update sprite
-        sprite.texture = PIXI.Texture.from(props.host + "/" + DATASET + "/resized_images/" + path);
+        sprite.texture = PIXI.Texture.from(props.host + "/" + props.selectedDataset + "/resized_images/" + path);
         // Save global coordinates of the artwork
         spritesGlobalInfo.current.set(index, {
             x: global_x, y: global_y, width: width, height: height, path: path,
@@ -225,9 +214,9 @@ const ClustersMap = (props) => {
 
         // Make sprite not visible if outside the stage
         /*sprite.visible = artwork_position.x >= -2*maxWidth.current
-            && artwork_position.x <= viewportWidth.current + 2*maxWidth.current
+            && artwork_position.x <= props.width + 2*maxWidth.current
             && artwork_position.y >= -2*maxHeight.current
-            && artwork_position.y <= viewportHeight.current + 2*maxHeight.current;*/
+            && artwork_position.y <= props.height + 2*maxHeight.current;*/
 
         // On click, create rectangle with the sprite inside on the right and some text on the left. Make everything unclickable,
         // such that the user has to click on the rectangle to close it. The rectangle should be at the center of the screen,
@@ -271,23 +260,46 @@ const ClustersMap = (props) => {
         container.current.addChild(sprite);
     }
 
-    // Create useEffect for initialization of the component. This is called only once when the component is mounted.
-    useEffect(() => {
-        if (!firstRender.current) {
-            console.log("ClustersMap useEffect called more than once");
-            return;
+    const reset = () => {
+        // Reset everything at the initial state
+        // Reset zoom level
+        zoomLevel.current = 0;
+        depth.current = 0;
+        // Move all sprites back to the sprite pool
+        for (let index of sprites.current.keys()) {
+            let sprite = sprites.current.get(index);
+            // Complete reset of sprite
+            sprite.removeAllListeners();
+            // Remove sprite from stage
+            container.current.removeChild(sprite);
+            // Add sprite back to sprite pool
+            spritePool.current.push(sprites.current.get(index));
         }
+        // Reset sprites global info
+        spritesGlobalInfo.current.clear();
+        // Reset artworks in tiles
+        artworksInTiles.current.clear();
+        // Make sure spritePool contains 800 sprites
+        console.assert(spritePool.current.length === 800);
+    }
 
-        firstRender.current = false;
+    // Create useEffect for initialization of the component. This is called every time the selected dataset changes.
+    useEffect(() => {
+        // Reset everything at the initial state
+        reset()
 
-        container.current = new PIXI.Container();
-        app.stage.addChild(container.current);
+        // Create container for the stage
+        if (!container.current) {
+            // Create container
+            container.current = new PIXI.Container();
+            app.stage.addChild(container.current);
+        }
 
         // Define container pointer
         container.current.cursor = 'grab';
 
         // Add handlers to stage
-        container.current.hitArea = new PIXI.Rectangle(0, 0, viewportWidth.current, viewportHeight.current);
+        container.current.hitArea = new PIXI.Rectangle(0, 0, props.width, props.height);
         container.current.interactive = true;
         container.sortableChildren = true;
         container.current
@@ -297,7 +309,7 @@ const ClustersMap = (props) => {
             .on('wheel', handleMouseWheel);
 
         // Fetch cluster data from the server
-        fetchClusterData(zoomLevel.current, 0, 0, props.host)
+        fetchClusterData(zoomLevel.current, 0, 0, props.selectedDataset, props.host)
             .then(data => {
                 // Update the limits of the embedding space
                 minX.current = data["tile_coordinate_range"]["x_min"];
@@ -342,18 +354,15 @@ const ClustersMap = (props) => {
                 // Handle any errors that occur during the fetch operation
                 console.error('Error:', error);
             });
-    }, []);
+    }, [props.selectedDataset]);
 
     useEffect(() => {
-        // Update viewport width and height
-        viewportWidth.current = props.width;
-        viewportHeight.current = props.height;
         // Resize container and set hit area
-        container.current.hitArea = new PIXI.Rectangle(0, 0, viewportWidth.current, viewportHeight.current);
+        container.current.hitArea = new PIXI.Rectangle(0, 0, props.width, props.height);
 
         // Update max width and height of a sprite and update all sprites
-        maxWidth.current = viewportWidth.current / 10;
-        maxHeight.current = viewportHeight.current / 10;
+        maxWidth.current = props.width / 10;
+        maxHeight.current = props.height / 10;
 
         for (let index of sprites.current.keys()) {
             // Get position of artwork in stage coordinates.
@@ -513,9 +522,9 @@ const ClustersMap = (props) => {
             );
             // Make sprite not visible if outside the stage
             /*sprites.current.get(index).visible = artwork_position.x >= -2*maxWidth.current
-                && artwork_position.x <= viewportWidth.current + 2*maxWidth.current
+                && artwork_position.x <= props.width + 2*maxWidth.current
                 && artwork_position.y >= -2*maxHeight.current
-                && artwork_position.y <= viewportHeight.current + 2*maxHeight.current;*/
+                && artwork_position.y <= props.height + 2*maxHeight.current;*/
 
             // Update position of sprite
             sprites.current.get(index).x = artwork_position.x;
@@ -542,7 +551,7 @@ const ClustersMap = (props) => {
             // If tile is in artworksInTiles, then we do not need to fetch data for it.
             if (!artworksInTiles.current.has(effective_zoom_level + "-" + tile.x + "-" + tile.y)) {
                 // The tile is not in artworksInTiles. We need to fetch data for it.
-                fetchClusterData(effective_zoom_level, tile.x, tile.y, props.host)
+                fetchClusterData(effective_zoom_level, tile.x, tile.y, props.selectedDataset, props.host)
                     .then(data => {
                         // Loop over artworks in tile and add them to the stage.
                         // noinspection JSUnresolvedVariable
@@ -725,8 +734,8 @@ const ClustersMap = (props) => {
         // If mouse is down, then move the stage
         if (mouseDown.current) {
             // Get mouse position. Transform movement of the mouse to movement in the embedding space.
-            const mouse_x = ((-event.movementX) * effectiveWidth.current) / viewportWidth.current;
-            const mouse_y = ((-event.movementY) * effectiveHeight.current) / viewportHeight.current;
+            const mouse_x = ((-event.movementX) * effectiveWidth.current) / props.width;
+            const mouse_y = ((-event.movementY) * effectiveHeight.current) / props.height;
             // Change the effective position of the stage. Make sure that it does not exceed the limits of the embedding space.
             const new_x = Math.max(
                 Math.min(effectivePosition.current.x + mouse_x, maxX.current - effectiveWidth.current), minX.current);
