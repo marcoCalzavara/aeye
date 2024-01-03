@@ -9,9 +9,12 @@
     "@mui/material": "latest",
     "@mui/system": "latest",
     "@pixi/react": "latest",
+    "@use-gesture/react": "^10.3.0",
+    "hammerjs": "^2.0.8",
     "pixi.js": "latest",
     "react": "latest",
     "react-dom": "latest",
+    "react-icons": "^4.12.0",
     "react-loading": "^2.0.3",
     "react-multi-carousel": "latest",
     "react-router-dom": "latest",
@@ -21,8 +24,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build:css": "postcss src/index.css -o public/index.css",
-    "build": "npm run build:css && react-scripts build",
+    "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

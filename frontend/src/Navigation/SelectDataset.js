@@ -18,7 +18,6 @@ function cleanText(text) {
 }
 
 export default function SelectDataset(props) {
-    console.log(props.datasets);
     const [dataset, setDataset] = React.useState(props.datasets[0]);
 
     const handleChange = (event) => {

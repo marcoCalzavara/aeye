@@ -6,6 +6,7 @@ import StickyBar from "./Navigation/StickyBar";
 import NeighborsCarousel from "./Carousel/Carousel";
 import ReactLoading from "react-loading";
 import Typography from "@mui/material/Typography";
+import { TfiAngleDown, TfiAngleUp } from "react-icons/tfi";
 
 
 async function fetchAvailableDatasets(host) {
@@ -27,7 +28,11 @@ async function fetchAvailableDatasets(host) {
 
 function extractHost() {
     // Get host
-    const in_host = window.location.href;
+    let in_host = window.location.href;
+    // Remove trailing slash if present
+    if (in_host.endsWith('/')) {
+        in_host = in_host.substring(0, in_host.length - 1);
+    }
     // Remove port from host. Keep http:// or https:// and the domain name, e.g. http://localhost
     // Get index of second colon
     let colon_count = 0;
@@ -36,6 +41,11 @@ function extractHost() {
         if (in_host[i] === ':') {
             colon_count++;
         }
+        i++;
+    }
+    // If the last character is not a colon, add it to the host
+    if (i === in_host.length) {
+        in_host += ':';
         i++;
     }
     return in_host.substring(0, i) + '80';
@@ -54,6 +64,8 @@ function App() {
     const [showCarousel, setShowCarousel] = useState(false);
     // Define variable for storing the index of the clicked image
     const [clickedImageIndex, setClickedImageIndex] = useState(-1);
+    // Define boolean for first carousel render
+    const [firstRender, setFirstRender] = useState(true);
     // Define state for datasets
     const [datasets, setDatasets] = useState([]);
     // Define state for selected dataset
@@ -89,6 +101,13 @@ function App() {
         };
     }, []);
 
+    const invertShownCarousel = () => {
+        if (firstRender) {
+            setFirstRender(false);
+        }
+        setShowCarousel(!showCarousel);
+    }
+
     return (
         selectedDataset !== null ?
             <div className="main">
@@ -112,7 +131,28 @@ function App() {
                                      setShowCarousel={setShowCarousel}
                                      setClickedImageIndex={setClickedImageIndex}/>
                     </Stage>
-                    {showCarousel && <NeighborsCarousel host={host} clickedImageIndex={clickedImageIndex}/>}
+                    <div id="gesture-area" style={
+                        {
+                            position: 'absolute',
+                            top: "32px",
+                            left: "32px",
+                            width: dimensionsStage.width,
+                            height: dimensionsStage.height,
+                            pointerEvents: 'none'
+                        }
+                    }/>
+                        <div id="carousel" className={`w-full bg-black carousel-container flex flex-col items-center justify-center ${showCarousel ? 'h-carousel' : 'h-0'}
+                        ${!firstRender ? 'height-transition' : ''}`}>
+                            <button className={`mb-1 ${showCarousel ? 'h-1/10' : 'h-full'}`} onClick={() => invertShownCarousel()}>
+                                {showCarousel ? <TfiAngleDown style={{ zIndex: 1000 }} className="text-white"/> :
+                                <TfiAngleUp style={{ zIndex: 1000 }} className="text-white"/>}
+                            </button>
+                            <div className={`carousel-div ${showCarousel ? 'h-9/10' : 'h-0'} 
+                            ${!firstRender ? 'height-transition' : ''}`}>
+                                {clickedImageIndex !== -1 && <NeighborsCarousel host={host} clickedImageIndex={clickedImageIndex}/>}
+                            </div>
+                        </div>
+
                 </div>
             </div>
             :

@@ -1,11 +1,11 @@
 import {useEffect, useRef} from 'react';
 import * as PIXI from "pixi.js";
+import Hammer from "hammerjs";
 import {useApp} from "@pixi/react";
-import 'tailwindcss/tailwind.css'
+import 'tailwindcss/tailwind.css';
 
 const maxZoomLevel = 7;
 const DURATION = 4; // seconds
-
 
 export function fetchClusterData(zoom_level, tile_x, tile_y, dataset, host = "") {
     const url = `${host}/api/clusters?zoom_level=${zoom_level}&tile_x=${tile_x}&tile_y=${tile_y}&collection=${dataset}_zoom_levels_clusters`;
@@ -133,10 +133,16 @@ const ClustersMap = (props) => {
     const app = useApp()
     // Create container for the stage
     const container = useRef(null);
-
+    // Define hammer
+    const hammer = useRef(null);
+    // Define state for previous scale for pinching
+    const previousScale = useRef(1);
     // Define constant for transition steps and depth steps
     const transitionSteps = 100;
     const depthStep = 0.02;
+
+    // Event handler lock for updating the stage
+    const updateStageLock = useRef(false);
 
     const mapGlobalCoordinatesToStageCoordinates = (global_x, global_y) => {
         // Map global coordinates to stage coordinates
@@ -166,6 +172,13 @@ const ClustersMap = (props) => {
         sprite.on('pointerdown', () => {
             props.setClickedImageIndex(index);
             props.setShowCarousel(true);
+            if (document.getElementById("carousel") !== null) {
+                document.getElementById("carousel").scrollIntoView({
+                    behavior: "smooth",
+                    block: "end",
+                    inline: "nearest"
+                });
+            }
         });
     }
 
@@ -286,7 +299,7 @@ const ClustersMap = (props) => {
     // Create useEffect for initialization of the component. This is called every time the selected dataset changes.
     useEffect(() => {
         // Reset everything at the initial state
-        reset()
+        reset();
 
         // Create container for the stage
         if (!container.current) {
@@ -307,6 +320,18 @@ const ClustersMap = (props) => {
             .on('pointerup', handleMouseUp)
             .on('pointermove', handleMouseMove)
             .on('wheel', handleMouseWheel);
+
+        // Create hammer. Bind it to the gesture area.
+        hammer.current = new Hammer(app.view);
+        // Disable all gestures except pinch
+        hammer.current.get('pan').set({enable: false});
+        hammer.current.get('swipe').set({enable: false});
+        hammer.current.get('tap').set({enable: false});
+        hammer.current.get('press').set({enable: false});
+        hammer.current.get('rotate').set({enable: false});
+        hammer.current.get('pinch').set({enable: true});
+        hammer.current.on('pinchstart', handlePinchStart);
+        hammer.current.on('pinch', handlePinch);
 
         // Fetch cluster data from the server
         fetchClusterData(zoomLevel.current, 0, 0, props.selectedDataset, props.host)
@@ -398,161 +423,171 @@ const ClustersMap = (props) => {
         }
     }, [props.searchData]);
 
-    const updateStage = () => {
-        // Get tile coordinates of the visible tiles. The number of tiles is not computed on the current zoom level, but
-        // on Math.ceil(zoomLevel.current + depth.current). This is because we want to fetch data for the next zoom level
-        // when the user is zooming in, and for the current zoom level when the user is zooming out.
-        const effective_zoom_level = Math.ceil(zoomLevel.current + depth.current);
 
-        const number_of_tiles = 2 ** effective_zoom_level;
-        const tile_step_x = (maxX.current - minX.current) / number_of_tiles;
-        const tile_step_y = (maxY.current - minY.current) / number_of_tiles;
-        // Get all tiles that are visible. We can have at most 4 tiles that are visible.
-        const visible_tiles = [];
-        // Get tile coordinates of the tile that contains the upper left corner of the stage.
-        const tile_x = Math.min(Math.floor((effectivePosition.current.x - minX.current) / tile_step_x), number_of_tiles - 1);
-        const tile_y = Math.min(Math.floor((effectivePosition.current.y - minY.current) / tile_step_y), number_of_tiles - 1);
-        visible_tiles.push({x: tile_x, y: tile_y});
-        // Get all neighboring tiles. This means all tiles at a distance of 1, plus tiles at a distance of 2 on the bottom
-        // and on the right.
-        if (tile_x > 0) {
-            visible_tiles.push({x: tile_x - 1, y: tile_y});
-            if (tile_y > 0) {
-                visible_tiles.push({x: tile_x - 1, y: tile_y - 1});
-            }
-            if (tile_y < number_of_tiles - 1) {
-                visible_tiles.push({x: tile_x - 1, y: tile_y + 1});
-            }
+    const updateStage = async () => {
+        // Try to acquire lock
+        if (updateStageLock.current) {
+            return;
         }
-        if (tile_x < number_of_tiles - 1) {
-            visible_tiles.push({x: tile_x + 1, y: tile_y});
-            if (tile_y > 0) {
-                visible_tiles.push({x: tile_x + 1, y: tile_y - 1});
+        try {
+            // Acquire lock
+            updateStageLock.current = true;
+            // Get tile coordinates of the visible tiles. The number of tiles is not computed on the current zoom level, but
+            // on Math.ceil(zoomLevel.current + depth.current). This is because we want to fetch data for the next zoom level
+            // when the user is zooming in, and for the current zoom level when the user is zooming out.
+            const effective_zoom_level = Math.ceil(zoomLevel.current + depth.current);
+
+            const number_of_tiles = 2 ** effective_zoom_level;
+            const tile_step_x = (maxX.current - minX.current) / number_of_tiles;
+            const tile_step_y = (maxY.current - minY.current) / number_of_tiles;
+            // Get all tiles that are visible. We can have at most 4 tiles that are visible.
+            const visible_tiles = [];
+            // Get tile coordinates of the tile that contains the upper left corner of the stage.
+            const tile_x = Math.min(Math.floor((effectivePosition.current.x - minX.current) / tile_step_x), number_of_tiles - 1);
+            const tile_y = Math.min(Math.floor((effectivePosition.current.y - minY.current) / tile_step_y), number_of_tiles - 1);
+            visible_tiles.push({x: tile_x, y: tile_y});
+            // Get all neighboring tiles. This means all tiles at a distance of 1, plus tiles at a distance of 2 on the bottom
+            // and on the right.
+            if (tile_x > 0) {
+                visible_tiles.push({x: tile_x - 1, y: tile_y});
+                if (tile_y > 0) {
+                    visible_tiles.push({x: tile_x - 1, y: tile_y - 1});
+                }
+                if (tile_y < number_of_tiles - 1) {
+                    visible_tiles.push({x: tile_x - 1, y: tile_y + 1});
+                }
             }
-            if (tile_y < number_of_tiles - 1) {
-                visible_tiles.push({x: tile_x + 1, y: tile_y + 1});
+            if (tile_x < number_of_tiles - 1) {
+                visible_tiles.push({x: tile_x + 1, y: tile_y});
+                if (tile_y > 0) {
+                    visible_tiles.push({x: tile_x + 1, y: tile_y - 1});
+                }
+                if (tile_y < number_of_tiles - 1) {
+                    visible_tiles.push({x: tile_x + 1, y: tile_y + 1});
+                }
             }
-        }
-        if (tile_x < number_of_tiles - 2) {
-            visible_tiles.push({x: tile_x + 2, y: tile_y});
-            if (tile_y < number_of_tiles - 1) {
-                visible_tiles.push({x: tile_x + 2, y: tile_y + 1});
+            if (tile_x < number_of_tiles - 2) {
+                visible_tiles.push({x: tile_x + 2, y: tile_y});
+                if (tile_y < number_of_tiles - 1) {
+                    visible_tiles.push({x: tile_x + 2, y: tile_y + 1});
+                }
+                if (tile_y < number_of_tiles - 2) {
+                    visible_tiles.push({x: tile_x + 2, y: tile_y + 2});
+                }
             }
             if (tile_y < number_of_tiles - 2) {
-                visible_tiles.push({x: tile_x + 2, y: tile_y + 2});
-            }
-        }
-        if (tile_y < number_of_tiles - 2) {
-            visible_tiles.push({x: tile_x, y: tile_y + 2});
-            if (tile_x < number_of_tiles - 1) {
-                visible_tiles.push({x: tile_x + 1, y: tile_y + 2});
-            }
-        }
-        if (tile_y > 0) {
-            visible_tiles.push({x: tile_x, y: tile_y - 1});
-        }
-        if (tile_y < number_of_tiles - 1) {
-            visible_tiles.push({x: tile_x, y: tile_y + 1});
-        }
-
-        // Remove tiles and sprites of tiles that are not visible
-        for (let tile of artworksInTiles.current.keys()) {
-            // If the tile is from the previous zoom level, delete the entry from artworksInTiles but do not delete all
-            // the sprites. This is because some of the sprites might still be visible.
-            if (effective_zoom_level === parseInt(tile.split("-")[0]) + 1) {
-                for (let index of artworksInTiles.current.get(tile)) {
-                    // Check the tile the sprite is in. If the sprite is not among the tiles in visible_tiles, then
-                    // remove it, else set is_in_previous_zoom_level to true.
-                    const spriteGlobalPosition = spritesGlobalInfo.current.get(index);
-                    const tile_x = Math.min(Math.floor((spriteGlobalPosition.x - minX.current) / tile_step_x), number_of_tiles - 1);
-                    const tile_y = Math.min(Math.floor((spriteGlobalPosition.y - minY.current) / tile_step_y), number_of_tiles - 1);
-                    if (!visible_tiles.some(visible_tile =>
-                        visible_tile.x === tile_x && visible_tile.y === tile_y)) {
-                        // Remove every event handler from sprite
-                        sprites.current.get(index).removeAllListeners();
-                        // Remove sprite from stage
-                        container.current.removeChild(sprites.current.get(index));
-                        // Add sprite back to sprite pool
-                        spritePool.current.push(sprites.current.get(index));
-                        // Remove sprite from sprites
-                        sprites.current.delete(index);
-                        // Remove sprite from spritesGlobalInfo
-                        spritesGlobalInfo.current.delete(index);
-                    } else {
-                        // Set is_in_previous_zoom_level to true
-                        spritesGlobalInfo.current.get(index).is_in_previous_zoom_level = true;
-                    }
+                visible_tiles.push({x: tile_x, y: tile_y + 2});
+                if (tile_x < number_of_tiles - 1) {
+                    visible_tiles.push({x: tile_x + 1, y: tile_y + 2});
                 }
-                // Delete tile from artworksInTiles
-                artworksInTiles.current.delete(tile);
             }
-            else if (!(effective_zoom_level === parseInt(tile.split("-")[0])) || !visible_tiles.some(visible_tile =>
-                visible_tile.x === parseInt(tile.split("-")[1]) && visible_tile.y === parseInt(tile.split("-")[2]))) {
+            if (tile_y > 0) {
+                visible_tiles.push({x: tile_x, y: tile_y - 1});
+            }
+            if (tile_y < number_of_tiles - 1) {
+                visible_tiles.push({x: tile_x, y: tile_y + 1});
+            }
 
-                // Deal with case where the zoom level of the tile is equal to the current zoom level - 1. In this case,
-                // the sprites that are still visible
-
-
-                // The tile is not among the visible ones.
-                for (let index of artworksInTiles.current.get(tile)) {
-                    if (sprites.current.has(index)) {
-                        // Remove every event handler from sprite
-                        sprites.current.get(index).removeAllListeners();
-                        // Remove sprite from stage
-                        container.current.removeChild(sprites.current.get(index));
-                        // Add sprite back to sprite pool
-                        spritePool.current.push(sprites.current.get(index));
-                        // Remove sprite from sprites
-                        sprites.current.delete(index);
-                        // Remove sprite from spritesGlobalInfo
-                        spritesGlobalInfo.current.delete(index);
+            // Remove tiles and sprites of tiles that are not visible
+            for (let tile of artworksInTiles.current.keys()) {
+                // If the tile is from the previous zoom level, delete the entry from artworksInTiles but do not delete all
+                // the sprites. This is because some of the sprites might still be visible.
+                if (effective_zoom_level === parseInt(tile.split("-")[0]) + 1) {
+                    for (let index of artworksInTiles.current.get(tile)) {
+                        // Check the tile the sprite is in. If the sprite is not among the tiles in visible_tiles, then
+                        // remove it, else set is_in_previous_zoom_level to true.
+                        if (!spritesGlobalInfo.current.has(index)) {
+                            continue;
+                        }
+                        const spriteGlobalPosition = spritesGlobalInfo.current.get(index);
+                        const tile_x = Math.min(Math.floor((spriteGlobalPosition.x - minX.current) / tile_step_x), number_of_tiles - 1);
+                        const tile_y = Math.min(Math.floor((spriteGlobalPosition.y - minY.current) / tile_step_y), number_of_tiles - 1);
+                        if (!visible_tiles.some(visible_tile =>
+                            visible_tile.x === tile_x && visible_tile.y === tile_y)) {
+                            // Remove every event handler from sprite
+                            sprites.current.get(index).removeAllListeners();
+                            // Remove sprite from stage
+                            container.current.removeChild(sprites.current.get(index));
+                            // Add sprite back to sprite pool
+                            spritePool.current.push(sprites.current.get(index));
+                            // Remove sprite from sprites
+                            sprites.current.delete(index);
+                            // Remove sprite from spritesGlobalInfo
+                            spritesGlobalInfo.current.delete(index);
+                        } else {
+                            // Set is_in_previous_zoom_level to true
+                            spritesGlobalInfo.current.get(index).is_in_previous_zoom_level = true;
+                        }
                     }
+                    // Delete tile from artworksInTiles
+                    artworksInTiles.current.delete(tile);
+                } else if (!(effective_zoom_level === parseInt(tile.split("-")[0])) || !visible_tiles.some(visible_tile =>
+                    visible_tile.x === parseInt(tile.split("-")[1]) && visible_tile.y === parseInt(tile.split("-")[2]))) {
+
+                    // Deal with case where the zoom level of the tile is equal to the current zoom level - 1. In this case,
+                    // the sprites that are still visible
+
+
+                    // The tile is not among the visible ones.
+                    for (let index of artworksInTiles.current.get(tile)) {
+                        if (sprites.current.has(index)) {
+                            // Remove every event handler from sprite
+                            sprites.current.get(index).removeAllListeners();
+                            // Remove sprite from stage
+                            container.current.removeChild(sprites.current.get(index));
+                            // Add sprite back to sprite pool
+                            spritePool.current.push(sprites.current.get(index));
+                            // Remove sprite from sprites
+                            sprites.current.delete(index);
+                            // Remove sprite from spritesGlobalInfo
+                            spritesGlobalInfo.current.delete(index);
+                        }
+                    }
+                    // Delete tile from artworksInTiles
+                    artworksInTiles.current.delete(tile);
                 }
-                // Delete tile from artworksInTiles
-                artworksInTiles.current.delete(tile);
             }
-        }
 
-        // Change position of all sprites that are on stage
-        for (let index of sprites.current.keys()) {
-            // Get position of artwork in stage coordinates.
-            const artwork_position = mapGlobalCoordinatesToStageCoordinates(
-                spritesGlobalInfo.current.get(index).x,
-                spritesGlobalInfo.current.get(index).y
-            );
-            // Make sprite not visible if outside the stage
-            /*sprites.current.get(index).visible = artwork_position.x >= -2*maxWidth.current
-                && artwork_position.x <= props.width + 2*maxWidth.current
-                && artwork_position.y >= -2*maxHeight.current
-                && artwork_position.y <= props.height + 2*maxHeight.current;*/
+            // Change position of all sprites that are on stage
+            for (let index of sprites.current.keys()) {
+                // Get position of artwork in stage coordinates.
+                const artwork_position = mapGlobalCoordinatesToStageCoordinates(
+                    spritesGlobalInfo.current.get(index).x,
+                    spritesGlobalInfo.current.get(index).y
+                );
+                // Make sprite not visible if outside the stage
+                /*sprites.current.get(index).visible = artwork_position.x >= -2*maxWidth.current
+                    && artwork_position.x <= props.width + 2*maxWidth.current
+                    && artwork_position.y >= -2*maxHeight.current
+                    && artwork_position.y <= props.height + 2*maxHeight.current;*/
 
-            // Update position of sprite
-            sprites.current.get(index).x = artwork_position.x;
-            sprites.current.get(index).y = artwork_position.y;
+                // Update position of sprite
+                sprites.current.get(index).x = artwork_position.x;
+                sprites.current.get(index).y = artwork_position.y;
 
-            // Set alpha of sprite
-            if (spritesGlobalInfo.current.get(index).is_in_previous_zoom_level || depth.current === 0) {
-                sprites.current.get(index).alpha = 1;
-                // Activate sprite's event handlers
-                sprites.current.get(index).interactive = true;
-            } else {
-                // Set alpha proportional to the depth
-                if (depth.current > 0)
-                    sprites.current.get(index).alpha = (1 - Math.cos(depth.current * Math.PI / 2)) ** 3;
-                else
-                    sprites.current.get(index).alpha = (1 - Math.cos((1 + depth.current) * Math.PI / 2)) ** 3;
-                // Deactivate sprite's event handlers
-                sprites.current.get(index).interactive = false;
+                // Set alpha of sprite
+                if (spritesGlobalInfo.current.get(index).is_in_previous_zoom_level || depth.current === 0) {
+                    sprites.current.get(index).alpha = 1;
+                    // Activate sprite's event handlers
+                    sprites.current.get(index).interactive = true;
+                } else {
+                    // Set alpha proportional to the depth
+                    if (depth.current > 0)
+                        sprites.current.get(index).alpha = (1 - Math.cos(depth.current * Math.PI / 2)) ** 3;
+                    else
+                        sprites.current.get(index).alpha = (1 - Math.cos((1 + depth.current) * Math.PI / 2)) ** 3;
+                    // Deactivate sprite's event handlers
+                    sprites.current.get(index).interactive = false;
+                }
             }
-        }
 
-        // Fetch data for the visible tiles
-        visible_tiles.map(tile => {
-            // If tile is in artworksInTiles, then we do not need to fetch data for it.
-            if (!artworksInTiles.current.has(effective_zoom_level + "-" + tile.x + "-" + tile.y)) {
-                // The tile is not in artworksInTiles. We need to fetch data for it.
-                fetchClusterData(effective_zoom_level, tile.x, tile.y, props.selectedDataset, props.host)
-                    .then(data => {
+            // Fetch data for the visible tiles
+            for (let tile of visible_tiles) {
+                // If tile is in artworksInTiles, then we do not need to fetch data for it.
+                if (!artworksInTiles.current.has(effective_zoom_level + "-" + tile.x + "-" + tile.y)) {
+                    // The tile is not in artworksInTiles. We need to fetch data for it.
+                    try {
+                        const data = await fetchClusterData(effective_zoom_level, tile.x, tile.y, props.selectedDataset, props.host)
                         // Loop over artworks in tile and add them to the stage.
                         // noinspection JSUnresolvedVariable
                         for (let j = 0; j < data["clusters_representatives"]["entities"].length; j++) {
@@ -575,18 +610,21 @@ const ClustersMap = (props) => {
                         // noinspection JSUnresolvedVariable
                         artworksInTiles.current.set(effective_zoom_level + "-" + tile.x + "-" + tile.y,
                             data["clusters_representatives"]["entities"].map(entity => entity["representative"]["index"]));
-                    })
-                    .catch(error => {
+                    } catch (error) {
                         // Handle any errors that occur during the fetch operation
                         console.error('Error:', error);
-                    });
+                    }
+                }
             }
-        });
 
-        // Do asserts to check that everything is correct
-        console.assert(sprites.current.size === spritesGlobalInfo.current.size);
-        console.assert(sprites.current.size + spritePool.current.length === 800);
-        console.assert(artworksInTiles.current.size <= 14);
+            // Do asserts to check that everything is correct
+            console.assert(sprites.current.size === spritesGlobalInfo.current.size);
+            console.assert(sprites.current.size + spritePool.current.length === 800);
+            console.assert(artworksInTiles.current.size <= 14);
+        } finally {
+            // Release lock
+            updateStageLock.current = false;
+        }
     }
 
     // Create function for handling click on image or search
@@ -635,6 +673,7 @@ const ClustersMap = (props) => {
                 translation_ticker.start();
             });
         }
+
         // Wait for translation ticker to finish
         await awaitTranslationTicker();
 
@@ -648,8 +687,7 @@ const ClustersMap = (props) => {
                         console.log("Zoom ticker stopped");
                         zoom_ticker.stop();
                         resolve();
-                    }
-                    else {
+                    } else {
                         // Change depth by 0.05. If the depth is -1 or 1, then change zoom level by 1 and reset depth sum or
                         // subtract 1 from delta.
                         let delta;
@@ -701,18 +739,19 @@ const ClustersMap = (props) => {
                 zoom_ticker.start();
             });
         }
+
         // Wait for zoom ticker to finish
         await awaitZoomTicker();
 
         // TODO problem with getting sprite when transitioning back because the sprites are removed and added again, hence the sprite could not be available here
 
-/*        // Get sprite for the image and put it in the foreground
-        const sprite = sprites.current.get(image.index);
-        sprite.zIndex = 30;
-        // Sort children
-        container.current.sortChildren();
-        // Make sprite pulse
-        makeSpritePulse(sprite);*/
+        /*        // Get sprite for the image and put it in the foreground
+                const sprite = sprites.current.get(image.index);
+                sprite.zIndex = 30;
+                // Sort children
+                container.current.sortChildren();
+                // Make sprite pulse
+                makeSpritePulse(sprite);*/
     }
 
     // Create handler for mouse down
@@ -784,6 +823,24 @@ const ClustersMap = (props) => {
         return coordinates_to_return;
     };
 
+    // Handle pinch start. Only reset previous scale.
+    const handlePinchStart = () => {
+        previousScale.current = 1;
+    };
+
+    // Create handler for pinch. The handler of pinch does the exact same thing as the handler for mouse wheel, but the
+    // delta is computed differently.
+    const handlePinch = (event) => {
+        // Get scale
+        let scale = event.scale;
+        // Delta is the difference between the current scale and the previous scale
+        const delta = scale - previousScale.current;
+        // Update previous scale
+        previousScale.current = scale;
+        // Handle zoom
+        handleZoom(delta, event.center);
+    }
+
     // Create handler for mouse wheel. We change the zoom level only if the user scrolls until a certain value of change in
     // depth is reached. This is to avoid changing the zoom level too often. We use a transition which depends on the percentage
     // of the change in depth in order to make the transition smoother. When the new zoom level is reached, we update
@@ -792,6 +849,13 @@ const ClustersMap = (props) => {
         // Get DOM element and remove default behavior
         // Define delta
         let delta = event.deltaY / 1000;
+        // Get mouse position with respect to container
+        const position = event.data.getLocalPosition(container.current);
+        // Handle zoom
+        handleZoom(delta, position);
+    }
+
+    const handleZoom = (delta, mousePosition) => {
         // Deal with border cases
         if (zoomLevel.current === maxZoomLevel && depth.current + delta > 0) {
             // Keep depth at 0
@@ -809,15 +873,13 @@ const ClustersMap = (props) => {
         delta = new_depth - depth.current;
         depth.current = new_depth;
 
-        // Get mouse position with respect to container
-        const position = event.data.getLocalPosition(container.current);
         // Get sprite under mouse
-        const global_coordinates_sprite_under_mouse = getGlobalCoordinatesOfSpriteUnderMouse(position);
+        const global_coordinates_sprite_under_mouse = getGlobalCoordinatesOfSpriteUnderMouse(mousePosition);
 
         // Fix zoom on top left corner of the sprite under the mouse
         let global_mouse_position;
         if (global_coordinates_sprite_under_mouse == null)
-            global_mouse_position = mapStageCoordinatesToGlobalCoordinates(position.x, position.y);
+            global_mouse_position = mapStageCoordinatesToGlobalCoordinates(mousePosition.x, mousePosition.y);
         else {
             global_mouse_position = {
                 x: global_coordinates_sprite_under_mouse.x,

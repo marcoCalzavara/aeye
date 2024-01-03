@@ -1,8 +1,24 @@
-.carousel {
+.carousel-container {
     background: #000;
     margin-top: 40px;
     margin-bottom: 20px;
     width: 85%;
+}
+
+.carousel-div {
+    background: #000;
+    width: 100%;
+    z-index: 9;
+}
+
+.carousel {
+    height: 100%;
+    z-index: 10;
+}
+
+.height-transition {
+    transition: height 1s ease-in-out;
+    transform-origin: bottom;
 }
 
 /* Media queries for the height of the carousel */

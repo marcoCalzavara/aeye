@@ -40,12 +40,9 @@ http {
         listen 80;
         access_log  /logs/reverse-proxy.log  time; # log for connections on port 80
         location / {
-            root /usr/share/nginx/html;
-            try_files ${DOLLAR}uri /index.html;
+            proxy_pass http://frontend:3000;
         }
-        location /static/ {
-            root /usr/share/nginx/html;
-        }
+
         location /api {
         #  if a request is made to http://${proxy-server}/api/some/path, Nginx will forward the request
         # to http://${back-end}/api/some/path (see upstream above) on the backend server.

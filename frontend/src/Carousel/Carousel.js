@@ -61,12 +61,10 @@ const NeighborsCarousel = (props) => {
 
 
     useEffect(() => {
-        console.log(props.clickedImageIndex)
         // Fetch neighbors from server
         fetchNeighbors(props.clickedImageIndex, 10, props.host, setImages)
             .then(data => {
                 // Populate state images with the fetched images
-                console.log(data);
                 let images = [];
                 for (const image of data) {
                     const text = "The author of the artwork is " + image.author + "."; // TODO maybe add more ai generated info
@@ -82,19 +80,13 @@ const NeighborsCarousel = (props) => {
             });
     }, [props.clickedImageIndex]);
 
-    useEffect(() => {
-       // Scroll to the top of the carousel
-        const carousel = document.getElementsByClassName('carousel')[0];
-        carousel.scrollIntoView({behavior: "smooth"});
-    }, [images]);
-
     return (
         <Carousel
             additionalTransfrom={0}
             arrows
             autoPlaySpeed={3000}
             centerMode={false}
-            className="carousel h-carousel"
+            className="carousel"
             containerClass="container"
             dotListClass=""
             draggable={false}

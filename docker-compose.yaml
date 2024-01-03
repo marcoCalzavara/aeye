@@ -88,6 +88,18 @@ services:
     networks:
       - default
 
+  frontend:
+    container_name: frontend
+    build:
+      context: ./frontend/docker
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend/build:/build
+    ports:
+      - "3000:3000"
+    networks:
+      - default
+
   nginx:
     container_name: nginx
     build:
@@ -97,7 +109,7 @@ services:
       - BACKEND_PORT=${BACKEND_PORT}
       - DOLLAR=$
     volumes:
-      - ./frontend/build:/usr/share/nginx/html
+      - ./frontend/build:/frontend/build
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template
       - ../best_artworks:/usr/share/nginx/best_artworks
     ports:

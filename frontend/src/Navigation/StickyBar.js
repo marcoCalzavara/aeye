@@ -28,7 +28,7 @@ const StickyBar = (props) => {
              onPointerOver={onPointerOver}
              onPointerLeave={onPointerLeave}
         >
-            <div className="w-2/19 h-2/3">
+            <div className="w-1/10 h-2/3">
                 <a href="https://disco.ethz.ch/" className="w-full h-full text-white text-lg md:text-xl font-bold flex items-center"
                    style={{textDecoration: "none"}}>
                     DISCOLab

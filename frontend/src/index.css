@@ -5,6 +5,7 @@
 body, #root {
     margin: 0;
     padding: 0;
+    background-color: #000000;
 }
 
 .h-1\/10 {
@@ -170,10 +171,6 @@ body, #root {
     }
 }
 
-.w-2\/19 {
-    width: 10%;
-}
-
 .w-1\/10 {
     width: 10%;
 }
@@ -189,4 +186,8 @@ body, #root {
 
 .pl-3 {
     padding-left: 1rem;
+}
+
+.h-9\/10 {
+    height: 90%;
 }
