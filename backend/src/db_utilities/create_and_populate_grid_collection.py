@@ -1,7 +1,10 @@
+# Deprecation warning: This script is deprecated. It is kept here for reference.
+
 import getopt
 import getpass
 import os
 import sys
+from warnings import warn
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -257,6 +260,12 @@ def create_zoom_levels(entities, zoom_levels_collection_name, zoom_levels, repop
 
 
 if __name__ == "__main__":
+    # Show deprecation warning
+    warn("This script is deprecated. Use create_and_populate_clusters_collection instead.", DeprecationWarning)
+    choice = input("Are you sure you want to continue? (y/n) ")
+    if choice.lower() != "y":
+        sys.exit(0)
+
     if ENV_FILE_LOCATION not in os.environ:
         print("export .env file location as ENV_FILE_LOCATION. Export $HOME/image-viz/.env if running outside of docker"
               " container, export /.env if running inside docker container backend.")
