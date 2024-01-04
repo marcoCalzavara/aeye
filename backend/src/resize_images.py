@@ -51,11 +51,18 @@ def resize_images(dataset_name):
 
 if __name__ == "__main__":
     if ENV_FILE_LOCATION not in os.environ:
-        print("export .env file location as ENV_FILE_LOCATION. Export $HOME/image-viz/.env if running outside of docker"
-              " container, export /.env if running inside docker container backend.")
-        sys.exit(1)
-    # Load environment variables
-    load_dotenv(os.getenv(ENV_FILE_LOCATION))
+        # Try to load /.env file
+        choice = input("Do you want to load /.env file? (y/n) ")
+        if choice.lower() == "y" and os.path.exists("/.env"):
+            load_dotenv("/.env")
+        else:
+            print("export .env file location as ENV_FILE_LOCATION. Export $HOME/image-viz/.env if running outside "
+                  "of docker container, export /.env if running inside docker container backend.")
+            sys.exit(1)
+    else:
+        # Load environment variables
+        load_dotenv(os.getenv(ENV_FILE_LOCATION))
+
     # Ask user for dataset name
     dataset_name = "best_artworks"
     choice = input(f"Dataset name (default: {dataset_name}, press enter to use default): ")
