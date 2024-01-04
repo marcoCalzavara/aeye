@@ -1,13 +1,72 @@
+import getopt
 import os
 import sys
 
 import dotenv
 import numpy as np
 from pymilvus import connections
-from sklearn.metrics import euclidean_distances
 from sklearn.cluster import KMeans
+from sklearn.metrics import euclidean_distances
 
-from ..CONSTANTS import MILVUS_IP, MILVUS_PORT, ENV_FILE_LOCATION
+from .datasets import DatasetOptions
+from ..CONSTANTS import *
+
+
+def parsing():
+    # Remove 1st argument from the list of command line arguments
+    arguments = sys.argv[1:]
+
+    # Options
+    options = "hd:c:r:i:"
+
+    # Long options
+    long_options = ["help", "database", "collection", "repopulate", "images"]
+
+    # Prepare flags
+    flags = {"database": DEFAULT_DATABASE_NAME,
+             "collection": DatasetOptions.BEST_ARTWORKS.value["name"],
+             "repopulate": False,
+             "images": False}
+
+    # Parsing argument
+    arguments, values = getopt.getopt(arguments, options, long_options)
+
+    if len(arguments) > 0 and arguments[0][0] in ("-h", "--help"):
+        print(f'This script generates zoom levels.\n\
+        -d or --database: database name (default={flags["database"]}).\n\
+        -c or --collection: collection name (default={flags["collection"]}).\n\
+        -r or --repopulate: repopulate the collection. Options are y/n (default='
+              f'{"y" if flags["repopulate"] == "y" else "n"}).\n\
+        -i or --images: save images. Options are y/n (default='
+              f'{"y" if flags["images"] else "n"}).')
+        sys.exit(0)
+
+    # Checking each argument
+    for arg, val in arguments:
+        if arg in ("-d", "--database"):
+            flags["database"] = val
+        elif arg in ("-c", "--collection"):
+            if val in [dataset.value for dataset in DatasetOptions]:
+                flags["collection"] = val
+            else:
+                raise ValueError("The collection must have one of the following names: "
+                                 + str([dataset.value["name"] for dataset in DatasetOptions]))
+        elif arg in ("-r", "--repopulate"):
+            if val == "y":
+                flags["repopulate"] = True
+            elif val == "n":
+                flags["repopulate"] = False
+            else:
+                raise ValueError("The repopulate flag must be either y or n.")
+        elif arg in ("-i", "--images"):
+            if val == "y":
+                flags["images"] = True
+            elif val == "n":
+                flags["images"] = False
+            else:
+                raise ValueError("The images flag must be either y or n.")
+
+    return flags
 
 
 def create_connection(user, passwd):
@@ -89,7 +148,8 @@ class ModifiedKMeans:
             # Do k-means clustering with fixed centers for self.n_init times. Keep the best result.
             for _ in range(self.n_init):
                 # Generate random centers for the remaining clusters
-                centers = ModifiedKMeans._compute_initial_centers(X, fixed_centers, self.n_clusters - len(fixed_centers), self.n_init)
+                centers = ModifiedKMeans._compute_initial_centers(X, fixed_centers,
+                                                                  self.n_clusters - len(fixed_centers), self.n_init)
                 # Now the first len(fixed_centers) centers are fixed and the remaining centers can move
                 # Do k-means clustering with fixed centers
                 it = 0

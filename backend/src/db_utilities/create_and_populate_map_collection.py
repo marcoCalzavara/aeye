@@ -9,9 +9,9 @@ from dotenv import load_dotenv
 from pymilvus import db, Collection, utility
 
 from .collections import map_collection, ZOOM_LEVEL_VECTOR_FIELD_NAME
-from .create_and_populate_grid_collection import parsing, load_vectors_from_collection
+from .create_and_populate_grid_collection import load_vectors_from_collection
 from .datasets import DatasetOptions
-from .utils import create_connection
+from .utils import create_connection, parsing
 from ..CONSTANTS import *
 
 

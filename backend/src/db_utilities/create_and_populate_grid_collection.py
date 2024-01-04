@@ -1,6 +1,5 @@
 # Deprecation warning: This script is deprecated. It is kept here for reference.
 
-import getopt
 import getpass
 import os
 import sys
@@ -15,63 +14,7 @@ from .collections import grid_collection
 from .datasets import DatasetOptions
 from .utils import create_connection
 from ..CONSTANTS import *
-
-
-def parsing():
-    # Remove 1st argument from the list of command line arguments
-    arguments = sys.argv[1:]
-
-    # Options
-    options = "hd:c:r:i:"
-
-    # Long options
-    long_options = ["help", "database", "collection", "repopulate", "images"]
-
-    # Prepare flags
-    flags = {"database": DEFAULT_DATABASE_NAME,
-             "collection": DatasetOptions.BEST_ARTWORKS.value["name"],
-             "repopulate": False,
-             "images": True}
-
-    # Parsing argument
-    arguments, values = getopt.getopt(arguments, options, long_options)
-
-    if len(arguments) > 0 and arguments[0][0] in ("-h", "--help"):
-        print(f'This script generates zoom levels.\n\
-        -d or --database: database name (default={flags["database"]}).\n\
-        -c or --collection: collection name (default={flags["collection"]}).\n\
-        -r or --repopulate: repopulate the collection. Options are y/n (default='
-              f'{"y" if flags["repopulate"] == "y" else "n"}).\n\
-        -i or --images: save images. Options are y/n (default='
-              f'{"y" if flags["images"] == "y" else "n"}).')
-        sys.exit(0)
-
-    # Checking each argument
-    for arg, val in arguments:
-        if arg in ("-d", "--database"):
-            flags["database"] = val
-        elif arg in ("-c", "--collection"):
-            if val in [dataset.value for dataset in DatasetOptions]:
-                flags["collection"] = val
-            else:
-                raise ValueError("The collection must have one of the following names: "
-                                 + str([dataset.value["name"] for dataset in DatasetOptions]))
-        elif arg in ("-r", "--repopulate"):
-            if val == "y":
-                flags["repopulate"] = True
-            elif val == "n":
-                flags["repopulate"] = False
-            else:
-                raise ValueError("The repopulate flag must be either y or n.")
-        elif arg in ("-i", "--images"):
-            if val == "y":
-                flags["images"] = True
-            elif val == "n":
-                flags["images"] = False
-            else:
-                raise ValueError("The images flag must be either y or n.")
-
-    return flags
+from .utils import parsing
 
 
 def load_vectors_from_collection(collection: Collection) -> list | None:

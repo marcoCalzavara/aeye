@@ -10,10 +10,10 @@ from pymilvus import db, Collection, utility
 
 from .collections import (clusters_collection, image_to_tile_collection, ZOOM_LEVEL_VECTOR_FIELD_NAME,
                           EMBEDDING_VECTOR_FIELD_NAME)
-from .create_and_populate_grid_collection import parsing, load_vectors_from_collection
+from .create_and_populate_grid_collection import load_vectors_from_collection
 from .utils import ModifiedKMeans
 # from .datasets import DatasetOptions
-from .utils import create_connection
+from .utils import create_connection, parsing
 from ..CONSTANTS import *
 
 # from .create_and_populate_zoom_levels_collection import plot_heat_map
