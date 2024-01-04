@@ -13,8 +13,7 @@ from ..CONSTANTS import MILVUS_IP, MILVUS_PORT, ENV_FILE_LOCATION
 def create_connection(user, passwd):
     if ENV_FILE_LOCATION not in os.environ:
         # Try to load /.env file
-        choice = input("Do you want to load /.env file? (y/n) ")
-        if choice.lower() == "y" and os.path.exists("/.env"):
+        if os.path.exists("/.env"):
             dotenv.load_dotenv("/.env")
         else:
             print("export .env file location as ENV_FILE_LOCATION. Export $HOME/image-viz/.env if running outside "

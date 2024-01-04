@@ -652,6 +652,11 @@ if __name__ == "__main__":
     # Get arguments
     flags = parsing()
 
+    if flags["images"]:
+        choice = input("Are you sure you want to save images? (y/n) ")
+        if choice.lower() != "y":
+            flags["images"] = False
+
     choice = input("Use root user? (y/n) ")
     if choice == "y":
         user = ROOT_USER
