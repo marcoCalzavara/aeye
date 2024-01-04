@@ -4,7 +4,7 @@ import sys
 import PIL.Image
 from dotenv import load_dotenv
 
-from backend.src.CONSTANTS import *
+from CONSTANTS import *
 
 # Increase pixel limit
 PIL.Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
