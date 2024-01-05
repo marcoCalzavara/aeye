@@ -117,7 +117,7 @@ function App() {
                            datasets={datasets}
                            setSelectedDataset={setSelectedDataset}
                 />
-                <div className="top-0 bg-black flex flex-col items-center justify-center pb-8 pt-8 pr-8 pl-8">
+                <div className="top-0 bg-black flex flex-col items-center justify-center m-8">
                     <Stage width={dimensionsStage.width}
                            height={dimensionsStage.height}
                            raf={true}
