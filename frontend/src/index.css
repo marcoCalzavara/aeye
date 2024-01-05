@@ -2,45 +2,131 @@
 @tailwind components;
 @tailwind utilities;
 
-body, #root {
-    margin: 0;
-    padding: 0;
-    background-color: #000000;
-}
+/* Define variables for the height of the sticky bar */
+:root {
+    --h-sticky-320: 40px;
+    --h-sticky-480: 48px;
+    --h-sticky-768: 56px;
+    --h-sticky-1024: 64px;
+    --h-sticky-1200: 72px;
 
-.h-1\/10 {
-    height: 10%;
+    --m-canvas-side-320: 15px;
+    --m-canvas-side-480: 20px;
+    --m-canvas-side-768: 32px;
+    --m-canvas-side-1024: 32px;
+    --m-canvas-side-1200: 32px;
+
+    --searchbar-width-320: 100px;
+    --searchbar-width-480: 200px;
+    --searchbar-width-768: 300px;
+    --searchbar-width-1024: 300px;
+    --searchbar-width-1200: 400px;
+
+    --searchbar-height-320: 22px;
+    --searchbar-height-480: 24px;
+    --searchbar-height-768: 28px;
+    --searchbar-height-1024: 32px;
+    --searchbar-height-1200: 36px;
 }
 
 /* Media queries for the height of the sticky bar */
 
 @media (min-width: 320px) and (max-width: 480px) {
     .h-sticky {
-        height: 32px;
+        height: var(--h-sticky-320);
     }
 }
 
 @media (min-width: 481px) and (max-width: 768px) {
     .h-sticky {
-        height: 40px;
+        height: var(--h-sticky-480);
     }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
     .h-sticky {
-        height: 48px;
+        height: var(--h-sticky-768);
     }
 }
 
 @media (min-width: 1025px) and (max-width: 1200px) {
     .h-sticky {
-        height: 56px;
+        height: var(--h-sticky-1024);
     }
 }
 
 @media (min-width: 1201px) {
     .h-sticky {
-        height: 64px;
+        height: var(--h-sticky-1200);
+    }
+}
+
+/* Media queries for the margin on top of the main content. The values are the same as the height of the sticky bar */
+
+@media (min-width: 320px) and (max-width: 480px) {
+    .mt-sticky {
+        margin-top: var(--h-sticky-320);
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    .mt-sticky {
+        margin-top: var(--h-sticky-480);
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .mt-sticky {
+        margin-top: var(--h-sticky-768);
+    }
+}
+
+@media (min-width: 1025px) and (max-width: 1200px) {
+    .mt-sticky {
+        margin-top: var(--h-sticky-1024);
+    }
+}
+
+@media (min-width: 1201px) {
+    .mt-sticky {
+        margin-top: var(--h-sticky-1200);
+    }
+}
+
+/* Media queries for the margin on the sides of the canvas */
+
+@media (min-width: 320px) and (max-width: 480px) {
+    .m-canvas-side {
+        margin-left: var(--m-canvas-side-320);
+        margin-right: var(--m-canvas-side-320);
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    .m-canvas-side {
+        margin-left: var(--m-canvas-side-480);
+        margin-right: var(--m-canvas-side-480);
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .m-canvas-side {
+        margin-left: var(--m-canvas-side-768);
+        margin-right: var(--m-canvas-side-768);
+    }
+}
+
+@media (min-width: 1025px) and (max-width: 1200px) {
+    .m-canvas-side {
+        margin-left: var(--m-canvas-side-1024);
+        margin-right: var(--m-canvas-side-1024);
+    }
+}
+
+@media (min-width: 1201px) {
+    .m-canvas-side {
+        margin-left: var(--m-canvas-side-1200);
+        margin-right: var(--m-canvas-side-1200);
     }
 }
 
@@ -48,31 +134,31 @@ body, #root {
 
 @media (min-width: 320px) and (max-width: 480px) {
     .h-searchbar {
-        height: 22px;
+        height: var(--searchbar-height-320);
     }
 }
 
 @media (min-width: 481px) and (max-width: 768px) {
     .h-searchbar {
-        height: 24px;
+        height: var(--searchbar-height-480);
     }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
     .h-searchbar {
-        height: 28px;
+        height: var(--searchbar-height-768);
     }
 }
 
 @media (min-width: 1025px) and (max-width: 1200px) {
     .h-searchbar {
-        height: 30px;
+        height: var(--searchbar-height-1024);
     }
 }
 
 @media (min-width: 1201px) {
     .h-searchbar {
-        height: 34px;
+        height: var(--searchbar-height-1200);
     }
 }
 
@@ -80,31 +166,31 @@ body, #root {
 
 @media (min-width: 320px) and (max-width: 480px) {
     .w-searchbar {
-        width: 100px;
+        width: var(--searchbar-width-320);
     }
 }
 
 @media (min-width: 481px) and (max-width: 768px) {
     .w-searchbar {
-        width: 200px;
+        width: var(--searchbar-width-480);
     }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
     .w-searchbar {
-        width: 300px;
+        width: var(--searchbar-width-768);
     }
 }
 
 @media (min-width: 1025px) and (max-width: 1200px) {
     .w-searchbar {
-        width: 300px;
+        width: var(--searchbar-width-1024);
     }
 }
 
 @media (min-width: 1201px) {
     .w-searchbar {
-        width: 400px;
+        width: var(--searchbar-width-1200);
     }
 }
 
@@ -140,7 +226,8 @@ body, #root {
     }
 }
 
-/* Media queries for the font size of the sticky header */
+/* Media queries for the width of the dataset selector */
+
 @media (min-width: 320px) and (max-width: 480px) {
     .w-selector {
         width: 40px;
@@ -169,6 +256,37 @@ body, #root {
     .w-selector {
         width: 160px;
     }
+}
+
+/* Non media queries */
+
+body, #root {
+    margin: 0;
+    padding: 0;
+    background-color: #000000;
+}
+
+::-webkit-scrollbar {
+    width: 1rem;
+}
+
+::-webkit-scrollbar-track {
+    border-radius: 10px;
+    background-color: #000000;
+}
+
+::-webkit-scrollbar-thumb {
+    border-radius: 10px;
+    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,.3);
+    background-color: silver;
+}
+
+::-webkit-scrollbar-corner {
+    background: black;
+}
+
+.h-1\/10 {
+    height: 10%;
 }
 
 .w-1\/10 {

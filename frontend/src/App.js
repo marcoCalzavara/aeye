@@ -6,8 +6,58 @@ import StickyBar from "./Navigation/StickyBar";
 import NeighborsCarousel from "./Carousel/Carousel";
 import ReactLoading from "react-loading";
 import Typography from "@mui/material/Typography";
-import { TfiAngleDown, TfiAngleUp } from "react-icons/tfi";
+import {TfiAngleDown, TfiAngleUp} from "react-icons/tfi";
 
+
+const responsive_margins = {
+    m_side_320: getComputedStyle(document.documentElement).getPropertyValue("--m-canvas-side-320"),
+    m_side_480: getComputedStyle(document.documentElement).getPropertyValue("--m-canvas-side-480"),
+    m_side_768: getComputedStyle(document.documentElement).getPropertyValue("--m-canvas-side-768"),
+    m_side_1024: getComputedStyle(document.documentElement).getPropertyValue("--m-canvas-side-1024"),
+    m_side_1200: getComputedStyle(document.documentElement).getPropertyValue("--m-canvas-side-1200"),
+};
+
+const responsive_heights = {
+    h_sticky_320: getComputedStyle(document.documentElement).getPropertyValue("--h-sticky-320"),
+    h_sticky_480: getComputedStyle(document.documentElement).getPropertyValue("--h-sticky-480"),
+    h_sticky_768: getComputedStyle(document.documentElement).getPropertyValue("--h-sticky-768"),
+    h_sticky_1024: getComputedStyle(document.documentElement).getPropertyValue("--h-sticky-1024"),
+    h_sticky_1200: getComputedStyle(document.documentElement).getPropertyValue("--h-sticky-1200"),
+}
+
+function getResponsiveMargin() {
+    switch (true) {
+        case document.documentElement.clientWidth >= 320 && document.documentElement.clientWidth <= 480:
+            return responsive_margins.m_side_320;
+        case document.documentElement.clientWidth > 480 && document.documentElement.clientWidth <= 768:
+            return responsive_margins.m_side_480;
+        case document.documentElement.clientWidth > 768 && document.documentElement.clientWidth <= 1024:
+            return responsive_margins.m_side_768;
+        case document.documentElement.clientWidth > 1024 && document.documentElement.clientWidth <= 1200:
+            return responsive_margins.m_side_1024;
+        case document.documentElement.clientWidth > 1200:
+            return responsive_margins.m_side_1200;
+        default:
+            return responsive_margins.m_side_1200;
+    }
+}
+
+function getResponsiveHeight() {
+    switch (true) {
+        case document.documentElement.clientWidth >= 320 && document.documentElement.clientWidth <= 480:
+            return responsive_heights.h_sticky_320;
+        case document.documentElement.clientWidth > 480 && document.documentElement.clientWidth <= 768:
+            return responsive_heights.h_sticky_480;
+        case document.documentElement.clientWidth > 768 && document.documentElement.clientWidth <= 1024:
+            return responsive_heights.h_sticky_768;
+        case document.documentElement.clientWidth > 1024 && document.documentElement.clientWidth <= 1200:
+            return responsive_heights.h_sticky_1024;
+        case document.documentElement.clientWidth > 1200:
+            return responsive_heights.h_sticky_1200;
+        default:
+            return responsive_heights.h_sticky_1200;
+    }
+}
 
 async function fetchAvailableDatasets(host) {
     let url = host + '/api/collection-names';
@@ -52,9 +102,12 @@ function extractHost() {
 }
 
 function App() {
+    console.log(responsive_margins)
+    console.log(getResponsiveMargin())
     const [dimensionsStage, setDimensionsStage] = useState({
-        width: document.documentElement.clientWidth - 63,
-        height: document.documentElement.clientHeight - 64
+        width: document.documentElement.clientWidth - 2 * getResponsiveMargin().replace('px', ''),
+        height: document.documentElement.clientHeight - getResponsiveHeight().replace('px', '')
+        - getResponsiveMargin().replace('px', '')
     });
     // Define host
     let host = extractHost();
@@ -70,36 +123,63 @@ function App() {
     const [datasets, setDatasets] = useState([]);
     // Define state for selected dataset
     const [selectedDataset, setSelectedDataset] = useState(null);
+    const carouselHeight = useRef(0);
 
     useEffect(() => {
         // Define function for updating the dimensions of the stage
         const updateDimensions = () => {
             setDimensionsStage({
-                width: document.documentElement.clientWidth - 63,
-                height: document.documentElement.clientHeight - 64
+                width: document.documentElement.clientWidth - 2 * getResponsiveMargin(),
+                height: document.documentElement.clientHeight - getResponsiveHeight().replace('px', '')
+                - getResponsiveMargin().replace('px', '')
             });
         };
         // Add event listener
         document.documentElement.addEventListener('resize', updateDimensions);
 
-        const await_datasets = async () => {
-            await fetchAvailableDatasets(host)
-                .then(data => {
-                    setDatasets(data.collections);
-                    setSelectedDataset(data.collections[0]);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-        }
+        fetchAvailableDatasets(host)
+            .then(data => {
+                setDatasets(data.collections);
+                setSelectedDataset(data.collections[0]);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
 
-        await_datasets();
 
         // Return cleanup function for removing the event listener
         return () => {
             document.documentElement.removeEventListener('resize', updateDimensions);
         };
     }, []);
+
+    useEffect(() => {
+        console.log("Hey")
+        const carouselDiv = document.getElementById('carousel');
+        if (carouselDiv) {
+            const observer = new ResizeObserver(entries => {
+                for (let entry of entries) {
+                    if (entry.contentRect.height > carouselHeight.current) {
+                        console.log(carouselHeight.current, entry.contentRect.height);
+                        window.scroll({
+                            top: document.body.scrollHeight,
+                            left: 0,
+                            behavior: 'smooth'
+                        });
+                    }
+                    carouselHeight.current = entry.contentRect.height;
+                }
+            });
+            observer.observe(carouselDiv);
+
+            // Return cleanup function for disconnecting the observer
+            return () => {
+                observer.disconnect();
+            };
+        }
+    }, [selectedDataset]); // We want to set the observer only when the selected dataset changes, so we avoid multiple
+    // observers being created
+
 
     const invertShownCarousel = () => {
         if (firstRender) {
@@ -117,7 +197,7 @@ function App() {
                            datasets={datasets}
                            setSelectedDataset={setSelectedDataset}
                 />
-                <div className="top-0 bg-black flex flex-col items-center justify-center m-8">
+                <div className="bg-black flex flex-col items-center justify-center mt-sticky m-canvas-side">
                     <Stage width={dimensionsStage.width}
                            height={dimensionsStage.height}
                            raf={true}
@@ -131,27 +211,20 @@ function App() {
                                      setShowCarousel={setShowCarousel}
                                      setClickedImageIndex={setClickedImageIndex}/>
                     </Stage>
-                    <div id="gesture-area" style={
-                        {
-                            position: 'absolute',
-                            top: "32px",
-                            left: "32px",
-                            width: dimensionsStage.width,
-                            height: dimensionsStage.height,
-                            pointerEvents: 'none'
-                        }
-                    }/>
-                        <div id="carousel" className={`w-full bg-black carousel-container flex flex-col items-center justify-center ${showCarousel ? 'h-carousel' : 'h-0'}
+                    <div id="carousel"
+                         className={`w-full bg-black carousel-container flex flex-col items-center justify-center ${showCarousel && clickedImageIndex !== -1 ? 'h-carousel' : 'h-0'}
                         ${!firstRender ? 'height-transition' : ''}`}>
-                            <button className={`mb-1 ${showCarousel ? 'h-1/10' : 'h-full'}`} onClick={() => invertShownCarousel()}>
-                                {showCarousel ? <TfiAngleDown style={{ zIndex: 1000 }} className="text-white"/> :
-                                <TfiAngleUp style={{ zIndex: 1000 }} className="text-white"/>}
-                            </button>
-                            <div className={`carousel-div ${showCarousel ? 'h-9/10' : 'h-0'} 
+                        <button className={`mb-1 ${showCarousel ? 'h-1/10' : 'h-full'}`}
+                                onClick={() => invertShownCarousel()}>
+                            {showCarousel ? <TfiAngleDown style={{zIndex: 1000}} className="text-white"/> :
+                                <TfiAngleUp style={{zIndex: 1000}} className="text-white"/>}
+                        </button>
+                        <div className={`carousel-div ${showCarousel ? 'h-9/10' : 'h-0'} 
                             ${!firstRender ? 'height-transition' : ''}`}>
-                                {clickedImageIndex !== -1 && <NeighborsCarousel host={host} clickedImageIndex={clickedImageIndex}/>}
-                            </div>
+                            {clickedImageIndex !== -1 &&
+                                <NeighborsCarousel host={host} clickedImageIndex={clickedImageIndex}/>}
                         </div>
+                    </div>
 
                 </div>
             </div>

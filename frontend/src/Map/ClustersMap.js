@@ -185,13 +185,11 @@ const ClustersMap = (props) => {
         sprite.on('pointerdown', () => {
             props.setClickedImageIndex(index);
             props.setShowCarousel(true);
-            if (document.getElementById("carousel") !== null) {
-                document.getElementById("carousel").scrollIntoView({
-                    behavior: "smooth",
-                    block: "end",
-                    inline: "nearest"
-                });
-            }
+            window.scroll({
+                top: document.body.scrollHeight,
+                behavior: "smooth",
+                left: 0
+            });
         });
     }
 
@@ -568,9 +566,11 @@ const ClustersMap = (props) => {
                 && artwork_position.y >= -2*maxHeight.current
                 && artwork_position.y <= props.height + 2*maxHeight.current;*/
 
-            // Update position of sprite
-            sprites.current.get(index).x = artwork_position.x;
-            sprites.current.get(index).y = artwork_position.y;
+            // Update position of sprite if it varies from the current position by more than 2 pixel
+            sprites.current.get(index).x = Math.abs(sprites.current.get(index).x - artwork_position.x) > 1 ?
+                artwork_position.x : sprites.current.get(index).x;
+            sprites.current.get(index).y = Math.abs(sprites.current.get(index).y - artwork_position.y) > 1 ?
+                artwork_position.y : sprites.current.get(index).y;
 
             // Set alpha of sprite
             if (spritesGlobalInfo.current.get(index).is_in_previous_zoom_level || depth.current === 0) {
