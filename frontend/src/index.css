@@ -4,11 +4,11 @@
 
 /* Define variables for the height of the sticky bar */
 :root {
-    --h-sticky-320: 40px;
-    --h-sticky-480: 48px;
-    --h-sticky-768: 56px;
-    --h-sticky-1024: 64px;
-    --h-sticky-1200: 72px;
+    --h-sticky-320: 64px;
+    --h-sticky-480: 72px;
+    --h-sticky-768: 78px;
+    --h-sticky-1024: 84px;
+    --h-sticky-1200: 90px;
 
     --m-canvas-side-320: 15px;
     --m-canvas-side-480: 20px;
@@ -16,17 +16,23 @@
     --m-canvas-side-1024: 32px;
     --m-canvas-side-1200: 32px;
 
-    --searchbar-width-320: 100px;
-    --searchbar-width-480: 200px;
-    --searchbar-width-768: 300px;
-    --searchbar-width-1024: 300px;
-    --searchbar-width-1200: 400px;
+    --searchbar-width-320: 200px;
+    --searchbar-width-480: 300px;
+    --searchbar-width-768: 400px;
+    --searchbar-width-1024: 500px;
+    --searchbar-width-1200: 500px;
 
-    --searchbar-height-320: 22px;
-    --searchbar-height-480: 24px;
-    --searchbar-height-768: 28px;
-    --searchbar-height-1024: 32px;
-    --searchbar-height-1200: 36px;
+    --searchbar-height-320: 24px;
+    --searchbar-height-480: 26px;
+    --searchbar-height-768: 30px;
+    --searchbar-height-1024: 34px;
+    --searchbar-height-1200: 38px;
+
+    --h-item-320: 30px;
+    --h-item-480: 30px;
+    --h-item-768: 30px;
+    --h-item-1024: 40px;
+    --h-item-1200: 40px;
 }
 
 /* Media queries for the height of the sticky bar */
@@ -277,7 +283,7 @@ body, #root {
 
 ::-webkit-scrollbar-thumb {
     border-radius: 10px;
-    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,.3);
+    -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, .3);
     background-color: silver;
 }
 
@@ -308,4 +314,8 @@ body, #root {
 
 .h-9\/10 {
     height: 90%;
+}
+
+.mb-10px {
+    margin-bottom: 10px;
 }

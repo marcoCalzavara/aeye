@@ -54,7 +54,7 @@ function makeSpritePulse(sprite) {
             ticker.stop();
         } else {
             // Calculate scale factor using a sine function
-            const scaleFactor = 1 + Math.abs(Math.sin(elapsed / (0.2 * Math.PI)));
+            const scaleFactor = 1 + 0.5 * Math.abs(Math.sin(elapsed / (0.2 * Math.PI)));
 
             // Calculate the difference in size before and after scaling
             const diffWidth = originalWidth * scaleFactor - originalWidth;
@@ -157,6 +157,9 @@ const ClustersMap = (props) => {
     const initial_transition_step = 100;
     const depthStep = 0.02;
 
+    // Define map of boolean for pointerenter and pointerleave for last call
+    const pointerEnter = useRef(new Map());
+
     const mapGlobalCoordinatesToStageCoordinates = (global_x, global_y) => {
         // Map global coordinates to stage coordinates
         const stage_x = ((global_x - effectivePosition.current.x) * (props.width - maxWidth.current)) / effectiveWidth.current;
@@ -185,6 +188,7 @@ const ClustersMap = (props) => {
         sprite.on('pointerdown', () => {
             props.setClickedImageIndex(index);
             props.setShowCarousel(true);
+            props.setMenuOpen(false);
             window.scroll({
                 top: document.body.scrollHeight,
                 behavior: "smooth",
@@ -249,7 +253,14 @@ const ClustersMap = (props) => {
         sprite.cursor = 'pointer';
         setSpriteOnPointerDown(sprite, index);
 
-        sprite.on('mouseover', () => {
+        if (pointerEnter.current.get(index) === undefined) {
+            pointerEnter.current.set(index, false);
+        }
+
+        sprite.on('pointerenter', () => {
+            if (pointerEnter.current.get(index)) {
+                return;
+            }
             // Put image in front
             sprite.zIndex = 10;
             // Sort children
@@ -263,9 +274,14 @@ const ClustersMap = (props) => {
             // Increase size of sprite from the center
             sprite.width += diffWidth;
             sprite.height += diffHeight;
+            // Change boolean for pointerenter
+            pointerEnter.current.set(index, true);
         });
 
-        sprite.on('mouseout', () => {
+        sprite.on('pointerleave', () => {
+            if (!pointerEnter.current.get(index)) {
+                return;
+            }
             // Calculate the difference in size before and after scaling
             const diffWidth = sprite.width * 0.2;
             const diffHeight = sprite.height * 0.2;
@@ -277,6 +293,8 @@ const ClustersMap = (props) => {
             sprite.height -= diffHeight;
             // Put image back in place
             sprite.zIndex = 0;
+            // Change boolean for pointerenter
+            pointerEnter.current.set(index, false);
         });
 
         // Add sprite to sprites
@@ -660,7 +678,7 @@ const ClustersMap = (props) => {
         let step_y = (final_effective_position_y - effectivePosition.current.y) / initial_transition_step;
 
         // If both steps are 0, then we do not need to do anything
-        if (step_x === 0 && step_y === 0) {
+        if (step_x <= 0.0001 && step_y <= 0.0001) {
             return Promise.resolve();
         }
 
@@ -681,7 +699,7 @@ const ClustersMap = (props) => {
             translation_ticker.add(() => {
                 // Check if position is equal to the target position.
                 if ((effectivePosition.current.x === final_effective_position_x
-                    && effectivePosition.current.y === final_effective_position_y)
+                        && effectivePosition.current.y === final_effective_position_y)
                     || counter === transition_steps) {
                     console.log("Translation ticker stopped");
                     // Stop ticker
