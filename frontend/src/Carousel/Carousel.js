@@ -61,7 +61,7 @@ const NeighborsCarousel = (props) => {
 
     useEffect(() => {
         // Fetch neighbors from server
-        fetchNeighbors(props.clickedImageIndex, 10, props.host, setImages, props.selectedDataset)
+        fetchNeighbors(props.clickedImageIndex, 10, props.host, props.selectedDataset)
             .then(data => {
                 // Populate state images with the fetched images
                 let images = [];
@@ -108,7 +108,6 @@ const NeighborsCarousel = (props) => {
             showDots={false}
             sliderClass=""
             slidesToSlide={1}
-            swipeable
         >
             {images.map((image) => {
                 return (

@@ -186,14 +186,18 @@ const ClustersMap = (props) => {
         sprite.removeAllListeners('pointerdown');
 
         sprite.on('pointerdown', () => {
+            props.prevClickedImageIndex.current = props.clickedImageIndex;
             props.setClickedImageIndex(index);
             props.setShowCarousel(true);
             props.setMenuOpen(false);
-            window.scroll({
-                top: document.body.scrollHeight,
-                behavior: "smooth",
-                left: 0
-            });
+            // Go to bottom of the page but wait until the carousel is shown
+            setTimeout(() => {
+                window.scroll({
+                    top: document.body.scrollHeight,
+                    behavior: "smooth",
+                    left: 0
+                });
+            }, 75);
         });
     }
 

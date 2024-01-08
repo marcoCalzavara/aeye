@@ -1,3 +1,12 @@
+/* Define variables for height of the carousel */
+:root {
+    --h-carousel-320: 75px;
+    --h-carousel-480: 100px;
+    --h-carousel-768: 150px;
+    --h-carousel-1024: 200px;
+    --h-carousel-1200: 300px;
+}
+
 .carousel-container {
     background: #000;
     margin-top: 40px;
@@ -16,43 +25,99 @@
     z-index: 10;
 }
 
+.button-height {
+    height: 18px;
+}
+
+/* Media queries for the height for the sliding transitions */
+
+@media (min-width: 320px) and (max-width: 480px) {
+    :root {
+        --height-transition: var(--h-carousel-320);
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    :root {
+        --height-transition: var(--h-carousel-480);
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    :root {
+        --height-transition: var(--h-carousel-768);
+    }
+}
+
+@media (min-width: 1025px) and (max-width: 1200px) {
+    :root {
+        --height-transition: var(--h-carousel-1024);
+    }
+}
+
+@media (min-width: 1201px) {
+    :root {
+        --height-transition: var(--h-carousel-1200);
+    }
+}
+
+@keyframes openAnimation {
+    0% { height: 0; }
+    100% { height: var(--height-transition); }
+}
+
+@keyframes closeAnimation {
+    0% { height: var(--height-transition); }
+    100% { height: 0; }
+}
+
 .height-transition {
-    transition: height 1s ease-in-out;
-    transform-origin: bottom;
+    animation-duration: 1s;
+    animation-fill-mode: both;
+}
+
+.height-transition.open {
+    animation-name: openAnimation;
+}
+
+.height-transition.close {
+    animation-name: closeAnimation;
 }
 
 /* Media queries for the height of the carousel */
+
 @media (min-width: 320px) and (max-width: 480px) {
     .h-carousel {
-        height: 75px;
+        height: var(--h-carousel-320);
     }
 }
 
 @media (min-width: 481px) and (max-width: 768px) {
     .h-carousel {
-        height: 100px;
+        height: var(--h-carousel-480);
     }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
     .h-carousel {
-        height: 150px;
+        height: var(--h-carousel-768);
     }
 }
 
 @media (min-width: 1025px) and (max-width: 1200px) {
     .h-carousel {
-        height: 200px;
+        height: var(--h-carousel-1024);
     }
 }
 
 @media (min-width: 1201px) {
     .h-carousel {
-        height: 300px;
+        height: var(--h-carousel-1200);
     }
 }
 
 /* Media queries for the font-size of the carousel */
+
 @media (min-width: 320px) and (max-width: 480px) {
     .font-carousel {
         font-size: 8px !important;

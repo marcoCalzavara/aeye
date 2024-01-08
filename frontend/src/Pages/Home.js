@@ -69,13 +69,11 @@ const Home = () => {
     const [showCarousel, setShowCarousel] = useState(false);
     // Define variable for storing the index of the clicked image
     const [clickedImageIndex, setClickedImageIndex] = useState(-1);
-    // Define boolean for first carousel render
-    const [firstRender, setFirstRender] = useState(true);
+    const prevClickedImageIndex = useRef(-1);
     // Define state for datasets
     const [datasets, setDatasets] = useState([]);
     // Define state for selected dataset
     const [selectedDataset, setSelectedDataset] = useState(null);
-    const carouselHeight = useRef(0);
     // Define state for menu open
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -112,37 +110,13 @@ const Home = () => {
         };
     }, []);
 
-    useEffect(() => {
-        const carouselDiv = document.getElementById('carousel');
-        if (carouselDiv) {
-            const observer = new ResizeObserver(entries => {
-                for (let entry of entries) {
-                    if (entry.contentRect.height > carouselHeight.current) {
-                        console.log(carouselHeight.current, entry.contentRect.height);
-                        window.scroll({
-                            top: document.body.scrollHeight,
-                            left: 0,
-                            behavior: 'smooth'
-                        });
-                    }
-                    carouselHeight.current = entry.contentRect.height;
-                }
-            });
-            observer.observe(carouselDiv);
-
-            // Return cleanup function for disconnecting the observer
-            return () => {
-                observer.disconnect();
-            };
-        }
-    }, [selectedDataset]); // We want to set the observer only when the selected dataset changes, so we avoid multiple
-    // observers being created
 
     const invertShownCarousel = () => {
-        if (firstRender) {
-            setFirstRender(false);
+        if (clickedImageIndex !== -1) {
+            setShowCarousel(!showCarousel);
+            prevClickedImageIndex.current = clickedImageIndex;
+            console.log(showCarousel)
         }
-        setShowCarousel(!showCarousel);
     }
 
     return (
@@ -176,22 +150,24 @@ const Home = () => {
                                      selectedDataset={selectedDataset}
                                      searchData={searchData}
                                      setShowCarousel={setShowCarousel}
+                                     prevClickedImageIndex={prevClickedImageIndex}
+                                     clickedImageIndex={clickedImageIndex}
                                      setClickedImageIndex={setClickedImageIndex}
                                      setMenuOpen={setMenuOpen}/>
                     </Stage>
                     <div id="carousel"
-                         className={`w-full bg-black carousel-container flex flex-col items-center justify-center 
-                         ${showCarousel && clickedImageIndex !== -1 ? 'h-carousel' : 'h-0'}
-                        ${!firstRender ? 'height-transition' : ''}`}>
-                        <button className={`mb-1 ${showCarousel ? 'h-1/10' : 'h-full'}`}
+                         className="w-full bg-black carousel-container flex flex-col items-center justify-center">
+                        <button className="mb-1 button-height"
                                 onClick={() => invertShownCarousel()}>
-                            {showCarousel ? <TfiAngleDown style={{zIndex: 1000}} className="text-white"/> :
-                                <TfiAngleUp style={{zIndex: 1000}} className="text-white"/>}
+                            {showCarousel ? <TfiAngleDown style={{zIndex: 1000}} className="text-white button-height"/> :
+                                <TfiAngleUp style={{zIndex: 1000}} className="text-white button-height"/>}
                         </button>
-                        <div className={`carousel-div ${showCarousel ? 'h-9/10' : 'h-0'} 
-                            ${!firstRender ? 'height-transition' : ''}`}>
+                        <div className={`carousel-div height-transition ${
+                            showCarousel && clickedImageIndex !== -1 ?
+                                (prevClickedImageIndex.current !== clickedImageIndex ? 'h-carousel' : 'open') : 'close'}`}>
                             {clickedImageIndex !== -1 &&
-                                <NeighborsCarousel host={host} clickedImageIndex={clickedImageIndex} selectedDataset={selectedDataset}/>}
+                                <NeighborsCarousel host={host} clickedImageIndex={clickedImageIndex}
+                                                   selectedDataset={selectedDataset}/>}
                         </div>
                     </div>
 
