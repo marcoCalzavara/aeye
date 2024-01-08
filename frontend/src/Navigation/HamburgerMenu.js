@@ -1,35 +1,15 @@
 /* Create component for the menu */
-import React, {useEffect, useState} from 'react';
 import {slide as Menu} from 'react-burger-menu'
 import './hamburgerMenu.css';
 import SelectDataset from "./SelectDataset";
 import {Link} from "react-router-dom";
 import {SlHome, SlQuestion} from "react-icons/sl";
 import {iconStyle, itemsStyle} from "../styles";
-import {getResponsiveHeight} from "../utilities";
 
 
 const HamburgerMenu = (props) => {
-    const [opacity, setOpacity] = useState(1);
-
-    const handleScroll = () => {
-        const newOpacity = window.scrollY > getResponsiveHeight().replace("px", "") ? 0.1 : 1;
-        setOpacity(newOpacity);
-    };
-
-    useEffect(() => {
-        window.addEventListener('scroll', handleScroll);
-        return () => {
-            window.removeEventListener('scroll', handleScroll);
-        };
-    }, []);
-
     return (
-        <div style={
-            {
-                opacity: opacity,
-            }
-        }>
+        <div>
             <Menu id="hamburger-menu" isOpen={props.menuOpen} right
                   customBurgerIcon={false}
                   customCrossIcon={false}

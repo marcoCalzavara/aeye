@@ -36,7 +36,7 @@ export function fetchTileData(zoom_level, x, y, host = "") {
  *
  * @param {*[]} images_indexes - indexes of images to be fetched
  * @param {string} host - host of the server
- * @return {Promise<Response>} - promise that resolves to the image paths
+ * @return {Promise<any>} - promise that resolves to the image paths
  */
 export function fetchImages(images_indexes, host = "") {
     if (images_indexes.length === 0) {

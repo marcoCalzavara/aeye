@@ -9,8 +9,8 @@ const StickyBar = (props) => {
     return (
         <div
             id="sticky-bar"
-            className="fixed top-0 w-full h-sticky flex flex-row justify-between items-center flex-gaps-1 bg-zinc-950
-             px-1/80 border-b-2 border-zinc-800 z-20 opacity-10 hover:opacity-100 transition-opacity duration-300">
+            className={`fixed top-0 w-full h-sticky flex flex-row justify-between items-center flex-gaps-1 bg-zinc-950
+             px-1/80 border-b-2 border-zinc-800 z-20 hover:opacity-100 transition-opacity duration-300 ${props.menuOpen ? 'opacity-100' : 'opacity-10'}`}>
             <div className="w-1/10 h-2/3">
                 <a href="https://disco.ethz.ch/"
                    className="w-full h-full text-white text-lg md:text-xl font-bold flex items-center"
@@ -20,7 +20,8 @@ const StickyBar = (props) => {
             </div>
             {props.hasSearchBar &&
                 <SearchBar host={props.host} setSearchData={setSearchData.current}
-                           setShowCarousel={props.setShowCarousel}/>
+                           setShowCarousel={props.setShowCarousel}
+                           selectedDataset={props.selectedDataset}/>
             }
             <Hamburger color={"white"} toggle={props.setMenuOpen} toggled={props.menuOpen}/>
         </div>

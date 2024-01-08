@@ -1,35 +1,14 @@
 import React, {useRef, useState} from "react";
 import SearchIcon from '@mui/icons-material/Search';
 import {IconButton, InputBase} from "@mui/material";
-import {DATASET} from "../Map/Cache";
 
 export default function SearchBar(props) {
-    const [searchHistory, setSearchHistory] = useState([]);
-    const [shownSearchHistory, setShownSearchHistory] = useState([]);
     const [inputValue, setInputValue] = useState("");
-    const [anchorEl, setAnchorEl] = useState(null);
     const [open, setOpen] = useState(false);
     const host = useRef(props.host);
-    const setSearchData = props.setSearchData;
-    const setShowCarousel = props.setShowCarousel;
-    const max_state_length = 20;
-    const max_history_shown = 5;
-
-    const updateSearchHistory = () => {
-        let updatedSearchHistory = []
-        if (!searchHistory.includes(inputValue))
-            updatedSearchHistory = [inputValue, ...searchHistory];
-        else
-            updatedSearchHistory = searchHistory;
-
-        if (updatedSearchHistory.length > max_state_length) {
-            updatedSearchHistory = updatedSearchHistory.slice(0, max_state_length);
-        }
-        setSearchHistory(updatedSearchHistory);
-    };
 
     const sendText = async (text) => {
-        let url = host.current + '/api/image-text?collection=' + DATASET + '&text=' + text + '&page=1';
+        let url = host.current + '/api/image-text?collection=' + props.selectedDataset + '&text=' + text + '&page=1';
         const result = await fetch(url, {
             method: 'GET'
         })
@@ -40,7 +19,7 @@ export default function SearchBar(props) {
                 return response.json();
             })
             .then(firstGet => {
-                url = host.current + '/api/image-to-tile?index=' + firstGet.index + '&collection=' + DATASET + "_image_to_tile";
+                url = host.current + '/api/image-to-tile?index=' + firstGet.index + '&collection=' + props.selectedDataset + "_image_to_tile";
 
                 return fetch(url, {
                     method: 'GET'
@@ -67,30 +46,21 @@ export default function SearchBar(props) {
         let groupedResult = {};
         groupedResult.tile = result.secondGet.zoom_plus_tile;
         groupedResult.image = {};
+        // noinspection JSUnresolvedVariable
         groupedResult.image.x = result.firstGet.low_dimensional_embedding_x;
+        // noinspection JSUnresolvedVariable
         groupedResult.image.y = result.firstGet.low_dimensional_embedding_y;
         groupedResult.image.width = result.firstGet.width;
         groupedResult.image.height = result.firstGet.height;
         groupedResult.image.index = result.firstGet.index;
 
         // Set result in parent component
-        setShowCarousel(false);
-        setSearchData(groupedResult);
+        props.setShowCarousel(false);
+        props.setSearchData(groupedResult);
     };
 
     const handleInputChange = (event) => {
-        let search = event.target.value;
-        let newShownSearchHistory = [];
-        for (let str of searchHistory) {
-            if (!(search === "") && str.toLowerCase().startsWith(search.toLowerCase())) {
-                newShownSearchHistory.push(str);
-            }
-            if (newShownSearchHistory.length === max_history_shown)
-                break;
-        }
-
-        setShownSearchHistory(newShownSearchHistory);
-        setInputValue(search);
+        setInputValue(event.target.value);
     };
 
     const handleEnter = (event) => {
@@ -99,26 +69,14 @@ export default function SearchBar(props) {
         }
     }
 
-    const handleMouseLeave = (event) => {
-        setShownSearchHistory([]);
-        setOpen(false);
-    }
-
-    const handleClickSearch = (event) => {
-        updateSearchHistory();
-        setShownSearchHistory([]);
+    const handleClickSearch = () => {
         setOpen(false);
         // noinspection JSIgnoredPromiseFromCall
         sendText(inputValue);
         setInputValue("");
     };
 
-    const handleClickHistory = (text) => {
-        setInputValue(text);
-    }
-
-    const handleClick = (event) => {
-        setAnchorEl(event.currentTarget);
+    const handleClick = () => {
         setOpen(!open);
     }
 

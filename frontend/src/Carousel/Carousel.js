@@ -1,10 +1,9 @@
 // Component for showing the nearest neighbors of an image on click or on search.
 
-import React, {useRef} from 'react';
+import React from 'react';
 import {useEffect, useState} from "react";
 import Carousel from 'react-multi-carousel';
 import ImageCard from "./ImageCard";
-import {DATASET} from "../Map/Cache";
 import 'react-multi-carousel/lib/styles.css';
 import './carousel.css';
 
@@ -33,10 +32,10 @@ const responsive = {
     }
 };
 
-export function fetchNeighbors(index, k, host) {
+export function fetchNeighbors(index, k, host, dataset) {
     // The function takes in an index of an image, and fetches the nearest neighbors of the image from the server.
     // Then it populates the state images with the fetched images.
-    const url = `${host}/api/neighbors?index=${index}&k=${k}&collection=${DATASET}`;
+    const url = `${host}/api/neighbors?index=${index}&k=${k}&collection=${dataset}`;
     return fetch(url,
         {
             method: 'GET',
@@ -62,15 +61,17 @@ const NeighborsCarousel = (props) => {
 
     useEffect(() => {
         // Fetch neighbors from server
-        fetchNeighbors(props.clickedImageIndex, 10, props.host, setImages)
+        fetchNeighbors(props.clickedImageIndex, 10, props.host, setImages, props.selectedDataset)
             .then(data => {
                 // Populate state images with the fetched images
                 let images = [];
                 for (const image of data) {
+                    // noinspection JSUnresolvedVariable
                     const text = "The author of the artwork is " + image.author + "."; // TODO maybe add more ai generated info
+                    // noinspection JSUnresolvedVariable
                     images.push(
                         {
-                            path: `${props.host}/${DATASET}/${image.path}`,
+                            path: `${props.host}/${props.dataset}/${image.path}`,
                             index: image.index,
                             text: text
                         }

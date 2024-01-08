@@ -449,6 +449,7 @@ const ClustersMap = (props) => {
         // This effect is called when the search data changes. This means that the user has searched something using the
         // search bar.
         if (Object.keys(props.searchData).length !== 0) {
+            // noinspection JSIgnoredPromiseFromCall
             moveToImage(props.searchData.tile, props.searchData.image);
         }
     }, [props.searchData]);

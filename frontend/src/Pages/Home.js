@@ -153,6 +153,7 @@ const Home = () => {
                            setSearchData={setSearchData}
                            setShowCarousel={setShowCarousel}
                            datasets={datasets}
+                           selectedDataset={selectedDataset}
                            setSelectedDataset={setSelectedDataset}
                            menuOpen={menuOpen}
                            setMenuOpen={setMenuOpen}
@@ -190,7 +191,7 @@ const Home = () => {
                         <div className={`carousel-div ${showCarousel ? 'h-9/10' : 'h-0'} 
                             ${!firstRender ? 'height-transition' : ''}`}>
                             {clickedImageIndex !== -1 &&
-                                <NeighborsCarousel host={host} clickedImageIndex={clickedImageIndex}/>}
+                                <NeighborsCarousel host={host} clickedImageIndex={clickedImageIndex} selectedDataset={selectedDataset}/>}
                         </div>
                     </div>
 

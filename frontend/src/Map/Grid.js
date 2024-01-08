@@ -4,7 +4,6 @@ import {getGridCellsToBeDisplayed, mapCellsToRealCoordinatePathPairs, updateZoom
 
 // Define constants
 const WINDOW_SIZE_IN_CELLS_PER_DIM = 10;
-const MAX_CACHE_SIZE = 100;
 const MAX_ZOOM_LEVEL = 5; // TODO get max zoom level from other component
 // TODO: both the dataset and the max zoom level should be fetched from the server using /api/collection-info
 
