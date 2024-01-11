@@ -30,7 +30,7 @@ class EmbeddingsModel(ABC):
     @abstractmethod
     def processData(self, data):
         """
-        Return the inputs to the model which generates the encodings.
+        Return the inputs to the embeddings_model which generates the encodings.
         :param data:
         :return:
         """
@@ -40,7 +40,7 @@ class EmbeddingsModel(ABC):
     def getEmbeddings(self, inputs) -> torch.Tensor | np.ndarray:
         """
         Return embedding of data. The type of data depends on the implementation.
-        :param inputs: Inputs to the model which generates the embeddings.
+        :param inputs: Inputs to the embeddings_model which generates the embeddings.
         :return: Embeddings for data.
         """
         pass

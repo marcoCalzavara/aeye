@@ -2,8 +2,8 @@ import unittest
 
 import torch
 
-from backend.src.model.CLIPEmbeddings import ClipEmbeddings
-from backend.src.model.EmbeddingsModel import EmbeddingsModel
+from backend.src.embeddings_model.CLIPEmbeddings import ClipEmbeddings
+from backend.src.embeddings_model.EmbeddingsModel import EmbeddingsModel
 
 
 class TestCLIPEmbeddings(unittest.TestCase):

@@ -4,7 +4,6 @@
 echo "MILVUS_IP=$MILVUS_IP" > /.env
 # shellcheck disable=SC2129
 echo "MILVUS_PORT=$MILVUS_PORT" >> /.env
-echo "START=1" >> /.env
 echo "WIKIART_COLLECTION=$WIKIART_COLLECTION" >> /.env
 echo "BEST_ARTWORKS_COLLECTION=$BEST_ARTWORKS_COLLECTION" >> /.env
 echo "BEST_ARTWORKS_DIR=/best_artworks" >> /.env
@@ -38,26 +37,7 @@ fi
 # Sleep for 100 seconds to allow time for the container hosting the milvus service to become healthy
 sleep 100
 
-echo "Creating database and collections..."
-for var in $(compgen -e); do
-  # Check if the variable ends with "COLLECTION"
-  if [[ "$var" == *COLLECTION ]]; then
-    # Get value of the variable
-    value="${!var}"
-    # Create a temporary collection name
-    export TEMP_COLLECTION_NAME="temp_$value"
-    # Write the temporary collection name to .env file
-    echo "TEMP_COLLECTION_NAME=$TEMP_COLLECTION_NAME" >> /.env
-    python -m src.db_utilities.create_embeddings_collection
-    # Remove "TEMP_COLLECTION_NAME=$TEMP_COLLECTION_NAME" from /.env file
-    sed -i '/TEMP_COLLECTION_NAME/d' /.env
-  fi
-done
-
-# Remove "START=$START" from /.env
-sed -i '/START/d' /.env
-
-echo "Database and collections created."
+echo "Starting backend..."
 
 # Start the backend
 uvicorn src.app.main:app --host 0.0.0.0 --port "$BACKEND_PORT" --reload

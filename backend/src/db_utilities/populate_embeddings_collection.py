@@ -15,7 +15,7 @@ from .create_embeddings_collection import create_embeddings_collection
 from .datasets import DatasetOptions, get_dataset_object
 from .utils import create_connection
 from ..CONSTANTS import *
-from ..model.CLIPEmbeddings import ClipEmbeddings
+from ..embeddings_model.CLIPEmbeddings import ClipEmbeddings
 
 # Increase pixel limit
 PIL.Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
@@ -253,7 +253,7 @@ if __name__ == "__main__":
     collection_name = "temp_" + flags["dataset"]
     did_not_exist = False
     if collection_name not in utility.list_collections():
-        print(f"The collection {collection_name} does not exist. Creating it...")
+        print(f"The temporary collection {collection_name} does not exist. Creating it...")
         collection, collection_name = create_embeddings_collection(collection_name=collection_name,
                                                                    choose_database=False)
         did_not_exist = True
@@ -278,10 +278,9 @@ if __name__ == "__main__":
 
     # Evaluate flags["repopulate"]
     if flags["repopulate"] and start != dataset.get_size():
+        print("Repopulating...")
         # Delete all vectors in the collection and define start point for dataloader
-        if did_not_exist:
-            collection.drop()
-            collection, _ = create_embeddings_collection(collection_name=collection_name, choose_database=False)
+        collection.drop()
         missing_indexes = []
         start = 0
     else:

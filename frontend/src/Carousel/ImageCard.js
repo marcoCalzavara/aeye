@@ -29,27 +29,28 @@ export default function ImageCard({url, text}) {
                 document.getElementById(url).classList.remove("cursor-grabbing");
         }}>
             <TransformWrapper
-                initialPositionX={0}
-                initialPositionY={0}
-                disablePadding={true}
-                minScale={0.5}
-                maxScale={2}
-            >
-                <TransformComponent>
-                    <CardMedia
-                        component="img"
-                        image={url}
-                        sx={{ height: '80%', width: '100%', objectFit: 'cover'}}
-                    />
-                </TransformComponent>
-            </TransformWrapper>
+                    initialPositionX={0}
+                    initialPositionY={0}
+                    disablePadding={true}
+                    initialScale={1}
+                    minScale={0.5}
+                    maxScale={2}
+                >
+                    <TransformComponent>
+                        <CardMedia
+                            component="img"
+                            image={url}
+                        />
+                    </TransformComponent>
+                </TransformWrapper>
             <CardContent sx={{ height : '20%', width: '100%' }}>
                 <Typography variant="h1" className="font-carousel" sx={ {
+                    marginTop: "-2%",
                     backgroundColor : 'white',
                     fontStyle: 'italic',
                     fontWeight: 'bold',
                     fontFamily: 'Roboto Slab, serif',
-                    textAlign: 'center',
+                    lineHeight: '1.1'
                 } }>
                     {text}
                 </Typography>

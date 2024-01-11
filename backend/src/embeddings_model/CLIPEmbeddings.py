@@ -26,13 +26,16 @@ class ClipEmbeddings(EmbeddingsModel, ABC):
         return self.cosine_similarity(emb1, emb2)
 
     def getTextEmbeddings(self, text):
-        # Get text inputs
-        inputs = self.processor(text, padding=True, truncation=True, return_tensors="pt").to(self.device)
-        # Return _embeddings
-        return self.model.get_text_features(**inputs)
+        try:
+            # Get text inputs
+            inputs = self.processor(text, padding=True, truncation=True, return_tensors="pt").to(self.device)
+            # Return _embeddings
+            return self.model.get_text_features(**inputs)
+        except Exception as e:
+            print(e.__str__())
 
     def processData(self, data):
-        # Return inputs for CLIP model
+        # Return inputs for CLIP embeddings_model
         try:
             return self.processor(images=data, return_tensors="pt").to(self.device)
         except Exception as e:

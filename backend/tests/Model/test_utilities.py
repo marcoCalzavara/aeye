@@ -1,6 +1,6 @@
 import unittest
 
-from backend.src.model.utils import *
+from backend.src.embeddings_model.utils import *
 
 
 class TestEmbeddingsModel(unittest.TestCase):

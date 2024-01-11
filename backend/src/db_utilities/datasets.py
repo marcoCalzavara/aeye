@@ -122,7 +122,8 @@ class SupportDatasetForImages(TorchDataset):
         # Get image height and width
         image = Image.open(img_name)
         width, height = image.size
-        image = self.transform(image)
+        if self.transform:
+            image = self.transform(image)
 
         return {
             'images': image,
@@ -151,7 +152,7 @@ class SupportSamplerForImages(Sampler):
 class DatasetOptions(Enum):
     # The name of the enum variable should equal the name of the dataset
     WIKIART = {"name": "wikiart", "collate_fn": wikiart_collate_fn, "zoom_levels": 8}
-    BEST_ARTWORKS = {"name": "best_artworks", "collate_fn": best_artworks_collate_fn, "zoom_levels": 5}
+    BEST_ARTWORKS = {"name": "best_artworks", "collate_fn": best_artworks_collate_fn, "zoom_levels": 7}
 
 
 # DATASET ABSTRACT CLASS
@@ -169,6 +170,9 @@ class Dataset(ABC):
     def get_dataloader(self, batch_size, num_workers, data_processor, is_missing_indexes=False,
                        start=None, end=None, missing_indexes=None):
         pass
+
+    def __getitem__(self, idx):
+        return self.dataset[idx]
 
 
 # DATASET CLASSES

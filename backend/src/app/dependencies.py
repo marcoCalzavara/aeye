@@ -1,14 +1,15 @@
 import threading
-from typing import Callable
 
+import deeplake
 import torch
 from fastapi import Query
 from pymilvus import Collection
 from pymilvus.orm import utility
 
 from .CONSTANTS import *
-from ..db_utilities.datasets import DatasetOptions
-from ..model.EmbeddingsModel import EmbeddingsModel
+from ..caption_model.CaptionModel import CaptionModel
+from ..db_utilities.datasets import DatasetOptions, get_dataset_object
+from ..embeddings_model.EmbeddingsModel import EmbeddingsModel
 
 
 # Define helper class for representing a collection
@@ -24,9 +25,7 @@ class HelperCollection:
         # the collection is released. Every time the collection is queried, the counter is set to the value. It the
         # collection had been released, it is loaded again once queried.
         self.counter = 0
-        # Create lock to ensure that the counter is not accessed by multiple threads at the same time. This it not
-        # necessary for the current implementation, but it could be useful when database access is made non-blocking.
-        # TODO: Implement non-blocking database access.
+        # Create lock to ensure that the counter is not accessed by multiple threads at the same time.
         self.lock = threading.Lock()
 
 
@@ -58,6 +57,8 @@ class CollectionNameGetter:
             self.collections[collection_name].load()
 
     def update_counters(self, collection_name: str):
+        # Log all counters before updating them
+        # print(f"Before update. Counters: {[(key, self.collections[key].counter) for key in self.collections.keys()]}")
         # Loop over collections. If the collection is not the one that was queried, decrement its counter. Else, if
         # the collection is the one that was queried, set its counter to COUNTER_MAX_VALUE.
         for key in self.collections.keys():
@@ -71,43 +72,13 @@ class CollectionNameGetter:
                 self.collections[key].lock.acquire()
                 self.collections[key].counter = COUNTER_MAX_VALUE
                 self.collections[key].lock.release()
+        # Log all counters after updating them
+        # print(f"After update. Counters: {[(key, self.collections[key].counter) for key in self.collections.keys()]}")
 
 
 class DatasetCollectionNameGetter(CollectionNameGetter):
     def __init__(self):
         super().__init__()
-
-    def _call(self, collection: str = Query(...)) -> Collection | None:
-        if collection in self.collections.keys():
-            # Check if the collection must be loaded
-            self.check_counter(collection)
-            # Update counter for all collections
-            self.update_counters(collection)
-            # Return the requested collection
-            return self.collections[collection].collection
-        else:
-            return None
-
-
-class GridCollectionNameGetter(CollectionNameGetter):
-    def __init__(self):
-        super().__init__("_zoom_levels_grid")
-
-    def _call(self, collection: str = Query(...)) -> Collection | None:
-        if collection in self.collections.keys():
-            # Check if the collection must be loaded
-            self.check_counter(collection)
-            # Update counter for all collections
-            self.update_counters(collection)
-            # Return the requested collection
-            return self.collections[collection].collection
-        else:
-            return None
-
-
-class MapCollectionNameGetter(CollectionNameGetter):
-    def __init__(self):
-        super().__init__("_zoom_levels_map")
 
     def _call(self, collection: str = Query(...)) -> Collection | None:
         if collection in self.collections.keys():
@@ -177,13 +148,9 @@ class Updater:
     """
 
     def __init__(self, dataset_collection_name_getter: DatasetCollectionNameGetter,
-                 grid_collection_name_getter: GridCollectionNameGetter,
-                 map_collection_name_getter: MapCollectionNameGetter,
                  clusters_collection_name_getter: ClustersCollectionNameGetter,
                  image_to_tile_collection_name_getter: ImageToTileCollectionNameGetter):
         self.dataset_collection_name_getter = dataset_collection_name_getter
-        self.grid_collection_name_getter = grid_collection_name_getter
-        self.map_collection_name_getter = map_collection_name_getter
         self.clusters_collection_name_getter = clusters_collection_name_getter
         self.image_to_tile_collection_name_getter = image_to_tile_collection_name_getter
         # Define lock for the updater
@@ -202,20 +169,6 @@ class Updater:
                     self.dataset_collection_name_getter.collections[name] = HelperCollection(name)
             # Second, update the list of zoom level collections if necessary
             for dataset in DatasetOptions:
-                name = dataset.value["name"] + "_zoom_levels_grid"
-                # Check if name is the suffix of one of the elements of the list of collections
-                if (name in utility.list_collections() and
-                        name not in self.grid_collection_name_getter.collections.keys()):
-                    # The collection is in the database, but not in the list of collections. Add it to the list.
-                    self.grid_collection_name_getter.collections[name] = HelperCollection(name)
-
-                name = dataset.value["name"] + "_zoom_levels_map"
-                # Check if name is the suffix of one of the elements of the list of collections
-                if (name in utility.list_collections() and
-                        name not in self.map_collection_name_getter.collections.keys()):
-                    # The collection is in the database, but not in the list of collections. Add it to the list.
-                    self.map_collection_name_getter.collections[name] = HelperCollection(name)
-
                 name = dataset.value["name"] + "_zoom_levels_clusters"
                 # Check if name is the suffix of one of the elements of the list of collections
                 if (name in utility.list_collections() and
@@ -236,6 +189,29 @@ class Updater:
         finally:
             # Release lock
             self.lock.release()
+
+
+class DatasetItemGetter:
+    """
+    Class for getting an item from a dataset. The item is returned as a dictionary.
+    """
+
+    def __init__(self, caption_model: CaptionModel):
+        self.caption_model = caption_model
+        self.datasets = {}
+        for dataset in DatasetOptions:
+            if dataset.value["name"] in utility.list_collections():
+                self.datasets[dataset.value["name"]] = get_dataset_object(dataset.value["name"])
+
+    def __call__(self, index: int, collection: str):
+        try:
+            image = self.datasets[collection][index]["images"]
+            if isinstance(image, deeplake.Tensor):
+                image = torch.tensor(image.numpy())
+            return self.caption_model.getImageCaption(image)
+        except Exception as e:
+            print(e.__str__())
+            return None
 
 
 class Embedder:

@@ -5,8 +5,8 @@ import torch
 from tqdm import tqdm
 
 from ..CONSTANTS import *
-from ..model.EmbeddingsModel import EmbeddingsModel
-from ..model.utils import project_embeddings_UMAP
+from ..embeddings_model.EmbeddingsModel import EmbeddingsModel
+from ..embeddings_model.utils import project_embeddings_UMAP
 
 
 class DatasetPreprocessor:
@@ -30,7 +30,7 @@ class DatasetPreprocessor:
 
     def _generateEmbeddings(self, inputs):
         """
-        Generate _embeddings of data using the provided _embeddings model. The method requires the inputs to the
+        Generate _embeddings of data using the provided _embeddings embeddings_model. The method requires the inputs to the
         data encoder.
         """
         # This code works for dataloader with batch_size == 1
