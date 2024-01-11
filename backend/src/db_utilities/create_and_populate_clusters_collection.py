@@ -10,7 +10,6 @@ from pymilvus import db, Collection, utility
 
 from .collections import (clusters_collection, image_to_tile_collection, ZOOM_LEVEL_VECTOR_FIELD_NAME,
                           EMBEDDING_VECTOR_FIELD_NAME)
-from .create_and_populate_grid_collection import load_vectors_from_collection
 from .utils import ModifiedKMeans
 # from .datasets import DatasetOptions
 from .utils import create_connection, parsing
@@ -29,6 +28,34 @@ class NumpyEncoder(json.JSONEncoder):
         if isinstance(obj, np.float32):
             return float(obj)
         return json.JSONEncoder.default(self, obj)
+
+
+def load_vectors_from_collection(collection: Collection) -> list | None:
+    # Load collection in memory
+    collection.load()
+    # Get low dimensional embeddings attributes
+    low_dim_attributes = (["index", "author", "path"] +
+                          ["low_dimensional_embedding_" + COORDINATES[i] for i in range(len(COORDINATES))])
+
+    # Get elements from collection
+    entities = []
+    try:
+        for i in range(0, collection.num_entities, SEARCH_LIMIT):
+            if collection.num_entities > 0:
+                # Get SEARCH_LIMIT entities
+                query_result = collection.query(
+                    expr=f"index in {list(range(i, i + SEARCH_LIMIT))}",
+                    output_fields=low_dim_attributes
+                )
+                # Add entities to the list of entities
+                entities += query_result
+    except Exception as e:
+        print(e.__str__())
+        print("Error in load_vectors_from_collection.")
+        return None
+
+    # Now entities contains all the entities in the collection, with fields 'index' and 'low_dimensional_embedding_*'
+    return entities
 
 
 def create_clusters_collection(zoom_levels,

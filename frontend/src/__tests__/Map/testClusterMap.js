@@ -1,7 +1,7 @@
-import "jest-canvas-mock";
-
 // Test ClustersMap component
 // ----------------------------------------------------------------------------
+import {expect, test} from '@jest/globals'
+
 const {
     fetchClusterData
 } = require('../../Map/ClustersMap');

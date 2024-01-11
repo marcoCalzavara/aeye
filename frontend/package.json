@@ -5,6 +5,7 @@
   "dependencies": {
     "@emotion/react": "latest",
     "@emotion/styled": "latest",
+    "@jest/globals": "^29.7.0",
     "@mui/icons-material": "latest",
     "@mui/material": "latest",
     "@mui/system": "latest",
@@ -12,6 +13,7 @@
     "@use-gesture/react": "^10.3.0",
     "hamburger-react": "latest",
     "hammerjs": "^2.0.8",
+    "lru-cache": "^10.1.0",
     "pixi.js": "latest",
     "react": "latest",
     "react-burger-menu": "^3.0.9",
@@ -49,7 +51,6 @@
     "@testing-library/user-event": "latest",
     "autoprefixer": "^10.4.16",
     "jest": "latest",
-    "jest-canvas-mock": "latest",
     "postcss": "^8.4.32",
     "postcss-cli": "^11.0.0",
     "tailwindcss": "^3.4.0"

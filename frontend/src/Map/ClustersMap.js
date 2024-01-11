@@ -3,6 +3,7 @@ import * as PIXI from "pixi.js";
 import Hammer from "hammerjs";
 import {useApp} from "@pixi/react";
 import 'tailwindcss/tailwind.css';
+import {getTilesToFetch} from "./utilities";
 
 const maxZoomLevel = 7;
 const DURATION = 4; // seconds
@@ -468,53 +469,13 @@ const ClustersMap = (props) => {
         const number_of_tiles = 2 ** effective_zoom_level;
         const tile_step_x = (maxX.current - minX.current) / number_of_tiles;
         const tile_step_y = (maxY.current - minY.current) / number_of_tiles;
-        // Get all tiles that are visible. We can have at most 4 tiles that are visible.
-        const visible_tiles = [];
+
         // Get tile coordinates of the tile that contains the upper left corner of the stage.
         const tile_x = Math.min(Math.floor((effectivePosition.current.x - minX.current) / tile_step_x), number_of_tiles - 1);
         const tile_y = Math.min(Math.floor((effectivePosition.current.y - minY.current) / tile_step_y), number_of_tiles - 1);
-        visible_tiles.push({x: tile_x, y: tile_y});
-        // Get all neighboring tiles. This means all tiles at a distance of 1, plus tiles at a distance of 2 on the bottom
-        // and on the right.
-        if (tile_x > 0) {
-            visible_tiles.push({x: tile_x - 1, y: tile_y});
-            if (tile_y > 0) {
-                visible_tiles.push({x: tile_x - 1, y: tile_y - 1});
-            }
-            if (tile_y < number_of_tiles - 1) {
-                visible_tiles.push({x: tile_x - 1, y: tile_y + 1});
-            }
-        }
-        if (tile_x < number_of_tiles - 1) {
-            visible_tiles.push({x: tile_x + 1, y: tile_y});
-            if (tile_y > 0) {
-                visible_tiles.push({x: tile_x + 1, y: tile_y - 1});
-            }
-            if (tile_y < number_of_tiles - 1) {
-                visible_tiles.push({x: tile_x + 1, y: tile_y + 1});
-            }
-        }
-        if (tile_x < number_of_tiles - 2) {
-            visible_tiles.push({x: tile_x + 2, y: tile_y});
-            if (tile_y < number_of_tiles - 1) {
-                visible_tiles.push({x: tile_x + 2, y: tile_y + 1});
-            }
-            if (tile_y < number_of_tiles - 2) {
-                visible_tiles.push({x: tile_x + 2, y: tile_y + 2});
-            }
-        }
-        if (tile_y < number_of_tiles - 2) {
-            visible_tiles.push({x: tile_x, y: tile_y + 2});
-            if (tile_x < number_of_tiles - 1) {
-                visible_tiles.push({x: tile_x + 1, y: tile_y + 2});
-            }
-        }
-        if (tile_y > 0) {
-            visible_tiles.push({x: tile_x, y: tile_y - 1});
-        }
-        if (tile_y < number_of_tiles - 1) {
-            visible_tiles.push({x: tile_x, y: tile_y + 1});
-        }
+
+        // Get tiles
+        const visible_tiles = getTilesToFetch(tile_x, tile_y, effective_zoom_level);
 
         // Remove tiles and sprites of tiles that are not visible
         for (let tile of artworksInTiles.current.keys()) {
