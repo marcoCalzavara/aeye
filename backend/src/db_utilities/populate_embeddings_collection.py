@@ -54,7 +54,7 @@ def parsing():
         if arg in ("-d", "--database"):
             flags["database"] = val
         elif arg in ("-c", "--dataset"):
-            if val in [dataset.value for dataset in DatasetOptions]:
+            if val in [dataset.value["name"] for dataset in DatasetOptions]:
                 flags["dataset"] = val
             else:
                 raise ValueError("Dataset not supported.")
@@ -274,6 +274,7 @@ if __name__ == "__main__":
     # the processing procedure, or an error message has been displayed in the previous iteration.
 
     # Get dataset object
+    print(f"Getting dataset {flags['dataset']}...")
     dataset = get_dataset_object(flags["dataset"])
 
     # Evaluate flags["repopulate"]
