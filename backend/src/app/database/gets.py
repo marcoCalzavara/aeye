@@ -1,3 +1,4 @@
+import time
 from typing import List
 
 import torch
@@ -7,6 +8,29 @@ from ...CONSTANTS import *
 from ...db_utilities.collections import EMBEDDING_VECTOR_FIELD_NAME, ZOOM_LEVEL_VECTOR_FIELD_NAME
 
 
+# Create decorator for timing functions
+def timeit(func):
+    """
+    Decorator for timing functions.
+    @param func:
+    @return:
+    """
+    def wrapper(*args, **kwargs):
+        """
+        Wrapper for timing functions.
+        @param args:
+        @param kwargs:
+        @return:
+        """
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        print(f"Function {func.__name__} took {end - start} seconds.")
+        return result
+    return wrapper
+
+
+@timeit
 def get_image_info_from_text_embedding(collection: Collection, text_embeddings: torch.Tensor) -> str:
     """
     Get the image embedding from the collection for a given text.
@@ -32,6 +56,7 @@ def get_image_info_from_text_embedding(collection: Collection, text_embeddings: 
     return results[0][0].to_dict()["entity"]
 
 
+@timeit
 def get_grid_data(zoom_level: int, tile_x: int, tile_y: int, collection: Collection) -> dict:
     """
     Get the data for a tile at a specific zoom level from the collection.
@@ -68,6 +93,7 @@ def get_grid_data(zoom_level: int, tile_x: int, tile_y: int, collection: Collect
     return results[0][0].to_dict()
 
 
+@timeit
 def get_map_data(zoom_level: int, image_x: int, image_y: int, collection: Collection) -> dict:
     """
     Get the data for a zoom level from the collection.
@@ -107,6 +133,7 @@ def get_map_data(zoom_level: int, image_x: int, image_y: int, collection: Collec
     return results[0][0].to_dict()
 
 
+@timeit
 def get_clusters_data(zoom_level: int, tile_x: int, tile_y: int, collection: Collection) -> dict:
     """
     Get the data for a tile at a specific zoom level from the collection.
@@ -147,6 +174,7 @@ def get_clusters_data(zoom_level: int, tile_x: int, tile_y: int, collection: Col
     return results[0][0].to_dict()
 
 
+@timeit
 def get_tile_from_image(index: int, collection: Collection) -> dict:
     """
     Get the tile data from the collection for a given image.
@@ -172,6 +200,7 @@ def get_tile_from_image(index: int, collection: Collection) -> dict:
         return {}
 
 
+@timeit
 def get_paths_from_indexes(indexes: List[int], collection: Collection) -> dict:
     """
     Get images from their indexes.
@@ -189,6 +218,7 @@ def get_paths_from_indexes(indexes: List[int], collection: Collection) -> dict:
     return results
 
 
+@timeit
 def get_neighbors(index: int, collection: Collection, top_k: int) -> List[dict]:
     """
     Get the neighbors of a given image.
