@@ -13,10 +13,10 @@ import {getResponsiveHeight, getResponsiveMargin} from "../utilities";
 import HamburgerMenu from "../Navigation/HamburgerMenu";
 
 
-async function fetchAvailableDatasets(host) {
+function fetchAvailableDatasets(host) {
     let url = host + '/api/collection-names';
 
-    return await fetch(url, {
+    return fetch(url, {
         method: 'GET'
     })
         .then(response => {
@@ -24,7 +24,42 @@ async function fetchAvailableDatasets(host) {
                 throw new Error('Dataset names could not be retrieved. Status: ' + response.status + ' ' + response.statusText);
             }
             return response.json();
-        }).catch(error => {
+        })
+        .then(data => {
+            // Fetch dataset info for each dataset
+            let fetchPromises = data.collections.map(collection => {
+                let url = host + '/api/collection-info?collection=' + collection;
+                return fetch(url, {
+                    method: 'GET'
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Dataset info could not be retrieved. Status: ' + response.status + ' ' + response.statusText);
+                        }
+                        return response.json();
+                    })
+                    .then(info => {
+                        return {collection, zoom_levels: info.zoom_levels};
+                    });
+            });
+
+            return Promise.all(fetchPromises)
+                .then(results => {
+                    let datasets_info = new Map();
+                    results.forEach(result => {
+                        datasets_info.set(result.collection, result.zoom_levels);
+                    });
+                    return {
+                        collections: data.collections,
+                        collections_info: datasets_info
+                    };
+                })
+                .catch(error => {
+                    // Handle any errors that occur during the fetch operation
+                    console.error('Error:', error);
+                });
+        })
+        .catch(error => {
             // Handle any errors that occur during the fetch operation
             console.error('Error:', error);
         });
@@ -62,7 +97,7 @@ const Home = () => {
             - getResponsiveMargin().replace('px', '')
     });
     // Define host
-    let host = extractHost();
+    let host = useRef(extractHost());
     // Define data from text search
     const [searchData, setSearchData] = useState({});
     // Define boolean for showing the carousel with the nearest neighbors of a clicked image
@@ -74,6 +109,8 @@ const Home = () => {
     const [datasets, setDatasets] = useState([]);
     // Define state for selected dataset
     const [selectedDataset, setSelectedDataset] = useState(null);
+    // Define state for dataset info
+    const [datasetInfo, setDatasetInfo] = useState(null);
     // Define state for menu open
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -90,7 +127,7 @@ const Home = () => {
         document.documentElement.addEventListener('resize', updateDimensions);
 
         // Fetch available datasets
-        fetchAvailableDatasets(host)
+        fetchAvailableDatasets(host.current)
             /**
              * @param data {object} - Response from the server
              * @param data.collections {array} - Array of available datasets
@@ -98,11 +135,12 @@ const Home = () => {
             .then(data => {
                 setDatasets(data.collections);
                 setSelectedDataset(data.collections[0]);
+                setDatasetInfo(data.collections_info);
+
             })
             .catch(error => {
                 console.error('Error:', error);
             });
-
 
         // Return cleanup function for removing the event listener
         return () => {
@@ -115,14 +153,13 @@ const Home = () => {
         if (clickedImageIndex !== -1) {
             setShowCarousel(!showCarousel);
             prevClickedImageIndex.current = clickedImageIndex;
-            console.log(showCarousel)
         }
     }
 
     return (
-        selectedDataset !== null ?
+        (selectedDataset !== null && datasetInfo.get(selectedDataset) !== undefined) ?
             <div className="home">
-                <StickyBar host={host}
+                <StickyBar host={host.current}
                            hasSearchBar={true}
                            setSearchData={setSearchData}
                            setShowCarousel={setShowCarousel}
@@ -146,8 +183,9 @@ const Home = () => {
                            options={{backgroundColor: 0x000000}}>
                         <ClustersMap width={dimensionsStage.width}
                                      height={dimensionsStage.height}
-                                     host={host}
+                                     host={host.current}
                                      selectedDataset={selectedDataset}
+                                     maxZoomLevel={datasetInfo.get(selectedDataset)}
                                      searchData={searchData}
                                      setShowCarousel={setShowCarousel}
                                      prevClickedImageIndex={prevClickedImageIndex}
@@ -157,16 +195,17 @@ const Home = () => {
                     </Stage>
                     <div id="carousel"
                          className="w-full bg-black carousel-container flex flex-col items-center justify-center">
-                        <button className="mb-1 button-height"
+                        <button className="mb-1 button"
                                 onClick={() => invertShownCarousel()}>
-                            {showCarousel ? <TfiAngleDown style={{zIndex: 1000}} className="text-white button-height"/> :
-                                <TfiAngleUp style={{zIndex: 1000}} className="text-white button-height"/>}
+                            {showCarousel ?
+                                <TfiAngleDown style={{zIndex: 1000}} className="text-white button"/> :
+                                <TfiAngleUp style={{zIndex: 1000}} className="text-white button"/>}
                         </button>
                         <div className={`carousel-div height-transition ${
                             showCarousel && clickedImageIndex !== -1 ?
                                 (prevClickedImageIndex.current !== clickedImageIndex ? 'h-carousel' : 'open') : 'close'}`}>
                             {clickedImageIndex !== -1 &&
-                                <NeighborsCarousel host={host} clickedImageIndex={clickedImageIndex}
+                                <NeighborsCarousel host={host.current} clickedImageIndex={clickedImageIndex}
                                                    selectedDataset={selectedDataset}/>}
                         </div>
                     </div>

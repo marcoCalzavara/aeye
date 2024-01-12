@@ -2,14 +2,21 @@ import {useEffect, useRef} from 'react';
 import * as PIXI from "pixi.js";
 import Hammer from "hammerjs";
 import {useApp} from "@pixi/react";
+import {LRUCache} from "lru-cache";
 import 'tailwindcss/tailwind.css';
 import {getTilesToFetch} from "./utilities";
 
-const maxZoomLevel = 7;
 const DURATION = 4; // seconds
 
-export function fetchClusterData(zoom_level, tile_x, tile_y, dataset, host = "") {
-    const url = `${host}/api/clusters?zoom_level=${zoom_level}&tile_x=${tile_x}&tile_y=${tile_y}&collection=${dataset}_zoom_levels_clusters`;
+function getUrlForClusterData(zoom_level, tile_x, tile_y, dataset, host = "") {
+    return `${host}/api/clusters?zoom_level=${zoom_level}&tile_x=${tile_x}&tile_y=${tile_y}&collection=${dataset}_zoom_levels_clusters`;
+}
+
+function getUrlForImage(path, dataset, host = "") {
+    return `${host}/${dataset}/resized_images/${path}`;
+}
+
+export function fetchClusterData(url) {
     return fetch(url,
         {
             method: 'GET',
@@ -34,6 +41,35 @@ export function fetchClusterData(zoom_level, tile_x, tile_y, dataset, host = "")
             console.error('Error:', error);
         });
 }
+
+// TODO check if this is the best way to fetch images
+export function newFetchTexture(url, signal) {
+    return new Promise((resolve, reject) => {
+        fetch(url, {
+                method: 'GET',
+                signal: signal
+            }
+        )
+            .then(response => response.blob())
+            .then(blob => {
+                const objectURL = URL.createObjectURL(new Blob([blob], { type: blob.type }));
+                resolve(PIXI.Texture.from(objectURL));
+            })
+            .catch(error => {
+                if (error.name === 'AbortError') {
+                    console.log('Fetch operation was aborted');
+                    resolve();
+                } else {
+                    reject(error);
+                }
+            });
+    });
+}
+
+/*export function fetchTexture(url) {
+    // This method returns a promise that resolves to a texture.
+    return PIXI.Texture.fromURL(url);
+}*/
 
 function makeSpritePulse(sprite) {
     // Make the image pulse for 4 seconds
@@ -142,9 +178,15 @@ const ClustersMap = (props) => {
     const maxY = useRef(0);
     // Define boolean for mouse down
     const mouseDown = useRef(false);
-    // Define state for artworks in tiles
-    const artworksInTiles = useRef(new Map());
-    // Define width and height of the viewport
+    // Define state for tiles which are currently on stage
+    const tilesOnStage = useRef(new Map());
+    // Define least recently used cache for tiles. Use fetchTileData to fetch tiles.
+    const tilesCache = useRef(new LRUCache({
+        max: 1000,
+        fetchMethod: fetchClusterData,
+    }));
+    // Create map of AbortControllers for fetch requests
+    const abortControllers = useRef(new Map());
 
     // Define state for the app
     const app = useApp()
@@ -207,8 +249,19 @@ const ClustersMap = (props) => {
                               is_in_previous_zoom_level) => {
         // Get sprite from sprite pool
         const sprite = spritePool.current.pop();
-        // Update sprite
-        sprite.texture = PIXI.Texture.from(props.host + "/" + props.selectedDataset + "/resized_images/" + path);
+
+        // Create abort controller for fetch request
+        const abortController = new AbortController();
+        abortControllers.current.set(index, abortController);
+
+        // Get texture for sprite. // TODO check if this is the best way to fetch images
+        newFetchTexture(getUrlForImage(path, props.selectedDataset, props.host), abortController.signal)
+            .then(texture => {
+                // Set texture for sprite
+                if (texture !== undefined)
+                    sprite.texture = texture;
+            })
+
         // Save global coordinates of the artwork
         spritesGlobalInfo.current.set(index, {
             x: global_x, y: global_y, width: width, height: height, path: path,
@@ -325,8 +378,12 @@ const ClustersMap = (props) => {
         }
         // Reset sprites global info
         spritesGlobalInfo.current.clear();
-        // Reset artworks in tiles
-        artworksInTiles.current.clear();
+        // Reset tiles on stage
+        tilesOnStage.current.clear();
+        // Clear tiles cache
+        tilesCache.current.clear();
+        // Clear abort controllers
+        abortControllers.current.clear();
         // Make sure spritePool contains 800 sprites
         console.assert(spritePool.current.length === 800);
     }
@@ -357,6 +414,7 @@ const ClustersMap = (props) => {
             .on('wheel', handleMouseWheel);
 
         // Create hammer. Bind it to the gesture area.
+        // noinspection all
         hammer.current = new Hammer(app.view);
         // Disable all gestures except pinch
         hammer.current.get('pan').set({enable: false});
@@ -368,8 +426,16 @@ const ClustersMap = (props) => {
         hammer.current.on('pinchstart', handlePinchStart);
         hammer.current.on('pinch', handlePinch);
 
+        // Get tile coordinates of tiles at the next zoom level.
+        const tiles_level_1 = [];
+        for (let i = 0; i < 2; i++) {
+            for (let j = 0; j < 2; j++) {
+                tiles_level_1.push({x: i, y: j});
+            }
+        }
+
         // Fetch cluster data from the server
-        fetchClusterData(zoomLevel.current, 0, 0, props.selectedDataset, props.host)
+        tilesCache.current.fetch(getUrlForClusterData(0, 0, 0, props.selectedDataset, props.host))
             .then(data => {
                 // Update the limits of the embedding space
                 minX.current = data["tile_coordinate_range"]["x_min"];
@@ -407,13 +473,19 @@ const ClustersMap = (props) => {
                 }
                 // Save artworks in tiles
                 // noinspection JSUnresolvedVariable
-                artworksInTiles.current.set(zoomLevel.current + "-0-0",
+                tilesOnStage.current.set(zoomLevel.current + "-0-0",
                     data["clusters_representatives"]["entities"].map(entity => entity["representative"]["index"]));
             })
             .catch(error => {
                 // Handle any errors that occur during the fetch operation
                 console.error('Error:', error);
             });
+
+        // Fetch data for the next zoom level
+        tiles_level_1.map(tile => {
+            // noinspection JSIgnoredPromiseFromCall
+            tilesCache.current.fetch(getUrlForClusterData(1, tile.x, tile.y, props.selectedDataset, props.host))
+        });
     }, [props.selectedDataset]);
 
     useEffect(() => {
@@ -475,14 +547,16 @@ const ClustersMap = (props) => {
         const tile_y = Math.min(Math.floor((effectivePosition.current.y - minY.current) / tile_step_y), number_of_tiles - 1);
 
         // Get tiles
-        const visible_tiles = getTilesToFetch(tile_x, tile_y, effective_zoom_level);
+        const tiles = getTilesToFetch(tile_x, tile_y, effective_zoom_level, props.maxZoomLevel);
+        // Get visible tiles. The visible tiles are the tiles at the current zoom level.
+        const visible_tiles = tiles.get(effective_zoom_level);
 
         // Remove tiles and sprites of tiles that are not visible
-        for (let tile of artworksInTiles.current.keys()) {
-            // If the tile is from the previous zoom level, delete the entry from artworksInTiles but do not delete all
+        for (let tile of tilesOnStage.current.keys()) {
+            // If the tile is from the previous zoom level, delete the entry from tilesOnStage but do not delete all
             // the sprites. This is because some of the sprites might still be visible.
             if (effective_zoom_level === parseInt(tile.split("-")[0]) + 1) {
-                for (let index of artworksInTiles.current.get(tile)) {
+                for (let index of tilesOnStage.current.get(tile)) {
                     // Check the tile the sprite is in. If the sprite is not among the tiles in visible_tiles, then
                     // remove it, else set is_in_previous_zoom_level to true.
                     if (!spritesGlobalInfo.current.has(index)) {
@@ -499,6 +573,11 @@ const ClustersMap = (props) => {
                         container.current.removeChild(sprites.current.get(index));
                         // Add sprite back to sprite pool
                         spritePool.current.push(sprites.current.get(index));
+                        // Abort fetch request if it is still pending
+                        if (abortControllers.current.has(index)) {
+                            abortControllers.current.get(index).abort();
+                            abortControllers.current.delete(index);
+                        }
                         // Remove sprite from sprites
                         sprites.current.delete(index);
                         // Remove sprite from spritesGlobalInfo
@@ -508,17 +587,12 @@ const ClustersMap = (props) => {
                         spritesGlobalInfo.current.get(index).is_in_previous_zoom_level = true;
                     }
                 }
-                // Delete tile from artworksInTiles
-                artworksInTiles.current.delete(tile);
+                // Delete tile from tilesOnStage
+                tilesOnStage.current.delete(tile);
             } else if (!(effective_zoom_level === parseInt(tile.split("-")[0])) || !visible_tiles.some(visible_tile =>
                 visible_tile.x === parseInt(tile.split("-")[1]) && visible_tile.y === parseInt(tile.split("-")[2]))) {
-
-                // Deal with case where the zoom level of the tile is equal to the current zoom level - 1. In this case,
-                // the sprites that are still visible
-
-
                 // The tile is not among the visible ones.
-                for (let index of artworksInTiles.current.get(tile)) {
+                for (let index of tilesOnStage.current.get(tile)) {
                     if (sprites.current.has(index)) {
                         // Remove every event handler from sprite
                         sprites.current.get(index).removeAllListeners();
@@ -526,14 +600,19 @@ const ClustersMap = (props) => {
                         container.current.removeChild(sprites.current.get(index));
                         // Add sprite back to sprite pool
                         spritePool.current.push(sprites.current.get(index));
+                        // Abort fetch request if it is still pending
+                        if (abortControllers.current.has(index)) {
+                            abortControllers.current.get(index).abort();
+                            abortControllers.current.delete(index);
+                        }
                         // Remove sprite from sprites
                         sprites.current.delete(index);
                         // Remove sprite from spritesGlobalInfo
                         spritesGlobalInfo.current.delete(index);
                     }
                 }
-                // Delete tile from artworksInTiles
-                artworksInTiles.current.delete(tile);
+                // Delete tile from tilesOnStage
+                tilesOnStage.current.delete(tile);
             }
         }
 
@@ -544,13 +623,8 @@ const ClustersMap = (props) => {
                 spritesGlobalInfo.current.get(index).x,
                 spritesGlobalInfo.current.get(index).y
             );
-            // Make sprite not visible if outside the stage
-            /*sprites.current.get(index).visible = artwork_position.x >= -2*maxWidth.current
-                && artwork_position.x <= props.width + 2*maxWidth.current
-                && artwork_position.y >= -2*maxHeight.current
-                && artwork_position.y <= props.height + 2*maxHeight.current;*/
 
-            // Update position of sprite if it varies from the current position by more than 2 pixel
+            // Update position of sprite if it varies from the current position by more than 1 pixel
             sprites.current.get(index).x = Math.abs(sprites.current.get(index).x - artwork_position.x) > 1 ?
                 artwork_position.x : sprites.current.get(index).x;
             sprites.current.get(index).y = Math.abs(sprites.current.get(index).y - artwork_position.y) > 1 ?
@@ -571,47 +645,60 @@ const ClustersMap = (props) => {
             sprites.current.get(index).interactive = sprites.current.get(index).alpha > 0.2;
         }
 
-        // Fetch data for the visible tiles
+        // Fetch data for the visible tiles if it is not in the cache
         visible_tiles.map(tile => {
-            // If tile is in artworksInTiles, then we do not need to fetch data for it.
-            if (!artworksInTiles.current.has(effective_zoom_level + "-" + tile.x + "-" + tile.y)) {
-                // The tile is not in artworksInTiles. We need to fetch data for it.
-                fetchClusterData(effective_zoom_level, tile.x, tile.y, props.selectedDataset, props.host)
-                    .then(data => {
-                        // Loop over artworks in tile and add them to the stage.
-                        // noinspection JSUnresolvedVariable
-                        for (let j = 0; j < data["clusters_representatives"]["entities"].length; j++) {
-                            // Check if the artwork is already on stage. If it is not, add it to the stage.
-                            if (!sprites.current.has(data["clusters_representatives"]["entities"][j]["representative"]["index"])) {
-                                // Add sprite to stage
-                                addSpriteToStage(
-                                    data["clusters_representatives"]["entities"][j]["representative"]["index"],
-                                    data["clusters_representatives"]["entities"][j]["representative"]["path"],
-                                    data["clusters_representatives"]["entities"][j]["representative"]["width"],
-                                    data["clusters_representatives"]["entities"][j]["representative"]["height"],
-                                    data["clusters_representatives"]["entities"][j]["representative"]["low_dimensional_embedding_x"],
-                                    data["clusters_representatives"]["entities"][j]["representative"]["low_dimensional_embedding_y"],
-                                    data["clusters_representatives"]["entities"][j]["number_of_entities"],
-                                    data["clusters_representatives"]["entities"][j]["is_in_previous_zoom_level"]
-                                );
-                            }
+            tilesCache.current.fetch(getUrlForClusterData(effective_zoom_level, tile.x, tile.y, props.selectedDataset, props.host))
+                .then(data => {
+                    // Loop over artworks in tile and add them to the stage.
+                    // noinspection JSUnresolvedVariable
+                    for (let j = 0; j < data["clusters_representatives"]["entities"].length; j++) {
+                        // Check if the artwork is already on stage. If it is not, add it to the stage.
+                        if (!sprites.current.has(data["clusters_representatives"]["entities"][j]["representative"]["index"])) {
+                            // Add sprite to stage
+                            addSpriteToStage(
+                                data["clusters_representatives"]["entities"][j]["representative"]["index"],
+                                data["clusters_representatives"]["entities"][j]["representative"]["path"],
+                                data["clusters_representatives"]["entities"][j]["representative"]["width"],
+                                data["clusters_representatives"]["entities"][j]["representative"]["height"],
+                                data["clusters_representatives"]["entities"][j]["representative"]["low_dimensional_embedding_x"],
+                                data["clusters_representatives"]["entities"][j]["representative"]["low_dimensional_embedding_y"],
+                                data["clusters_representatives"]["entities"][j]["number_of_entities"],
+                                data["clusters_representatives"]["entities"][j]["is_in_previous_zoom_level"]
+                            );
                         }
-                        // Save artworks in tiles
-                        // noinspection JSUnresolvedVariable
-                        artworksInTiles.current.set(effective_zoom_level + "-" + tile.x + "-" + tile.y,
-                            data["clusters_representatives"]["entities"].map(entity => entity["representative"]["index"]));
-                    })
-                    .catch(error => {
-                        // Handle any errors that occur during the fetch operation
-                        console.error('Error:', error);
-                    });
-            }
+                    }
+                    // Save artworks in tiles
+                    // noinspection JSUnresolvedVariable
+                    tilesOnStage.current.set(effective_zoom_level + "-" + tile.x + "-" + tile.y,
+                        data["clusters_representatives"]["entities"].map(entity => entity["representative"]["index"]));
+
+                })
+                .catch(error => {
+                    // Handle any errors that occur during the fetch operation
+                    console.error('Error:', error);
+                });
+
         });
+
+        // Fetch all other tiles that are not visible. This is done to speed up transitions to other zoom levels.
+        if (effective_zoom_level < props.maxZoomLevel) {
+            tiles.get(effective_zoom_level + 1).map(tile => {
+                // noinspection JSIgnoredPromiseFromCall
+                tilesCache.current.fetch(getUrlForClusterData(effective_zoom_level + 1, tile.x, tile.y, props.selectedDataset, props.host));
+            });
+        }
+
+        if (effective_zoom_level > 0) {
+            tiles.get(effective_zoom_level - 1).map(tile => {
+                // noinspection JSIgnoredPromiseFromCall
+                tilesCache.current.fetch(getUrlForClusterData(effective_zoom_level - 1, tile.x, tile.y, props.selectedDataset, props.host));
+            });
+        }
 
         // Do asserts to check that everything is correct
         console.assert(sprites.current.size === spritesGlobalInfo.current.size);
         console.assert(sprites.current.size + spritePool.current.length === 800);
-        console.assert(artworksInTiles.current.size <= 14);
+        console.assert(tilesOnStage.current.size <= 14);
     }
 
     const updateStageThrottled = throttle(updateStage, 50);
@@ -757,6 +844,10 @@ const ClustersMap = (props) => {
 
     // Create function for handling click on image or search
     const moveToImage = async (tile, image) => {
+        // Make container not interactive.
+        container.current.interactive = false;
+        container.current.interactiveChildren = false;
+
         // 1. Transition to the new location in the embedding space without changing the zoom level.
 
         // Wait for first translation ticker to finish
@@ -767,6 +858,10 @@ const ClustersMap = (props) => {
 
         // Wait for second translation ticker to finish
         await awaitTranslationTicker(image);
+
+        // Make container interactive again
+        container.current.interactive = true;
+        container.current.interactiveChildren = true;
 
         // 2. Pulse the sprite of the image that was clicked on.
         setTimeout(() => {
@@ -878,7 +973,7 @@ const ClustersMap = (props) => {
 
     const handleZoom = (delta, mousePosition) => {
         // Deal with border cases
-        if (zoomLevel.current === maxZoomLevel && depth.current + delta > 0) {
+        if (zoomLevel.current === props.maxZoomLevel && depth.current + delta > 0) {
             // Keep depth at 0
             depth.current = 0;
             return;
@@ -938,7 +1033,7 @@ const ClustersMap = (props) => {
             // Change zoom level
             zoomLevel.current += Math.sign(depth.current);
             // Make sure the zoom level is within the limits
-            zoomLevel.current = Math.min(Math.max(zoomLevel.current, 0), maxZoomLevel);
+            zoomLevel.current = Math.min(Math.max(zoomLevel.current, 0), props.maxZoomLevel);
             // Reset depth
             depth.current = 0;
         }

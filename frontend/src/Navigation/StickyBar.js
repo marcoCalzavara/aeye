@@ -14,7 +14,11 @@ const StickyBar = (props) => {
             <div className="w-1/10 h-2/3">
                 <a href="https://disco.ethz.ch/"
                    className="w-full h-full text-white text-lg md:text-xl font-bold flex items-center"
-                   style={{textDecoration: "none"}}>
+                   style={
+                    {
+                        fontFamily: "Brush Script MT, cursive",
+                    }
+                }>
                     DISCOLab
                 </a>
             </div>
@@ -23,7 +27,10 @@ const StickyBar = (props) => {
                            setShowCarousel={props.setShowCarousel}
                            selectedDataset={props.selectedDataset}/>
             }
-            <Hamburger color={"white"} toggle={props.setMenuOpen} toggled={props.menuOpen}/>
+            <div className="w-1/10 h-2/3 flex flex-row justify-end">
+                <Hamburger color={"white"} toggle={props.setMenuOpen} toggled={props.menuOpen}/>
+            </div>
+
         </div>
     );
 }
