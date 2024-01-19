@@ -80,6 +80,7 @@ const NeighborsCarousel = (props) => {
     // and text is the text associated to the image.
     const [images, setImages] = useState([]);
     const [captions, setCaptions] = useState([]);
+    const [image, setImage] = useState("");
 
 
     useEffect(() => {
@@ -95,6 +96,7 @@ const NeighborsCarousel = (props) => {
             .then(data => {
                 // Populate state images with the fetched images
                 let images = [];
+                let first = true;
                 for (const image of data) {
                     // noinspection JSUnresolvedVariable
                     images.push(
@@ -104,6 +106,11 @@ const NeighborsCarousel = (props) => {
                             author: image.author
                         }
                     );
+                    if (first) {
+                        // noinspection JSUnresolvedVariable
+                        setImage(`${props.host}/${props.selectedDataset}/${image.path}`);
+                        first = false;
+                    }
                 }
                 setImages(images);
                 return images
@@ -125,39 +132,56 @@ const NeighborsCarousel = (props) => {
     }, [props.clickedImageIndex]);
 
     return (
-        <Carousel
-            additionalTransfrom={0}
-            arrows
-            autoPlaySpeed={3000}
-            centerMode={false}
-            className="carousel"
-            containerClass="container"
-            dotListClass=""
-            draggable={false}
-            focusOnSelect={false}
-            infinite={false}
-            itemClass=""
-            keyBoardControl
-            minimumTouchDrag={80}
-            pauseOnHover
-            renderArrowsWhenDisabled={false}
-            renderButtonGroupOutside={false}
-            renderDotsOutside={false}
-            responsive={responsive}
-            rewind={false}
-            rewindWithAnimation={false}
-            rtl={false}
-            shouldResetAutoplay
-            showDots={false}
-            sliderClass=""
-            slidesToSlide={1}
-        >
-            {images.map((image, index) => {
-                return (
-                    <ImageCard key={image.index} url={image.path} text={captions[index]}/>
-                );
-            })}
-        </Carousel>
+        <>
+            {/* Place space for the main image of the carousel */}
+            {image !== "" &&
+                <div className="h-image flex flex-row justify-center items-center pb-2 pointer-events-auto">
+                    <div className="frame h-full">
+                        <div className="border h-full">
+                            <img src={image} alt="Main image" className="object-cover h-full main-img"/>
+                        </div>
+                    </div>
+                </div>
+
+            }
+            <div className="w-full h-carousel flex flex-row justify-center items-center">
+                <Carousel
+                    additionalTransfrom={0}
+                    arrows
+                    autoPlaySpeed={3000}
+                    centerMode={false}
+                    className="carousel"
+                    containerClass="container"
+                    dotListClass=""
+                    draggable={false}
+                    focusOnSelect={false}
+                    infinite={false}
+                    itemClass=""
+                    keyBoardControl
+                    minimumTouchDrag={80}
+                    pauseOnHover
+                    renderArrowsWhenDisabled={false}
+                    renderButtonGroupOutside={false}
+                    renderDotsOutside={false}
+                    responsive={responsive}
+                    rewind={false}
+                    rewindWithAnimation={false}
+                    rtl={false}
+                    shouldResetAutoplay
+                    showDots={false}
+                    sliderClass=""
+                    slidesToSlide={1}
+                >
+                    {images.map((image, index) => {
+                        return (
+                            <ImageCard key={image.index} url={image.path} text={captions[index]}
+                                setImage={setImage} path={image.path}/>
+                        );
+                    })}
+                </Carousel>
+            </div>
+        </>
+
     );
 }
 

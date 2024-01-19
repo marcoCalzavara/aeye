@@ -21,7 +21,7 @@ class HelperCollection:
         self.release = self.collection.release
         # Define counter. The counter is initialized to 0. When the collection is queried for the first time,
         # it is loaded, and the counter is set to a value greater than 0. Every time the collection is not
-        # used by an app method that accesses the database, the counter is decremented by 1. Once the counter becomes 0,
+        # used by an app1 method that accesses the database, the counter is decremented by 1. Once the counter becomes 0,
         # the collection is released. Every time the collection is queried, the counter is set to the value. It the
         # collection had been released, it is loaded again once queried.
         self.counter = 0

@@ -4,12 +4,12 @@ import StickyBar from "../Navigation/StickyBar";
 import {getResponsiveHeight} from "../utilities";
 import HamburgerMenu from "../Navigation/HamburgerMenu";
 
-const About = () => {
+const About = (props) => {
     // Define state for menu open
     const [menuOpen, setMenuOpen] = useState(false);
 
     return (
-        <div>
+        <div hidden={props.page !== "about"}>
             <StickyBar hasSearchBar={false}
                        menuOpen={menuOpen}
                        setMenuOpen={setMenuOpen}/>
@@ -23,7 +23,7 @@ const About = () => {
                     height: "100%",
                 }
             }>
-                <HamburgerMenu menuOpen={menuOpen} setMenuOpen={setMenuOpen}/>
+                <HamburgerMenu menuOpen={menuOpen} setMenuOpen={setMenuOpen} setPage={props.setPage}/>
                 About page yet to be implemented.
             </div>
         </div>

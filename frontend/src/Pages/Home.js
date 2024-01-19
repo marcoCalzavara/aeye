@@ -9,7 +9,12 @@ import NeighborsCarousel from "../Carousel/Carousel";
 import ReactLoading from "react-loading";
 import Typography from "@mui/material/Typography";
 import {TfiAngleDown, TfiAngleUp} from "react-icons/tfi";
-import {getResponsiveHeight, getResponsiveMargin} from "../utilities";
+import {
+    getCarouselContainerMarginTop,
+    getCarouselSizeWhenClosed,
+    getResponsiveHeight,
+    getResponsiveMargin
+} from "../utilities";
 import HamburgerMenu from "../Navigation/HamburgerMenu";
 
 
@@ -90,11 +95,11 @@ function extractHost() {
     return in_host.substring(0, i) + '80';
 }
 
-const Home = () => {
+const Home = (props) => {
     const [dimensionsStage, setDimensionsStage] = useState({
         width: document.documentElement.clientWidth - 2 * getResponsiveMargin().replace('px', ''),
         height: document.documentElement.clientHeight - getResponsiveHeight().replace('px', '')
-            - getResponsiveMargin().replace('px', '')
+            - getCarouselSizeWhenClosed()
     });
     // Define host
     let host = useRef(extractHost());
@@ -113,6 +118,8 @@ const Home = () => {
     const [datasetInfo, setDatasetInfo] = useState(null);
     // Define state for menu open
     const [menuOpen, setMenuOpen] = useState(false);
+    // Define state to know if initial loading is done
+    const [initialLoadingDone, setInitialLoadingDone] = useState(false);
 
     useEffect(() => {
         // Define function for updating the dimensions of the stage
@@ -120,7 +127,7 @@ const Home = () => {
             setDimensionsStage({
                 width: document.documentElement.clientWidth - 2 * getResponsiveMargin(),
                 height: document.documentElement.clientHeight - getResponsiveHeight().replace('px', '')
-                    - getResponsiveMargin().replace('px', '')
+                    - getCarouselSizeWhenClosed()
             });
         };
         // Add event listener
@@ -157,77 +164,102 @@ const Home = () => {
     }
 
     return (
-        (selectedDataset !== null && datasetInfo.get(selectedDataset) !== undefined) ?
-            <div className="home">
-                <StickyBar host={host.current}
-                           hasSearchBar={true}
-                           setSearchData={setSearchData}
-                           setShowCarousel={setShowCarousel}
-                           datasets={datasets}
-                           selectedDataset={selectedDataset}
-                           setSelectedDataset={setSelectedDataset}
-                           menuOpen={menuOpen}
-                           setMenuOpen={setMenuOpen}
-                />
-                <HamburgerMenu
-                    menuOpen={menuOpen}
-                    setMenuOpen={setMenuOpen}
-                    datasets={datasets}
-                    setSelectedDataset={setSelectedDataset}
-                />
-                <div className="bg-black flex flex-col items-center justify-center mt-sticky m-canvas-side">
-                    <Stage width={dimensionsStage.width}
-                           height={dimensionsStage.height}
-                           raf={true}
-                           renderOnComponentChange={false}
-                           options={{backgroundColor: 0x000000}}>
-                        <ClustersMap width={dimensionsStage.width}
-                                     height={dimensionsStage.height}
-                                     host={host.current}
-                                     selectedDataset={selectedDataset}
-                                     maxZoomLevel={datasetInfo.get(selectedDataset)}
-                                     searchData={searchData}
-                                     setShowCarousel={setShowCarousel}
-                                     prevClickedImageIndex={prevClickedImageIndex}
-                                     clickedImageIndex={clickedImageIndex}
-                                     setClickedImageIndex={setClickedImageIndex}
-                                     setMenuOpen={setMenuOpen}/>
-                    </Stage>
-                    <div id="carousel"
-                         className="w-full bg-black carousel-container flex flex-col items-center justify-center">
-                        <button className="mb-1 button"
-                                onClick={() => invertShownCarousel()}>
-                            {showCarousel ?
-                                <TfiAngleDown style={{zIndex: 1000}} className="text-white button"/> :
-                                <TfiAngleUp style={{zIndex: 1000}} className="text-white button"/>}
-                        </button>
-                        <div className={`carousel-div height-transition ${
-                            showCarousel && clickedImageIndex !== -1 ?
-                                (prevClickedImageIndex.current !== clickedImageIndex ? 'h-carousel' : 'open') : 'close'}`}>
-                            {clickedImageIndex !== -1 &&
-                                <NeighborsCarousel host={host.current} clickedImageIndex={clickedImageIndex}
-                                                   selectedDataset={selectedDataset}/>}
+        <>
+            {(selectedDataset !== null && datasetInfo.get(selectedDataset) !== undefined) &&
+                <div className="home" hidden={props.page !== "home" || !initialLoadingDone}>
+                    <StickyBar host={host.current}
+                               hasSearchBar={true}
+                               setSearchData={setSearchData}
+                               setShowCarousel={setShowCarousel}
+                               datasets={datasets}
+                               selectedDataset={selectedDataset}
+                               setSelectedDataset={setSelectedDataset}
+                               menuOpen={menuOpen}
+                               setMenuOpen={setMenuOpen}
+                    />
+                    <HamburgerMenu
+                        menuOpen={menuOpen}
+                        setMenuOpen={setMenuOpen}
+                        datasets={datasets}
+                        setSelectedDataset={setSelectedDataset}
+                        setPage={props.setPage}
+                    />
+                    <div className="bg-black flex flex-col items-center justify-center mt-sticky m-canvas-side">
+                        <Stage width={dimensionsStage.width}
+                               height={dimensionsStage.height}
+                               raf={true}
+                               renderOnComponentChange={false}
+                               options={{backgroundColor: 0x000000}}>
+                            <ClustersMap width={dimensionsStage.width}
+                                         height={dimensionsStage.height}
+                                         host={host.current}
+                                         selectedDataset={selectedDataset}
+                                         maxZoomLevel={datasetInfo.get(selectedDataset)}
+                                         searchData={searchData}
+                                         showCarousel={showCarousel}
+                                         setShowCarousel={setShowCarousel}
+                                         prevClickedImageIndex={prevClickedImageIndex}
+                                         clickedImageIndex={clickedImageIndex}
+                                         setClickedImageIndex={setClickedImageIndex}
+                                         setMenuOpen={setMenuOpen}
+                                         setInitialLoadingDone={setInitialLoadingDone}/>
+                        </Stage>
+                        <div id="carousel"
+                             className="w-full bg-transparent carousel-container flex flex-col items-center justify-center"
+                             style={
+                                 {
+                                     marginTop: {showCarousel} ? '0' : getCarouselContainerMarginTop(),
+                                     position: 'absolute',
+                                     bottom: {showCarousel} ? '0' : '-100%'
+                                 }
+                             }>
+                            {clickedImageIndex !== -1 && (
+                                <button
+                                    className="mb-1 flex flex-row items-center justify-center button pointer-events-auto"
+                                    /*style={
+                                        {
+                                            width: "43px",
+                                            height: "43px",
+                                            borderRadius: "50%",
+                                            backgroundColor: "rgba(255, 255, 255, 0.1)",
+                                        }
+                                    }*/
+                                    onPointerDown={() => {
+                                        invertShownCarousel();
+                                    }}>
+                                    {showCarousel ?
+                                        <TfiAngleDown style={{zIndex: 1000, fontWeight: 2000}}
+                                                      className="text-white button"/> :
+                                        <TfiAngleUp style={{zIndex: 1000}} className="text-white button"/>}
+                                </button>
+                            )}
+                            <div
+                                className={`flex flex-col items-center justify-center bg-transparent carousel-div height-transition ${
+                                    showCarousel && clickedImageIndex !== -1 ? 'open' : 'close'}`}>
+                                {clickedImageIndex !== -1 &&
+                                    <NeighborsCarousel host={host.current} clickedImageIndex={clickedImageIndex}
+                                                       selectedDataset={selectedDataset}/>}
+                            </div>
                         </div>
                     </div>
-
-                </div>
-            </div>
-            :
-            <div className="bg-black flex flex-col items-center justify-center w-screen h-screen">
-                <ReactLoading type="spinningBubbles" color="#ffffff" height={100} width={100}/>
-                <Typography variant="h1" sx={{
-                    backgroundColor: 'black',
-                    fontSize: 'calc(min(3vh, 3vw))',
-                    fontStyle: 'italic',
-                    fontWeight: 'bold',
-                    fontFamily: 'Roboto Slab, serif',
-                    textAlign: 'center',
-                    color: 'white',
-                    marginTop: '2%'
-                }}>
-                    Painting...
-                </Typography>
-            </div>
+                </div>}
+            {(selectedDataset === null || datasetInfo.get(selectedDataset) === undefined || !initialLoadingDone) &&
+                <div className="bg-black flex flex-col items-center justify-center w-screen h-screen">
+                    <ReactLoading type="spinningBubbles" color="#ffffff" height={100} width={100}/>
+                    <Typography variant="h1" sx={{
+                        backgroundColor: 'black',
+                        fontSize: 'calc(min(3vh, 3vw))',
+                        fontStyle: 'italic',
+                        fontWeight: 'bold',
+                        fontFamily: 'Roboto Slab, serif',
+                        textAlign: 'center',
+                        color: 'white',
+                        marginTop: '2%'
+                    }}>
+                        Painting...
+                    </Typography>
+                </div>}
+        </>
     );
 }
 

@@ -1,6 +1,6 @@
 from abc import ABC
 
-from transformers import BlipForConditionalGeneration, BlipProcessor
+from transformers import Blip2ForConditionalGeneration, BlipProcessor, BlipForConditionalGeneration
 
 from ..CONSTANTS import *
 from .CaptionModel import CaptionModel
@@ -9,6 +9,7 @@ from .CaptionModel import CaptionModel
 class BLIPForCaptionGeneration(CaptionModel, ABC):
     def __init__(self, device):
         self.device = device
+        # self.model = Blip2ForConditionalGeneration.from_pretrained(BLIP2_MODEL).to(self.device)
         self.model = BlipForConditionalGeneration.from_pretrained(BLIP_MODEL).to(self.device)
         self.processor = BlipProcessor.from_pretrained(BLIP_MODEL)
 

@@ -59,99 +59,6 @@ def embeddings_collection(collection_name: str):
     return collection
 
 
-def grid_collection(collection_name: str):
-    # Create fields for collection
-    index = FieldSchema(
-        name="index",
-        dtype=DataType.INT64,
-        is_primary=True
-    )
-    zoom_level = FieldSchema(
-        name=ZOOM_LEVEL_VECTOR_FIELD_NAME,
-        dtype=DataType.FLOAT_VECTOR,
-        dim=3
-    )
-    images = FieldSchema(
-        name="images",
-        dtype=DataType.JSON
-    )
-    # Create collection schema
-    schema = CollectionSchema(
-        fields=[index, zoom_level, images],
-        description="zoom_levels_grid",
-        enable_dynamic_field=True
-    )
-
-    # Create collection
-    collection = Collection(
-        name=collection_name,
-        schema=schema,
-        shards_num=1  # type: ignore
-    )
-
-    index_params = {
-        "metric_type": L2_METRIC,
-        "index_type": INDEX_TYPE,
-        "params": {}
-    }
-
-    collection.create_index(
-        field_name=ZOOM_LEVEL_VECTOR_FIELD_NAME,
-        index_params=index_params
-    )
-
-    return collection
-
-
-def map_collection(collection_name):
-    # Create fields for collection
-    index = FieldSchema(
-        name="index",
-        dtype=DataType.INT64,
-        is_primary=True
-    )
-    zoom_level = FieldSchema(
-        name=ZOOM_LEVEL_VECTOR_FIELD_NAME,
-        dtype=DataType.FLOAT_VECTOR,
-        dim=3
-    )
-    images = FieldSchema(
-        name="images",
-        dtype=DataType.JSON
-    )
-    path = FieldSchema(
-        name="path_to_image",
-        dtype=DataType.VARCHAR,
-        max_length=65535
-    )
-    # Create collection schema
-    schema = CollectionSchema(
-        fields=[index, zoom_level, images, path],
-        description="zoom_levels_maps",
-        enable_dynamic_field=True
-    )
-
-    # Create collection
-    collection = Collection(
-        name=collection_name,
-        schema=schema,
-        shards_num=1  # type: ignore
-    )
-
-    index_params = {
-        "metric_type": L2_METRIC,
-        "index_type": INDEX_TYPE,
-        "params": {}
-    }
-
-    collection.create_index(
-        field_name=ZOOM_LEVEL_VECTOR_FIELD_NAME,
-        index_params=index_params
-    )
-
-    return collection
-
-
 def clusters_collection(collection_name):
     """
     In the cluster collection, we save the following fields:
@@ -177,13 +84,9 @@ def clusters_collection(collection_name):
         name="clusters_representatives",
         dtype=DataType.JSON
     )
-    tile_coordinate_range = FieldSchema(
-        name="tile_coordinate_range",
-        dtype=DataType.JSON
-    )
     # Create collection schema
     schema = CollectionSchema(
-        fields=[index, zoom_level, clusters_representatives, tile_coordinate_range],
+        fields=[index, zoom_level, clusters_representatives],
         description="zoom_levels_clusters",
         enable_dynamic_field=True
     )

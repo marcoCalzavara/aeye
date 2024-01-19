@@ -107,3 +107,19 @@ def test_get_caption():
     response = client.get("/api/caption", params={"collection": "best_artworks", "index": 2881})
     assert response.status_code == 200
     assert response.json().keys() == {"caption"}
+
+
+def test_get_all_clusters():
+    response = client.get("/api/all-clusters", params={"collection": "best_artworks_zoom_levels_clusters"})
+    assert response.status_code == 200
+    assert response.json().keys() == {"clusters"}
+    assert len(response.json()["clusters"]) == 5
+    assert response.json()["clusters"][0].keys() == {"index", ZOOM_LEVEL_VECTOR_FIELD_NAME, "clusters_representatives",
+                                                     "tile_coordinate_range"}
+    assert response.json()["clusters"][0]["clusters_representatives"].keys() == {"entities"}
+    assert list(response.json()["clusters"][0]["tile_coordinate_range"].keys()) == ['x_min', 'x_max', 'y_min', 'y_max']
+    assert response.json()["clusters"][0][ZOOM_LEVEL_VECTOR_FIELD_NAME] == [0, 0, 0]
+
+    # Make second request to test that status code is 404 when collection is not found
+    response = client.get("/api/all-clusters", params={"collection": "test_collection"})
+    assert response.status_code == 404

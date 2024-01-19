@@ -21,3 +21,9 @@ export const responsive_menu_item_heights = {
     h_item_1024: getComputedStyle(document.documentElement).getPropertyValue("--h-item-1024"),
     h_item_1200: getComputedStyle(document.documentElement).getPropertyValue("--h-item-1200"),
 };
+
+export const button_size = getComputedStyle(document.documentElement).getPropertyValue("--button-size");
+
+export const carousel_container_margin_top = getComputedStyle(document.documentElement).getPropertyValue("--carousel-container-margin-top");
+
+export const carousel_container_margin_bottom = getComputedStyle(document.documentElement).getPropertyValue("--carousel-container-margin-bottom");

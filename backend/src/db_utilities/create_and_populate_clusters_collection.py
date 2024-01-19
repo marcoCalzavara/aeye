@@ -88,9 +88,10 @@ def create_clusters_collection(zoom_levels,
                 "clusters_representatives": {
                     "entities": [json.dumps(representative, cls=NumpyEncoder) for representative in
                                  zoom_levels[zoom_level][tile]["cluster_representatives"]],
-                },
-                "tile_coordinate_range": zoom_levels[zoom_level][tile]["tile_coordinate_range"]
+                }
             }
+            if zoom_level == 0:
+                entity["tile_coordinate_range"] = zoom_levels[zoom_level][tile]["tile_coordinate_range"]
             # Insert entity
             entities_to_insert.append(entity)
             # Increment index
@@ -538,9 +539,15 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
 
                     # Save information for tile in zoom_levels. Cluster representatives are the entities themselves.
                     zoom_levels[zoom_level][(tile_x_index, tile_y_index)] = {
-                        "cluster_representatives": representative_entities,
-                        "tile_coordinate_range": {"x_min": x_min, "x_max": x_max, "y_min": y_min, "y_max": y_max}
+                        "cluster_representatives": representative_entities
                     }
+                    if zoom_level == 0:
+                        zoom_levels[zoom_level][(tile_x_index, tile_y_index)]["tile_coordinate_range"] = {
+                            "x_min": x_min,
+                            "x_max": x_max,
+                            "y_min": y_min,
+                            "y_max": y_max
+                        }
                     # Save mapping from images to tile
                     for representative in representative_entities:
                         if representative["representative"]["index"] not in images_to_tile:
@@ -648,9 +655,15 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
 
                     # Save information for tile in zoom_levels.
                     zoom_levels[zoom_level][(tile_x_index, tile_y_index)] = {
-                        "cluster_representatives": representative_entities,
-                        "tile_coordinate_range": {"x_min": x_min, "x_max": x_max, "y_min": y_min, "y_max": y_max}
+                        "cluster_representatives": representative_entities
                     }
+                    if zoom_level == 0:
+                        zoom_levels[zoom_level][(tile_x_index, tile_y_index)]["tile_coordinate_range"] = {
+                            "x_min": x_min,
+                            "x_max": x_max,
+                            "y_min": y_min,
+                            "y_max": y_max
+                        }
                     # Save mapping from images to tile
                     for representative in representative_entities:
                         if representative["representative"]["index"] not in images_to_tile:

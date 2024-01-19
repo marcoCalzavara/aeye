@@ -14,22 +14,28 @@ const HamburgerMenu = (props) => {
                   customBurgerIcon={false}
                   customCrossIcon={false}
                   noOverlay>
-                <Link to="/" onClick={() => props.setMenuOpen(false)}>
+                <div onClick={() => {
+                    props.setMenuOpen(false);
+                    props.setPage("home");
+                }} style={{cursor: "pointer"}}>
                     <div className="flex flex-row items-center justify-items-start w-full">
                         <SlHome style={iconStyle}/>
                         <h1 style={itemsStyle}>
                             Home
                         </h1>
                     </div>
-                </Link>
-                <Link to="/about" onClick={() => props.setMenuOpen(false)}>
+                </div>
+                <div onClick={() => {
+                    props.setMenuOpen(false);
+                    props.setPage("about");
+                }} style={{cursor: "pointer"}}>
                     <div className="flex flex-row items-center justify-items-start w-full">
                         <SlQuestion style={iconStyle}/>
                         <h1 style={itemsStyle}>
                             About
                         </h1>
                     </div>
-                </Link>
+                </div>
                 <SelectDataset datasets={props.datasets} setSelectedDataset={props.setSelectedDataset}/>
             </Menu>
         </div>

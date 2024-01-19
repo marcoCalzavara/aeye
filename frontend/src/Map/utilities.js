@@ -157,3 +157,65 @@ export function getTilesToFetch(tile_x, tile_y, zoom_level, max_zoom_level) {
 
     return all_tiles;
 }
+
+
+/**
+ * Get the tiles to fetch for a given tile.
+ * @param tile_x The x coordinate of the tile.
+ * @param tile_y The y coordinate of the tile.
+ * @param zoom_level The zoom level.
+ * @returns {*[]} An array containing the tiles to fetch.
+ */
+export function getTilesToFetchCurrentZoomLevel(tile_x, tile_y, zoom_level) {
+    // Get the number of tiles at the current zoom level
+    const number_of_tiles = 2 ** zoom_level;
+
+    const tiles = [];
+
+    // Add center tile
+    tiles.push({x: tile_x, y: tile_y});
+
+    // Get all neighboring tiles. This means all tiles at a distance of 1, plus tiles at a distance of 2 on the bottom
+    // and on the right.
+    if (tile_x > 0) {
+        tiles.push({x: tile_x - 1, y: tile_y});
+        if (tile_y > 0) {
+            tiles.push({x: tile_x - 1, y: tile_y - 1});
+        }
+        if (tile_y < number_of_tiles - 1) {
+            tiles.push({x: tile_x - 1, y: tile_y + 1});
+        }
+    }
+    if (tile_x < number_of_tiles - 1) {
+        tiles.push({x: tile_x + 1, y: tile_y});
+        if (tile_y > 0) {
+            tiles.push({x: tile_x + 1, y: tile_y - 1});
+        }
+        if (tile_y < number_of_tiles - 1) {
+            tiles.push({x: tile_x + 1, y: tile_y + 1});
+        }
+    }
+    if (tile_x < number_of_tiles - 2) {
+        tiles.push({x: tile_x + 2, y: tile_y});
+        if (tile_y < number_of_tiles - 1) {
+            tiles.push({x: tile_x + 2, y: tile_y + 1});
+        }
+        if (tile_y < number_of_tiles - 2) {
+            tiles.push({x: tile_x + 2, y: tile_y + 2});
+        }
+    }
+    if (tile_y < number_of_tiles - 2) {
+        tiles.push({x: tile_x, y: tile_y + 2});
+        if (tile_x < number_of_tiles - 1) {
+            tiles.push({x: tile_x + 1, y: tile_y + 2});
+        }
+    }
+    if (tile_y > 0) {
+        tiles.push({x: tile_x, y: tile_y - 1});
+    }
+    if (tile_y < number_of_tiles - 1) {
+        tiles.push({x: tile_x, y: tile_y + 1});
+    }
+
+    return tiles;
+}

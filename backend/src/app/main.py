@@ -1,7 +1,9 @@
 from typing import List
 
 from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi_utils.timing import add_timing_middleware
 from pymilvus import db, MilvusException
+import logging
 
 from .database import gets
 from .dependencies import *
@@ -9,6 +11,7 @@ from ..CONSTANTS import *
 from ..db_utilities.utils import create_connection
 from ..embeddings_model.CLIPEmbeddings import ClipEmbeddings
 from ..caption_model.BLIPForCaptionGeneration import BLIPForCaptionGeneration
+
 
 # Create connection
 create_connection(ROOT_USER, ROOT_PASSWD)
@@ -27,8 +30,13 @@ updater = Updater(dataset_collection_name_getter,
 embeddings = Embedder(ClipEmbeddings(DEVICE))
 datasets = DatasetItemGetter(BLIPForCaptionGeneration(DEVICE))
 
-# Create app
+# Create app1
 app = FastAPI()
+
+# Add timing middleware
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+add_timing_middleware(app, record=logger.info, prefix="app1", exclude="untimed")
 
 
 # Add dependency that adds header "Access-Control-Allow-Origin: *" to all responses
@@ -150,3 +158,18 @@ def get_neighbours(index: int, k: int, collection: Collection = Depends(dataset_
 @app.get("/api/caption")
 def get_caption(caption: str = Depends(datasets)):
     return {"caption": caption}
+
+
+@app.get("/api/first_7_zoom_levels")
+def get_all_clusters(collection: Collection = Depends(clusters_collection_name_getter)):
+    if collection is None:
+        # Collection not found, return 404
+        raise HTTPException(status_code=404, detail="Collection not found")
+    else:
+        # Collection found, return tile data
+        try:
+            tile_data = gets.get_first_7_zoom_levels(collection)
+            return tile_data
+        except MilvusException:
+            # Milvus error, return code 505
+            raise HTTPException(status_code=404, detail="Tile data not found")

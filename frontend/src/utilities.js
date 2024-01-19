@@ -1,4 +1,5 @@
-import {responsive_heights, responsive_margins, responsive_menu_item_heights} from './CONSTANTS.js';
+import {responsive_heights, responsive_margins, responsive_menu_item_heights,
+    button_size, carousel_container_margin_top, carousel_container_margin_bottom} from "./CONSTANTS";
 
 export function getResponsiveMargin() {
     switch (true) {
@@ -32,6 +33,16 @@ export function getResponsiveHeight() {
         default:
             return responsive_heights.h_sticky_320;
     }
+}
+
+export function getCarouselSizeWhenClosed() {
+    return parseInt(button_size.replace("px", "")) +
+        parseInt(carousel_container_margin_top.replace("px", "")) +
+        parseInt(carousel_container_margin_bottom.replace("px", ""));
+}
+
+export function getCarouselContainerMarginTop() {
+    return carousel_container_margin_top;
 }
 
 export function getResponsiveMenuItemHeight() {

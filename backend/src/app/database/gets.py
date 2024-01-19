@@ -25,7 +25,7 @@ def timeit(func):
         start = time.time()
         result = func(*args, **kwargs)
         end = time.time()
-        print(f"Function {func.__name__} took {end - start} seconds.")
+        print(f"Function {func.__name__} took {(end - start) * 1000} milliseconds.")
         return result
     return wrapper
 
@@ -247,3 +247,31 @@ def get_neighbors(index: int, collection: Collection, top_k: int) -> List[dict]:
     )
     # Return results
     return [hit.to_dict()["entity"] for hit in results[0]]
+
+
+@timeit
+def get_first_7_zoom_levels(collection: Collection) -> List[dict]:
+    """
+    Get all clusters from the collection.
+    @param collection:
+    @return:
+    """
+    # Define limit on number of entities
+    limit = max(collection.num_entities, sum([4 ** i for i in range(0, 8)]))
+    results = []
+    for i in range(0, limit, 16384):
+        # Search image
+        results += collection.query(
+            expr=f"index in {list(range(i, min(i + 16384, collection.num_entities)))}",
+            output_fields=["*"],
+            limit=16384
+        )
+
+    # Convert all float values to int
+    if len(results) > 0:
+        for result in results:
+            result[ZOOM_LEVEL_VECTOR_FIELD_NAME] = [int(x) for x in result[ZOOM_LEVEL_VECTOR_FIELD_NAME]]
+
+    print(f"Number of entities: {len(results)}")
+    # Return results
+    return results
