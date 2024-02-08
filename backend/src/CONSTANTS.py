@@ -1,6 +1,6 @@
 CLIP_MODEL = "openai/clip-vit-base-patch16"
 BLIP2_MODEL = "Salesforce/blip2-opt-2.7b"
-BLIP_MODEL = "Salesforce/blip-image-captioning-base"
+BLIP_MODEL = "Salesforce/blip-image-captioning-large"
 DEFAULT_N_NEIGHBORS = 100
 DEFAULT_DIM = 2
 DEFAULT_MIN_DIST = 0.1
