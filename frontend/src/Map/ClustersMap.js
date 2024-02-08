@@ -6,16 +6,13 @@ import {useApp} from "@pixi/react";
 import {LRUCache} from "lru-cache";
 import 'tailwindcss/tailwind.css';
 import {getTilesToFetchCurrentZoomLevel} from "./utilities";
+import {getUrlForImage} from "../utilities";
 
 const DURATION = 4; // seconds
 
 // function getUrlForClusterData(zoom_level, tile_x, tile_y, dataset, host = "") {
 //     return `${host}/api/clusters?zoom_level=${zoom_level}&tile_x=${tile_x}&tile_y=${tile_y}&collection=${dataset}_zoom_levels_clusters`;
 // }
-
-function getUrlForImage(path, dataset, host = "") {
-    return `${host}/${dataset}/resized_images/${path}`;
-}
 
 function getUrlForFirst7ZoomLevels(dataset, host = "") {
     return `${host}/api/first_7_zoom_levels?collection=${dataset}_zoom_levels_clusters`;
@@ -83,29 +80,6 @@ export function fetchFirst7ZoomLevels(url, signal, tilesCache) {
         });
 
 }
-
-// TODO check if this is the best way to fetch images
-export function newFetchTexture(url) {
-    return fetch(url, {
-            method: 'GET'
-        }
-    )
-        .then(response => response.blob())
-        .then(blob => {
-            const objectURL = URL.createObjectURL(new Blob([blob], {type: blob.type}));
-            return PIXI.Texture.from(objectURL);
-        })
-
-        .catch(error => {
-            // Handle any errors that occur during the fetch operation
-            console.error('Error:', error);
-        });
-}
-
-/*export function fetchTexture(url) {
-    // This method returns a promise that resolves to a texture.
-    return PIXI.Texture.fromURL(url);
-}*/
 
 function makeSpritePulse(sprite) {
     // Make the image pulse for 4 seconds
@@ -222,11 +196,6 @@ const ClustersMap = (props) => {
         fetchMethod: fetchClusterData,
     }));
 
-    const imageCache = useRef(new LRUCache({
-        max: 8000,
-        fetchMethod: newFetchTexture,
-    }));
-
     // Define state for the app1
     const app = useApp()
     // Create container for the stage
@@ -274,16 +243,20 @@ const ClustersMap = (props) => {
             sprite.width = maxHeight.current * aspect_ratio;
         }
 
-        imageCache.current.fetch(getUrlForImage(path, props.selectedDataset, props.host))
-            .then(texture => {
-                // Set texture for sprite
-                if (texture !== undefined) {
-                    sprite.texture = texture;
-                    sprite.interactive = true;
-                    sprite.cursor = "pointer";
-                    sprite.interactiveChildren = true;
-                }
-            });
+        let graphics = new PIXI.Graphics();
+        graphics.beginFill(0x808080); // Gray color in hexadecimal
+        graphics.drawRect(0, 0, sprite.width, sprite.height);
+        graphics.endFill();
+
+        // Set texture of sprite
+        // First, set it to a gray texture, then set it to the actual texture. This is done to give the user the
+        // impression that there is something happening in the background.
+        sprite.texture = app.renderer.generateTexture(graphics);
+        //sprite.texture = PIXI.Texture.from(getUrlForImage(path, props.selectedDataset, props.host));
+        // Set as interactive
+        sprite.interactive = true;
+        sprite.cursor = "pointer";
+        sprite.interactiveChildren = true;
 
         // Save global coordinates of the artwork
         spritesGlobalInfo.current.set(index, {

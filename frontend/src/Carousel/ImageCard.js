@@ -3,8 +3,6 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardMedia from '@mui/material/CardMedia';
 import Typography from '@mui/material/Typography';
-import {TransformComponent, TransformWrapper} from "react-zoom-pan-pinch";
-import { SlSizeFullscreen } from "react-icons/sl";
 import './carousel.css';
 
 // Define width and height of the image cards. Change it based on the screen size.
@@ -35,21 +33,10 @@ export default function ImageCard({url, text, setImage, path}) {
                     event.stopPropagation();
                 }
             }>
-            <TransformWrapper
-                initialPositionX={0}
-                initialPositionY={0}
-                disablePadding={true}
-                initialScale={1.3}
-                minScale={0.5}
-                maxScale={2}
-            >
-                <TransformComponent>
-                    <CardMedia
+            <CardMedia
                         component="img"
                         image={url}
-                    />
-                </TransformComponent>
-            </TransformWrapper>
+            />
             <CardContent sx={{height: '20%', width: '100%'}}>
                 <Typography variant="h1" className="font-carousel" sx={{
                     marginTop: "-2%",

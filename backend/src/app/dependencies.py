@@ -1,14 +1,12 @@
 import threading
 
-import deeplake
 import torch
 from fastapi import Query
 from pymilvus import Collection
 from pymilvus.orm import utility
 
 from .CONSTANTS import *
-from ..caption_model.CaptionModel import CaptionModel
-from ..db_utilities.datasets import DatasetOptions, get_dataset_object
+from ..db_utilities.datasets import DatasetOptions
 from ..embeddings_model.EmbeddingsModel import EmbeddingsModel
 
 
@@ -20,8 +18,8 @@ class HelperCollection:
         self.load = self.collection.load
         self.release = self.collection.release
         # Define counter. The counter is initialized to 0. When the collection is queried for the first time,
-        # it is loaded, and the counter is set to a value greater than 0. Every time the collection is not
-        # used by an app1 method that accesses the database, the counter is decremented by 1. Once the counter becomes 0,
+        # it is loaded, and the counter is set to a value greater than 0. Every time the collection is not used by an
+        # app1 method that accesses the database, the counter is decremented by 1. Once the counter becomes 0,
         # the collection is released. Every time the collection is queried, the counter is set to the value. It the
         # collection had been released, it is loaded again once queried.
         self.counter = 0
@@ -189,29 +187,6 @@ class Updater:
         finally:
             # Release lock
             self.lock.release()
-
-
-class DatasetItemGetter:
-    """
-    Class for getting an item from a dataset. The item is returned as a dictionary.
-    """
-
-    def __init__(self, caption_model: CaptionModel):
-        self.caption_model = caption_model
-        self.datasets = {}
-        for dataset in DatasetOptions:
-            if dataset.value["name"] in utility.list_collections():
-                self.datasets[dataset.value["name"]] = get_dataset_object(dataset.value["name"])
-
-    def __call__(self, index: int, collection: str):
-        try:
-            image = self.datasets[collection][index]["images"]
-            if isinstance(image, deeplake.Tensor):
-                image = torch.tensor(image.numpy())
-            return self.caption_model.getImageCaption(image)
-        except Exception as e:
-            print(e.__str__())
-            return None
 
 
 class Embedder:

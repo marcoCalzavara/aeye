@@ -10,10 +10,12 @@ import ReactLoading from "react-loading";
 import Typography from "@mui/material/Typography";
 import {TfiAngleDown, TfiAngleUp} from "react-icons/tfi";
 import {
-    getCarouselContainerMarginTop,
-    getCarouselSizeWhenClosed,
     getResponsiveHeight,
-    getResponsiveMargin
+    getResponsiveMargin,
+    getButtonSize,
+    getCarouselContainerMarginTop,
+    getCarouselContainerMarginBottom,
+
 } from "../utilities";
 import HamburgerMenu from "../Navigation/HamburgerMenu";
 
@@ -70,6 +72,7 @@ function fetchAvailableDatasets(host) {
         });
 }
 
+
 function extractHost() {
     // Get host
     let in_host = window.location.href;
@@ -99,8 +102,12 @@ const Home = (props) => {
     const [dimensionsStage, setDimensionsStage] = useState({
         width: document.documentElement.clientWidth - 2 * getResponsiveMargin().replace('px', ''),
         height: document.documentElement.clientHeight - getResponsiveHeight().replace('px', '')
-            - getCarouselSizeWhenClosed()
+            - getCarouselContainerMarginTop().replace('px', '') - getCarouselContainerMarginBottom().replace('px', '')
+            - getButtonSize().replace('px', '')
     });
+    console.log(document.documentElement.clientHeight - getResponsiveHeight().replace('px', '')
+        - getCarouselContainerMarginTop().replace('px', '') - getCarouselContainerMarginBottom().replace('px', '')
+        - getButtonSize().replace('px', ''))
     // Define host
     let host = useRef(extractHost());
     // Define data from text search
@@ -127,7 +134,8 @@ const Home = (props) => {
             setDimensionsStage({
                 width: document.documentElement.clientWidth - 2 * getResponsiveMargin(),
                 height: document.documentElement.clientHeight - getResponsiveHeight().replace('px', '')
-                    - getCarouselSizeWhenClosed()
+                    - getCarouselContainerMarginTop().replace('px', '') - getCarouselContainerMarginBottom().replace('px', '')
+                    - getButtonSize().replace('px', '')
             });
         };
         // Add event listener

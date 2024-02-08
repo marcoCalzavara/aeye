@@ -10,7 +10,6 @@ from .dependencies import *
 from ..CONSTANTS import *
 from ..db_utilities.utils import create_connection
 from ..embeddings_model.CLIPEmbeddings import ClipEmbeddings
-from ..caption_model.BLIPForCaptionGeneration import BLIPForCaptionGeneration
 
 
 # Create connection
@@ -28,7 +27,6 @@ updater = Updater(dataset_collection_name_getter,
                   clusters_collection_name_getter,
                   image_to_tile_collection_name_getter)
 embeddings = Embedder(ClipEmbeddings(DEVICE))
-datasets = DatasetItemGetter(BLIPForCaptionGeneration(DEVICE))
 
 # Create app1
 app = FastAPI()
@@ -153,11 +151,6 @@ def get_neighbours(index: int, k: int, collection: Collection = Depends(dataset_
         except MilvusException:
             # Milvus error, return code 505
             raise HTTPException(status_code=505, detail="Milvus error")
-
-
-@app.get("/api/caption")
-def get_caption(caption: str = Depends(datasets)):
-    return {"caption": caption}
 
 
 @app.get("/api/first_7_zoom_levels")

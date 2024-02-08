@@ -35,14 +35,16 @@ export function getResponsiveHeight() {
     }
 }
 
-export function getCarouselSizeWhenClosed() {
-    return parseInt(button_size.replace("px", "")) +
-        parseInt(carousel_container_margin_top.replace("px", "")) +
-        parseInt(carousel_container_margin_bottom.replace("px", ""));
+export function getButtonSize() {
+    return button_size;
 }
 
 export function getCarouselContainerMarginTop() {
     return carousel_container_margin_top;
+}
+
+export function getCarouselContainerMarginBottom() {
+    return carousel_container_margin_bottom;
 }
 
 export function getResponsiveMenuItemHeight() {
@@ -62,3 +64,6 @@ export function getResponsiveMenuItemHeight() {
     }
 }
 
+export function getUrlForImage(path, dataset, host = "") {
+    return `${host}/${dataset}/resized_images/${path}`;
+}

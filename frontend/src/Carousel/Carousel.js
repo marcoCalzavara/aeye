@@ -4,6 +4,7 @@ import React, {useEffect, useState} from 'react';
 import Carousel from 'react-multi-carousel';
 import ImageCard from "./ImageCard";
 import 'react-multi-carousel/lib/styles.css';
+import {getUrlForImage} from "../utilities";
 import './carousel.css';
 
 
@@ -42,6 +43,27 @@ function fetchNeighbors(index, k, host, dataset) {
         .then(response => {
             if (!response.ok) {
                 throw new Error('Neighbors could not be retrieved from the server.' +
+                    ' Please try again later. Status: ' + response.status + ' ' + response.statusText);
+            }
+            return response.json();
+        })
+        .catch(error => {
+            // Handle any errors that occur during the fetch operation
+            console.error('Error:', error);
+        });
+}
+
+function fetchHighResImage(index, host, dataset) {
+    // The function takes in an index of an image, and fetches the high resolution version of the image from the server.
+    // Then it populates the state images with the fetched images.
+    const url = `${host}/api/highres?index=${index}&collection=${dataset}`;
+    return fetch(url,
+        {
+            method: 'GET',
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('High resolution image could not be retrieved from the server.' +
                     ' Please try again later. Status: ' + response.status + ' ' + response.statusText);
             }
             return response.json();
@@ -101,7 +123,7 @@ const NeighborsCarousel = (props) => {
                     // noinspection JSUnresolvedVariable
                     images.push(
                         {
-                            path: `${props.host}/${props.selectedDataset}/${image.path}`,
+                            path: image.path,
                             index: image.index,
                             author: image.author
                         }
@@ -173,10 +195,8 @@ const NeighborsCarousel = (props) => {
                     slidesToSlide={1}
                 >
                     {images.map((image, index) => {
-                        return (
-                            <ImageCard key={image.index} url={image.path} text={captions[index]}
-                                setImage={setImage} path={image.path}/>
-                        );
+                        return <ImageCard key={image.index} url={getUrlForImage(image.path, props.selectedDataset, props.host)}
+                                   text={captions[index]} setImage={setImage} path={image.path}/>
                     })}
                 </Carousel>
             </div>

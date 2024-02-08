@@ -5,9 +5,10 @@ from abc import ABC, abstractmethod
 from enum import Enum
 
 import deeplake
+import numpy as np
 import torch
 from PIL import Image
-from torch.utils.data import DataLoader, Sampler
+from torch.utils.data import DataLoader, Sampler, SequentialSampler
 from torch.utils.data import Dataset as TorchDataset
 
 from ..CONSTANTS import *
@@ -76,7 +77,8 @@ def wikiart_collate_fn(batch):
 def best_artworks_collate_fn(batch):
     try:
         return {
-            "images": {key: torch.cat([x["images"][key] for x in batch], dim=0).detach()
+            "images": {key: torch.cat([x["images"][key] if isinstance(x["images"][key], torch.Tensor)
+                                       else torch.Tensor(np.array(x["images"][key])) for x in batch], dim=0).detach()
                        for key in batch[0]["images"].keys()},
             "index": [x["index"] for x in batch],
             "author": [x["author"] for x in batch],
@@ -228,7 +230,14 @@ class BestArtworks(Dataset):
                                   collate_fn=self.collate_fn,
                                   sampler=sampler)
             else:
-                raise Exception("In BestArtworks, missing start and end parameters.")
+                # The dataset is being used without missing indexes and start-end parameters
+                sampler = SequentialSampler(self.dataset)
+                self.dataset.append_transform(data_processor)
+                return DataLoader(self.dataset,
+                                  batch_size=batch_size,
+                                  num_workers=1,
+                                  collate_fn=self.collate_fn,
+                                  sampler=sampler)
         else:
             if missing_indexes is not None:
                 sampler = SupportSamplerForImages(self.dataset, missing_indexes)

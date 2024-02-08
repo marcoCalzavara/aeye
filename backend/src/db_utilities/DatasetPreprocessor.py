@@ -30,8 +30,8 @@ class DatasetPreprocessor:
 
     def _generateEmbeddings(self, inputs):
         """
-        Generate _embeddings of data using the provided _embeddings embeddings_model. The method requires the inputs to the
-        data encoder.
+        Generate _embeddings of data using the provided _embeddings embeddings_model. The method requires the inputs
+        to the data encoder.
         """
         # This code works for dataloader with batch_size == 1
         if self._embeddings is None:
