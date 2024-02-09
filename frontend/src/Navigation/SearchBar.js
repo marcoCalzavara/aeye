@@ -86,7 +86,7 @@ export default function SearchBar(props) {
             <InputBase
                 className="w-98 h-full pl-3 font-bar"
                 label={"Search Images by Text"}
-                placeholder={"\"A painting of a dog\""}
+                placeholder={"Search for an image"}
                 value={inputValue}
                 onChange={handleInputChange}
                 onKeyDown={handleEnter}

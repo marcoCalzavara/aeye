@@ -330,9 +330,11 @@ body, #root {
 @keyframes moveSearchBar {
     0%, 50% {
         transform: translateY(calc(50vh - 50%)) scale(1.3);
+        pointer-events: none;
     }
     25%, 75% {
         transform: translateY(calc(50vh - 50%)) scale(1.5);
+        pointer-events: none;
     }
     100% {
         transform: none;
@@ -340,20 +342,27 @@ body, #root {
 }
 
 .searchBar {
-    animation: moveSearchBar 7s forwards;
+    animation-name: moveSearchBar;
+    animation-duration: 7s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: 1;
 }
 
 @keyframes opacityStickyBar {
     0%, 90% {
         opacity: 1;
+        pointer-events: none;
     }
     100% {
-        opacity: 0.1;
+        transform: none;
     }
 }
 
 .stickyBarOpacity {
-    animation: opacityStickyBar 7s forwards;
+    animation-name: opacityStickyBar;
+    animation-duration: 7s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: 1;
 }
 
 @keyframes opacityMainContent {
@@ -367,5 +376,8 @@ body, #root {
 }
 
 .mainContentOpacity {
-    animation: opacityMainContent 7s forwards;
+    animation-name: opacityMainContent;
+    animation-duration: 7s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: 1;
 }

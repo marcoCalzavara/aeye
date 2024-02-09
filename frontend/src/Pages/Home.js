@@ -124,6 +124,8 @@ const Home = (props) => {
     const [menuOpen, setMenuOpen] = useState(false);
     // Define state to know if initial loading is done
     const [initialLoadingDone, setInitialLoadingDone] = useState(false);
+    // Define variable for first render for animation
+    const firstRender = useRef(true);
 
     useEffect(() => {
         // Define function for updating the dimensions of the stage

@@ -22,9 +22,9 @@ const ProgressiveImg = ({ placeholderSrc, src, width, maxWidth, cursor, objectFi
             style={{
                 objectFit: objectFit,
                 maxWidth: maxWidth,
-                height: "96%",
-                marginBottom: "2%",
-                marginTop: "2%"
+                height: "100%",
+                paddingBottom: "2%",
+                paddingTop: "2%"
             }}
         />
     );

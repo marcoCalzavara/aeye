@@ -23,7 +23,6 @@ export default function MainImageCard({placeholderSrc, src, width, maxWidth, cur
         } className="h-image pointer-events-auto">
             <CardContent sx={{height: '20%', width: '28%'}}>
                 <Typography variant="h1" className="font-carousel" sx={{
-                    marginTop: "3%",
                     backgroundColor: "transparent",
                     fontStyle: 'italic',
                     fontFamily: 'Roboto Slab, serif',
