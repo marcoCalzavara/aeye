@@ -119,6 +119,11 @@ class SupportDatasetForImages(TorchDataset):
     def __len__(self):
         return len(self.file_list)
 
+
+class SupportDatasetForImagesBestArtworks(SupportDatasetForImages):
+    def __init__(self, root_dir):
+        super().__init__(root_dir)
+
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir, self.file_list[idx])
         # Get image height and width
@@ -135,6 +140,15 @@ class SupportDatasetForImages(TorchDataset):
             'width': width,
             'height': height
         }
+
+
+class SupportDatasetForImagesWikiArt(SupportDatasetForImages):
+    def __init__(self, root_dir):
+        super().__init__(root_dir)
+
+    def __getitem__(self, idx):
+        # TODO implement version for wikiart
+        pass
 
 
 class SupportSamplerForImages(Sampler):
@@ -261,7 +275,7 @@ def get_dataset_object(dataset_name) -> Dataset:
             return WikiArt(ds, DatasetOptions.WIKIART.value["collate_fn"])
     elif dataset_name == DatasetOptions.BEST_ARTWORKS.value["name"]:
         # Create SupportDatasetForImages object
-        ds = SupportDatasetForImages(os.getenv(BEST_ARTWORKS_DIR))
+        ds = SupportDatasetForImagesBestArtworks(os.getenv(BEST_ARTWORKS_DIR))
         # Create and return dataset object
         return BestArtworks(ds, DatasetOptions.BEST_ARTWORKS.value["collate_fn"])
 

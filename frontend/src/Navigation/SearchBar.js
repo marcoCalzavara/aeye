@@ -44,6 +44,7 @@ export default function SearchBar(props) {
         // Group result into object with fields tile and image. Tile is an array of three elements, while image contains
         // the global position of the image, and its width and height.
         let groupedResult = {};
+        // noinspection JSUnresolvedVariable
         groupedResult.tile = result.secondGet.zoom_plus_tile;
         groupedResult.image = {};
         // noinspection JSUnresolvedVariable
@@ -81,7 +82,7 @@ export default function SearchBar(props) {
     }
 
     return (
-        <div className="w-searchbar h-searchbar flex justify-between items-center z-10 bg-white rounded-full">
+        <div className="w-searchbar h-searchbar flex justify-between items-center z-10 bg-white rounded-full searchBar">
             <InputBase
                 className="w-98 h-full pl-3 font-bar"
                 label={"Search Images by Text"}

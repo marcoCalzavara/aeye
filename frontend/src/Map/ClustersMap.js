@@ -244,19 +244,21 @@ const ClustersMap = (props) => {
         }
 
         let graphics = new PIXI.Graphics();
-        graphics.beginFill(0x808080); // Gray color in hexadecimal
+        graphics.beginFill(0x404040);
         graphics.drawRect(0, 0, sprite.width, sprite.height);
         graphics.endFill();
 
         // Set texture of sprite
         // First, set it to a gray texture, then set it to the actual texture. This is done to give the user the
         // impression that there is something happening in the background.
+        // noinspection all
         sprite.texture = app.renderer.generateTexture(graphics);
-        //sprite.texture = PIXI.Texture.from(getUrlForImage(path, props.selectedDataset, props.host));
         // Set as interactive
         sprite.interactive = true;
         sprite.cursor = "pointer";
         sprite.interactiveChildren = true;
+        // Set main texture
+        sprite.texture = PIXI.Texture.from(getUrlForImage(path, props.selectedDataset, props.host));
 
         // Save global coordinates of the artwork
         spritesGlobalInfo.current.set(index, {
@@ -896,7 +898,6 @@ const ClustersMap = (props) => {
 
     // Create handler for mouse down
     const handleMouseDown = () => {
-        console.log("Mouse down");
         // Set mouse down to true
         container.current.cursor = 'grabbing';
         mouseDown.current = true;
@@ -904,7 +905,6 @@ const ClustersMap = (props) => {
 
     // Create handler for mouse up
     const handleMouseUp = () => {
-        console.log("Mouse up");
         // Set mouse down to false
         container.current.cursor = 'grab';
         mouseDown.current = false;

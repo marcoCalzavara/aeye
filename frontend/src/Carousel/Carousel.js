@@ -2,10 +2,11 @@
 
 import React, {useEffect, useState} from 'react';
 import Carousel from 'react-multi-carousel';
-import ImageCard from "./ImageCard";
+import CarouselImageCard from "./CarouselImageCard";
 import 'react-multi-carousel/lib/styles.css';
 import {getUrlForImage} from "../utilities";
 import './carousel.css';
+import MainImageCard from "./MainImageCard";
 
 
 const responsive = {
@@ -43,27 +44,6 @@ function fetchNeighbors(index, k, host, dataset) {
         .then(response => {
             if (!response.ok) {
                 throw new Error('Neighbors could not be retrieved from the server.' +
-                    ' Please try again later. Status: ' + response.status + ' ' + response.statusText);
-            }
-            return response.json();
-        })
-        .catch(error => {
-            // Handle any errors that occur during the fetch operation
-            console.error('Error:', error);
-        });
-}
-
-function fetchHighResImage(index, host, dataset) {
-    // The function takes in an index of an image, and fetches the high resolution version of the image from the server.
-    // Then it populates the state images with the fetched images.
-    const url = `${host}/api/highres?index=${index}&collection=${dataset}`;
-    return fetch(url,
-        {
-            method: 'GET',
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('High resolution image could not be retrieved from the server.' +
                     ' Please try again later. Status: ' + response.status + ' ' + response.statusText);
             }
             return response.json();
@@ -125,12 +105,13 @@ const NeighborsCarousel = (props) => {
                         {
                             path: image.path,
                             index: image.index,
-                            author: image.author
+                            author: image.author,
+                            width: image.width
                         }
                     );
                     if (first) {
                         // noinspection JSUnresolvedVariable
-                        setImage(`${props.host}/${props.selectedDataset}/${image.path}`);
+                        setImage(image);
                         first = false;
                     }
                 }
@@ -139,6 +120,7 @@ const NeighborsCarousel = (props) => {
             })
             .then(images => {
                 // Fetch captions from server
+                /*
                 for (let i = 0; i < images.length; i++) {
                     fetchCaption(images, i, props.host, props.selectedDataset)
                         .then(data => {
@@ -149,20 +131,22 @@ const NeighborsCarousel = (props) => {
                                 return newCaptions;
                             });
                         });
-                }
+                } */
             });
     }, [props.clickedImageIndex]);
 
     return (
         <>
             {/* Place space for the main image of the carousel */}
-            {image !== "" &&
-                <div className="h-image flex flex-row justify-center items-center pb-2 pointer-events-auto">
-                    <div className="frame h-full">
-                        <div className="border h-full">
-                            <img src={image} alt="Main image" className="object-cover h-full main-img"/>
-                        </div>
-                    </div>
+            {image.path !== "" &&
+                <div className="h-image flex flex-row justify-center items-center pointer-events-auto margin-between-images-bottom">
+                    <MainImageCard placeholderSrc={getUrlForImage(image.path, props.selectedDataset, props.host)}
+                                   src={`${props.host}/${props.selectedDataset}/${image.path}`}
+                                   width={`${image.width}px`}
+                                   maxWidth="90%"
+                                   cursor="pointer"
+                                   objectFit="fit"
+                                   text={"Author: " + image.author}/>
                 </div>
 
             }
@@ -195,8 +179,11 @@ const NeighborsCarousel = (props) => {
                     slidesToSlide={1}
                 >
                     {images.map((image, index) => {
-                        return <ImageCard key={image.index} url={getUrlForImage(image.path, props.selectedDataset, props.host)}
-                                   text={captions[index]} setImage={setImage} path={image.path}/>
+                        return <CarouselImageCard
+                            key={index}
+                            url={getUrlForImage(image.path, props.selectedDataset, props.host)}
+                            setImage={setImage}
+                            image={image}/>
                     })}
                 </Carousel>
             </div>

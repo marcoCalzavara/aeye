@@ -1,40 +1,38 @@
-cd ~ || exit
-
 # Download the dataset from drive
 # Check if the wikiart folder does not exist
-if [ ! -d "wikiart" ]; then
+if [ ! -d "$HOME/wikiart" ]; then
   echo "Downloading wikiart dataset..."
-  curl 'https://drive.usercontent.google.com/download?id=1vTChp3nU5GQeLkPwotrybpUGUXj12BTK&export=download&authuser=0&confirm=t&uuid=8f576069-d7c7-4845-bd7e-026d4eeab3ab&at=APZUnTUATWAr2eLGIMTDOrtusWyA%3A1705068289308' \
-    -H 'authority: drive.usercontent.google.com' \
-    -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7' \
-    -H 'accept-language: en-US,en;q=0.9,it;q=0.8,it-IT;q=0.7' \
-    -H 'cookie: HSID=A188sNAgXImInrzrF; SSID=AkW6RjgHKxWenURvz; APISID=pLKmA4hfJhZiSz3y/AG4sZGXVjVnc2Vbdc; SAPISID=Z5fLCYCT6k56tqIm/ATMXsKwLCd2RgUy4L; __Secure-1PAPISID=Z5fLCYCT6k56tqIm/ATMXsKwLCd2RgUy4L; __Secure-3PAPISID=Z5fLCYCT6k56tqIm/ATMXsKwLCd2RgUy4L; S=billing-ui-v3=3Sj8MMfV_qRZGi9eUb0c5roCXHRq-msp:billing-ui-v3-efe=3Sj8MMfV_qRZGi9eUb0c5roCXHRq-msp; SID=ewgE-8vCXug3rj4m_u-i3FF4GdbrADjzjjv1iW16Spnf6ezdLabTOvdqaAiPNswG6IwnYw.; __Secure-1PSID=ewgE-8vCXug3rj4m_u-i3FF4GdbrADjzjjv1iW16Spnf6ezdmsqfMqDXWfl8cxtQj0AYpQ.; __Secure-3PSID=ewgE-8vCXug3rj4m_u-i3FF4GdbrADjzjjv1iW16Spnf6ezdCpqYKv7fDum0ZcmY6zRzWw.; AEC=Ae3NU9PNvWu23BlVVbJUNuy4mOIHnQO8EnilBqQtkyQITwQdUgEe1fFfO2o; 1P_JAR=2024-01-12-13; __Secure-ENID=17.SE=MmdGkVfRp6KRZOhOYJWJW3c9A-Qw3ltxOm2SyIwKLjM2_hs5Bz4RNwVTm37rb_KKpz0_t3yJCdEfLocE3jIo3KzzFf8KHR5qTXRmXn3YI2S_miXR4c1U4F-8PB4seO7rfLshD_3DYoWk-pi8lxWvUs6CAgnzcYHtZBFZgwdpgDQonx0N7QO-6hH2D6_jni0-gex18LyuqEHF2-4jyApyd_1QwdhYC-x8juE6C4vORqSBBqt4D_I8bqgqh6AGvfxGhKrgw4Mws1ggymdwB0OWlZbZhCfhybCYzI1ifxWd90tzSyedSDLEdGFOY_WjIVl_zwOR3nZFNFZ0gVybUFEgH8ZLcFqmIabvRTVXu8W7QfMSSsQDPo8; NID=511=N1Syr5T14WphFXGLxNLGhn6Vip-wpN6QXF-9JbE1hJl0hi_QOdHGPRRgz1Gj5HhKbcR7x-8_7ZBYPgdKXZC3fCFZxWz7g6lZBahSvm8LFH8FScYZrLSopb54Oj5lamtnoHHlX7E8ya96bqJ8rggRqQNw7d-CDyfguQG-9V2gCQJTFCI4wbdGMR5IX9sQrSUQc2leFMeohrDpYH59jabT9TGyIN56G6K2CmcWf5B95xLySVFXsvAfAmG60OpbOp40QEvsp6ZSTO1rh9Hq0vJdAVRMBh8NqHVCAmk5czFiMnrhTZPMwubHiUviiOYuUuqUMlb-R6s; __Secure-1PSIDTS=sidts-CjIBPVxjSnSnqR7arkrv54sRfer0dUnf7EoB4ivopHKSySPe3-9CEIgSLRzbI2WuRYs8EBAA; __Secure-3PSIDTS=sidts-CjIBPVxjSnSnqR7arkrv54sRfer0dUnf7EoB4ivopHKSySPe3-9CEIgSLRzbI2WuRYs8EBAA; SIDCC=ABTWhQHLPk1kO-IkGYbabAtvOEqtXUx3up-qpwHbXkTpj0meaczDjGPHEuc43N_mLbKBJSrVBJw; __Secure-1PSIDCC=ABTWhQGMN43Vmmanf2MMjOJxOZWXYty-hPjUXmRrkoA-4aIKzaRlMkSFzjxX29wJsCE3n07d8TXv; __Secure-3PSIDCC=ABTWhQGmlLsHTyCrdRd48nvJmvSnh9enJkWIuxxqwPlgDjKxZ-prE1I05I7L46cCvmiYzDJErAmZ' \
-    -H 'sec-ch-ua: "Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"' \
-    -H 'sec-ch-ua-arch: ""' \
-    -H 'sec-ch-ua-bitness: "64"' \
-    -H 'sec-ch-ua-full-version: "120.0.6099.216"' \
-    -H 'sec-ch-ua-full-version-list: "Not_A Brand";v="8.0.0.0", "Chromium";v="120.0.6099.216", "Google Chrome";v="120.0.6099.216"' \
-    -H 'sec-ch-ua-mobile: ?1' \
-    -H 'sec-ch-ua-model: "Nexus 5"' \
-    -H 'sec-ch-ua-platform: "Android"' \
-    -H 'sec-ch-ua-platform-version: "6.0"' \
-    -H 'sec-ch-ua-wow64: ?0' \
-    -H 'sec-fetch-dest: document' \
-    -H 'sec-fetch-mode: navigate' \
-    -H 'sec-fetch-site: cross-site' \
-    -H 'sec-fetch-user: ?1' \
-    -H 'upgrade-insecure-requests: 1' \
-    -H 'user-agent: Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36' \
-    -H 'x-client-data: CIS2yQEIorbJAQipncoBCNyOywEIlaHLAQiHoM0BCIPwzQEY9snNARin6s0BGPryzQE=' \
-    --compressed > wikiart.tar.gz
+  curl 'https://drive.usercontent.google.com/download?id=1vTChp3nU5GQeLkPwotrybpUGUXj12BTK&export=download&authuser=0&confirm=t&uuid=bd66dba0-0ba8-413b-8adb-4469151f204b&at=APZUnTWc3N60EDtS2utfSDWXBQLo%3A1707475471657' \
+  -H 'authority: drive.usercontent.google.com' \
+  -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7' \
+  -H 'accept-language: en-US,en;q=0.9,it;q=0.8,it-IT;q=0.7' \
+  -H 'cookie: SSID=AkW6RjgHKxWenURvz; HSID=A188sNAgXImInrzrF; APISID=pLKmA4hfJhZiSz3y/AG4sZGXVjVnc2Vbdc; __Secure-1PAPISID=Z5fLCYCT6k56tqIm/ATMXsKwLCd2RgUy4L; SAPISID=Z5fLCYCT6k56tqIm/ATMXsKwLCd2RgUy4L; __Secure-3PAPISID=Z5fLCYCT6k56tqIm/ATMXsKwLCd2RgUy4L; S=billing-ui-v3=3Sj8MMfV_qRZGi9eUb0c5roCXHRq-msp:billing-ui-v3-efe=3Sj8MMfV_qRZGi9eUb0c5roCXHRq-msp; SID=g.a000gAgE-5l7LvJW81aJYCo0mmipmghK6Rfcl080rwCqCR0LlUve9YfWSCA6MEpNqCWfRkToNAACgYKAWUSAQASFQHGX2MiTjFUYNS7NRzFkUrqf8HaZRoVAUF8yKp4MiBZU5S7HDuTh34lC9gi0076; __Secure-1PSID=g.a000gAgE-5l7LvJW81aJYCo0mmipmghK6Rfcl080rwCqCR0LlUveZRv5eKxcErHwtoiWjx3k0QACgYKAeISAQASFQHGX2MitQ5aKiqbZuCkd_fkoa-sshoVAUF8yKoQEgKXXd3UwYLaTbUiztbh0076; __Secure-3PSID=g.a000gAgE-5l7LvJW81aJYCo0mmipmghK6Rfcl080rwCqCR0LlUve7WDHtKjiXT0vNeqN_62z7wACgYKAfUSAQASFQHGX2Minft-rQ_N8KoIo5xmSr-V1xoVAUF8yKpXeJVD65cWeSrCJVCphaFr0076; 1P_JAR=2024-02-09-10; AEC=Ae3NU9Pd3lU1qAv22_39f12enyW_Z-jP0yDzRresFKfz1XVe29GunnjYjS4; __Secure-ENID=17.SE=rVZcoAKwR8OtO1ZnjFF0HkMKyEEDGkloMDlTwbyyBVqGuZAcdC_m3YBKVGbk0NLb3nv0xcnyuslvCeFmOb0quFzQju2B-TTyqCDuHgdH_xwukyn0PDyj-PZH2Lcrjc2gR-c7efgZ7XE8THNhCh5C8TsBbi8jgZPmRSCrWf3-fNFqmcYOyUTA2rPRLFDkMPGkT7dkr1gQ5g0_PLnME0uGaplPSWjFkDCl41EilkgXnyt8ODDASyRO1VNPBbsgl4IOrVkf4RSj-Jtdc57Mqn4erCPGECg5AEIyWUn7WGsIPmbM3Sn_IxqqH0QW956IvlikAx7ufN6Vf9K7I332QZQoQBq8S1ErnOiCygcEi8xLWauhGMrouhg; __Secure-1PSIDTS=sidts-CjIBPVxjSsKoiDHu_Rj8eYmo1o5A9asKBFQgnSzp7BSEwdaeLzUkGdGMNp2m9KPMLSWkRxAA; __Secure-3PSIDTS=sidts-CjIBPVxjSsKoiDHu_Rj8eYmo1o5A9asKBFQgnSzp7BSEwdaeLzUkGdGMNp2m9KPMLSWkRxAA; NID=511=H5KginX2r0rDC8BWwt1_FyBXCl3Fx43AmBIqWERZnjRnkB0dS32h6-LQI-eIMunIq81KEBuntqdfy5yr32bWN6pAGqoWL8Ul1t2kLqTSg6l7TX1J4CXr83gT3oB9jUXR8SQTdTxFSpogYVCNdDNFaekUp8sVawNQespMa_4z0EGyBRBYaFuy5QBpMegriq9KdIMQWrho7705I782BDF5-F3R9D9-0OHEc-EqeT04iXLKXDFNmCii61D_Xa4zLPO-1p7JelZDepDm97tonZ3XRvGq_sscfLZEtadGJzsknWsP5qtlhxy0MW3YdxO7hECuJfqZ2Nc; SIDCC=ABTWhQFBELcawWX78KrGJEmptvIXkQBB1x9DaKZLAzZ3kBrkMICEMK8UxnjeIU8rkuREs3aYcBk; __Secure-1PSIDCC=ABTWhQFeBvNu-FZDPLg5pejzdqJQABgGwry4v83-99WfFlOjRpkJnlajY7nje5zWEYxilj36rol7; __Secure-3PSIDCC=ABTWhQGqggSBh4geLJ5oyPKMBcFiEZ0SG73HbkpX1ffyoqbPRZ-vyeMOe8ak_NIdtOOuakwiOMlY' \
+  -H 'sec-ch-ua: "Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"' \
+  -H 'sec-ch-ua-arch: ""' \
+  -H 'sec-ch-ua-bitness: "64"' \
+  -H 'sec-ch-ua-full-version: "121.0.6167.160"' \
+  -H 'sec-ch-ua-full-version-list: "Not A(Brand";v="99.0.0.0", "Google Chrome";v="121.0.6167.160", "Chromium";v="121.0.6167.160"' \
+  -H 'sec-ch-ua-mobile: ?1' \
+  -H 'sec-ch-ua-model: "Nexus 5"' \
+  -H 'sec-ch-ua-platform: "Android"' \
+  -H 'sec-ch-ua-platform-version: "6.0"' \
+  -H 'sec-ch-ua-wow64: ?0' \
+  -H 'sec-fetch-dest: document' \
+  -H 'sec-fetch-mode: navigate' \
+  -H 'sec-fetch-site: cross-site' \
+  -H 'sec-fetch-user: ?1' \
+  -H 'upgrade-insecure-requests: 1' \
+  -H 'user-agent: Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36' \
+  -H 'x-client-data: CIS2yQEIorbJAQipncoBCNyOywEIlKHLAQiHoM0BCIPwzQEY9snNARin6s0BGMn4zQE=' \
+  --compressed > ~/wikiart.tar.gz
 
   # Extract everything
   # First, download tar package if not present
   apt-get install -y tar
-  tar -xzf wikiart.tar.gz -C ~
+  tar -xzf ~/wikiart.tar.gz -C ~
 
   # Remove tar package
-  rm wikiart.tar.gz
+  rm ~/wikiart.tar.gz
 fi
 
 # The folder comes with a lot of directories. We only need the images, so move all the files outside of the directories

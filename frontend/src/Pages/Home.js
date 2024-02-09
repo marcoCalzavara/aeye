@@ -105,9 +105,6 @@ const Home = (props) => {
             - getCarouselContainerMarginTop().replace('px', '') - getCarouselContainerMarginBottom().replace('px', '')
             - getButtonSize().replace('px', '')
     });
-    console.log(document.documentElement.clientHeight - getResponsiveHeight().replace('px', '')
-        - getCarouselContainerMarginTop().replace('px', '') - getCarouselContainerMarginBottom().replace('px', '')
-        - getButtonSize().replace('px', ''))
     // Define host
     let host = useRef(extractHost());
     // Define data from text search
@@ -192,7 +189,7 @@ const Home = (props) => {
                         setSelectedDataset={setSelectedDataset}
                         setPage={props.setPage}
                     />
-                    <div className="bg-black flex flex-col items-center justify-center mt-sticky m-canvas-side">
+                    <div className="bg-black flex flex-col items-center justify-center mt-sticky m-canvas-side mainContentOpacity">
                         <Stage width={dimensionsStage.width}
                                height={dimensionsStage.height}
                                raf={true}
@@ -223,7 +220,7 @@ const Home = (props) => {
                              }>
                             {clickedImageIndex !== -1 && (
                                 <button
-                                    className="mb-1 flex flex-row items-center justify-center button pointer-events-auto"
+                                    className="mb-1 flex flex-row items-center justify-center button pointer-events-auto z-50"
                                     /*style={
                                         {
                                             width: "43px",

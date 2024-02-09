@@ -1,23 +1,21 @@
 /* Define variables for height of the carousel */
 :root {
-    --h-carousel-320: 250px;
-    --h-carousel-480: 250px;
-    --h-carousel-768: 250px;
-    --h-carousel-1024: 250px;
-    --h-carousel-1200: 300px;
-    --w-carousel-320: 85%;
-    --w-carousel-480: 85%;
-    --w-carousel-768: 85%;
-    --w-carousel-1024: 85%;
-    --w-carousel-1200: 85%;
+    --h-carousel-320: 180px;
+    --h-carousel-480: 180px;
+    --h-carousel-768: 180px;
+    --h-carousel-1024: 200px;
+    --h-carousel-1200: 230px;
+    --w-carousel-320: 50%;
+    --w-carousel-480: 50%;
+    --w-carousel-768: 60%;
+    --w-carousel-1024: 55%;
+    --w-carousel-1200: 50%;
     --h-carousel-plus-image-320: 700px;
     --h-carousel-plus-image-480: 700px;
     --h-carousel-plus-image-768: 700px;
-    --h-carousel-plus-image-1024: 750px;
+    --h-carousel-plus-image-1024: 800px;
     --h-carousel-plus-image-1200: 800px;
-    --button-size: 20px;
-    --carousel-container-margin-top: 35px;
-    --carousel-container-margin-bottom: 15px;
+    --margin-between-images: 20px;
 }
 
 .carousel-container {
@@ -43,24 +41,8 @@
     width: var(--button-size);
 }
 
-.frame{
-    padding: 10px;
-    background-color: #555;
-}
-
-.border{
-    padding: 20px;
-    background-color: white;
-    box-shadow:-3px -3px 12px #999;
-}
-
 .main-img{
-    padding: 2px;
-    background-color: #aaa;
-    border-top:2px solid #aaa;
-    border-left:2px solid #aaa;
-    border-bottom:2px solid #ccc;
-    border-right:2px solid #ccc;
+    border-bottom: 20px;
 }
 
 .transform-component-module_wrapper__SPB86 {
@@ -194,31 +176,31 @@
 
 @media (min-width: 320px) and (max-width: 480px) {
     .font-carousel {
-        font-size: 13px !important;
+        font-size: 12px !important;
     }
 }
 
 @media (min-width: 481px) and (max-width: 768px) {
     .font-carousel {
-        font-size: 14px !important;
+        font-size: 12px !important;
     }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
     .font-carousel {
-        font-size: 14px !important;
+        font-size: 12px !important;
     }
 }
 
 @media (min-width: 1025px) and (max-width: 1200px) {
     .font-carousel {
-        font-size: 16px !important;
+        font-size: 14px !important;
     }
 }
 
 @media (min-width: 1201px) {
     .font-carousel {
-        font-size: 16px !important;
+        font-size: 14px !important;
     }
 }
 
@@ -256,32 +238,36 @@
 
 /* Media queries for the height of the image */
 
+.margin-between-images-bottom {
+    margin-bottom: var(--margin-between-images);
+}
+
 @media (min-width: 320px) and (max-width: 480px) {
     .h-image {
-        height: calc(var(--h-carousel-plus-image-320) - var(--h-carousel-320));
+        height: calc(calc(var(--h-carousel-plus-image-320) - var(--h-carousel-320)) - var(--margin-between-images));
     }
 }
 
 @media (min-width: 481px) and (max-width: 768px) {
     .h-image {
-        height: calc(var(--h-carousel-plus-image-480) - var(--h-carousel-480));
+        height: calc(calc(var(--h-carousel-plus-image-480) - var(--h-carousel-480)) - var(--margin-between-images));
     }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
     .h-image {
-        height: calc(var(--h-carousel-plus-image-768) - var(--h-carousel-768));
+        height: calc(calc(var(--h-carousel-plus-image-768) - var(--h-carousel-768)) - var(--margin-between-images));
     }
 }
 
 @media (min-width: 1025px) and (max-width: 1200px) {
     .h-image {
-        height: calc(var(--h-carousel-plus-image-1024) - var(--h-carousel-1024));
+        height: calc(calc(var(--h-carousel-plus-image-1024) - var(--h-carousel-1024)) - var(--margin-between-images));
     }
 }
 
 @media (min-width: 1201px) {
     .h-image {
-        height: calc(var(--h-carousel-plus-image-1200) - var(--h-carousel-1200));
+        height: calc(calc(var(--h-carousel-plus-image-1200) - var(--h-carousel-1200)) - var(--margin-between-images));
     }
 }
