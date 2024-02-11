@@ -202,14 +202,12 @@ class SupportDatasetForImagesWikiArt(SupportDatasetForImages):
                 title_elements = title_elements[:-1]
 
             # First, assign single s to previous word with "'s"
-            indexes_to_remove = []
             for i in range(len(title_elements)):
                 if title_elements[i] == "s" and i > 0:
                     title_elements[i - 1] = title_elements[i - 1] + "'s"
-                    indexes_to_remove.append(i)
-            # Remove elements
-            for i in indexes_to_remove:
-                title_elements.pop(i)
+
+            # Remove all standalone "s" from the list
+            title_elements = [x for x in title_elements if x != "s"]
             # Capitalize first letter of each word
             return_value['title'] = " ".join(title_elements).capitalize()
 
