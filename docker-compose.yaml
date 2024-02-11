@@ -112,6 +112,7 @@ services:
       - ./frontend/build:/frontend/build
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template
       - ../best_artworks:/usr/share/nginx/best_artworks
+      - ../wikiart:/usr/share/nginx/wikiart
     ports:
       - "80:80"
     depends_on:
