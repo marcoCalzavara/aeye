@@ -1,5 +1,5 @@
-import contextlib
-import io
+# import contextlib
+# import io
 import os
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -16,61 +16,80 @@ from ..CONSTANTS import *
 
 # COLLATE FUNCTIONS
 
+# def wikiart_collate_fn(batch):
+#     # Find first non-None values in the batch. Each sample has a field "pixel_values" inside "images", but we
+#     # use a general for loop for the keys in case the field changes in the future.
+#     try:
+#         index = None
+#         for i, sample in enumerate(batch):
+#             if sample is not None and sample["images"].keys():
+#                 index = i
+#                 break
+#
+#         # Return if no such index has been found
+#         if index is None:
+#             return
+#
+#         # Select all samples for which there is complete data
+#         select_sample = True
+#         batch_data = []
+#         for i in range(len(batch)):
+#             image_data = {}
+#             for key in batch[index]["images"].keys():
+#                 if batch[i]["images"] is not None and batch[i]["images"][key] is not None:
+#                     image_data[key] = batch[i]["images"][key]
+#                 else:
+#                     select_sample = False
+#                     break
+#
+#             # Add label
+#             label = -1
+#             if select_sample and batch[i]["labels"] is not None and len(batch[i]["labels"]) == 1:
+#                 label = batch[i]["labels"][0]
+#             else:
+#                 select_sample = False
+#
+#             # Add index
+#             sample_id = -1
+#             if select_sample and batch[i]["index"] is not None and len(batch[i]["index"]) == 1:
+#                 sample_id = batch[i]["index"][0]
+#             else:
+#                 select_sample = False
+#
+#             # If all the data for the sample is available, add it to the return value
+#             if select_sample:
+#                 batch_data.append({"images": image_data, "label": label, "index": sample_id})
+#
+#         # Return batch
+#         return {
+#             "images": {key: torch.cat([x["images"][key] for x in batch_data], dim=0).detach()
+#                        for key in batch[index]["images"].keys()},
+#             "labels": [x["label"] for x in batch_data],
+#             "index": [x["index"] for x in batch_data]
+#         }
+#
+#     except Exception as e:
+#         print(e.__str__())
+#         print("Error in collate_fn of wikiart.")
+#         return
+
 def wikiart_collate_fn(batch):
-    # Find first non-None values in the batch. Each sample has a field "pixel_values" inside "images", but we
-    # use a general for loop for the keys in case the field changes in the future.
     try:
-        index = None
-        for i, sample in enumerate(batch):
-            if sample is not None and sample["images"].keys():
-                index = i
-                break
-
-        # Return if no such index has been found
-        if index is None:
-            return
-
-        # Select all samples for which there is complete data
-        select_sample = True
-        batch_data = []
-        for i in range(len(batch)):
-            image_data = {}
-            for key in batch[index]["images"].keys():
-                if batch[i]["images"] is not None and batch[i]["images"][key] is not None:
-                    image_data[key] = batch[i]["images"][key]
-                else:
-                    select_sample = False
-                    break
-
-            # Add label
-            label = -1
-            if select_sample and batch[i]["labels"] is not None and len(batch[i]["labels"]) == 1:
-                label = batch[i]["labels"][0]
-            else:
-                select_sample = False
-
-            # Add index
-            sample_id = -1
-            if select_sample and batch[i]["index"] is not None and len(batch[i]["index"]) == 1:
-                sample_id = batch[i]["index"][0]
-            else:
-                select_sample = False
-
-            # If all the data for the sample is available, add it to the return value
-            if select_sample:
-                batch_data.append({"images": image_data, "label": label, "index": sample_id})
-
-        # Return batch
         return {
-            "images": {key: torch.cat([x["images"][key] for x in batch_data], dim=0).detach()
-                       for key in batch[index]["images"].keys()},
-            "labels": [x["label"] for x in batch_data],
-            "index": [x["index"] for x in batch_data]
+            "images": {key: torch.cat([x["images"][key] if isinstance(x["images"][key], torch.Tensor)
+                                       else torch.Tensor(np.array(x["images"][key])) for x in batch], dim=0).detach()
+                       for key in batch[0]["images"].keys()},
+            "index": [x["index"] for x in batch],
+            "path": [x["path"] for x in batch],
+            "width": [x["width"] for x in batch],
+            "height": [x["height"] for x in batch],
+            "genre": [x["genre"] for x in batch],
+            "author": [x["author"] for x in batch],
+            "date": [x["date"] for x in batch]
         }
-
     except Exception as e:
         print(e.__str__())
-        print("Error in collate_fn of wikiart.")
+        print("Error in collate_fn of best_artworks.")
         return
 
 
@@ -93,6 +112,7 @@ def best_artworks_collate_fn(batch):
 
 
 # SUPPORT DATASET FOR IMAGES
+
 class SupportDatasetForImages(TorchDataset):
     def __init__(self, root_dir):
         self.root_dir = root_dir
@@ -147,8 +167,53 @@ class SupportDatasetForImagesWikiArt(SupportDatasetForImages):
         super().__init__(root_dir)
 
     def __getitem__(self, idx):
-        # TODO implement version for wikiart
-        pass
+        img_name = os.path.join(self.root_dir, self.file_list[idx])
+        # Get image height and width
+        image = Image.open(img_name)
+        width, height = image.size
+        if self.transform:
+            image = self.transform(image)
+
+        # Create dictionary to return
+        return_value = {
+            'images': image,
+            'index': idx,
+            'path': self.file_list[idx],
+            'width': width,
+            'height': height,
+            'genre': '',
+            'author': '',
+            'date': -1,
+        }
+
+        # Get elements from filename. Remove initial number and extension, and split by "_"
+        elements = self.file_list[idx].removesuffix(".jpg").split("_")[1:]
+        if len(elements) > 0:
+            return_value['genre'] = " ".join(elements[0].split("-"))
+        if len(elements) > 1:
+            # Get author and capitalize first letter of each word
+            return_value['author'] = " ".join(elements[1].split("-")).capitalize()
+        if len(elements) > 2:
+            # If at the end there are 4 consecutive numbers, it is a date. Remove it from the title and assign it to
+            # date
+            title_elements = elements[2].split("-")
+            if len(title_elements) > 0 and title_elements[-1].isdigit() and len(title_elements[-1]) == 4:
+                return_value['date'] = int(title_elements[-1])
+                title_elements = title_elements[:-1]
+
+            # First, assign single s to previous word with "'s"
+            indexes_to_remove = []
+            for i in range(len(title_elements)):
+                if title_elements[i] == "s" and i > 0:
+                    title_elements[i - 1] = title_elements[i - 1] + "'s"
+                    indexes_to_remove.append(i)
+            # Remove elements
+            for i in indexes_to_remove:
+                title_elements.pop(i)
+            # Capitalize first letter of each word
+            return_value['title'] = " ".join(title_elements).capitalize()
+
+        return return_value
 
 
 class SupportSamplerForImages(Sampler):
@@ -193,7 +258,7 @@ class Dataset(ABC):
 
 # DATASET CLASSES
 
-class WikiArt(Dataset):
+class WikiArtDataset(Dataset):
     def __init__(self, dataset: deeplake.Dataset, collate_fn):
         super().__init__(dataset, collate_fn)
 
@@ -224,7 +289,7 @@ class WikiArt(Dataset):
                 raise Exception("Missing missing_indexes parameter.")
 
 
-class BestArtworks(Dataset):
+class LocalArtworksDataset(Dataset):
     def __init__(self, dataset: TorchDataset, collate_fn):
         super().__init__(dataset, collate_fn)
 
@@ -262,23 +327,27 @@ class BestArtworks(Dataset):
                                   collate_fn=self.collate_fn,
                                   sampler=sampler)
             else:
-                raise Exception("In BestArtworks, missing missing_indexes parameter.")
+                raise Exception("In LocalArtworksDataset, missing missing_indexes parameter.")
 
 
 # FUNCTION FOR GETTING DATASET OBJECT
+
 def get_dataset_object(dataset_name) -> Dataset:
     if dataset_name == DatasetOptions.WIKIART.value["name"]:
         # Get dataset
-        with contextlib.redirect_stdout(io.StringIO()):
-            ds = deeplake.load(WIKIART)
-            # Create and return dataset object
-            return WikiArt(ds, DatasetOptions.WIKIART.value["collate_fn"])
+        # with contextlib.redirect_stdout(io.StringIO()):
+        #     ds = deeplake.load(WIKIART)
+        #     # Create and return dataset object
+        #     return WikiArtDataset(ds, DatasetOptions.WIKIART.value["collate_fn"])
+        # Create SupportDatasetForImages object
+        ds = SupportDatasetForImagesWikiArt(os.getenv(WIKIART_DIR))
+        # Create and return dataset object
+        return LocalArtworksDataset(ds, DatasetOptions.WIKIART.value["collate_fn"])
     elif dataset_name == DatasetOptions.BEST_ARTWORKS.value["name"]:
         # Create SupportDatasetForImages object
         ds = SupportDatasetForImagesBestArtworks(os.getenv(BEST_ARTWORKS_DIR))
         # Create and return dataset object
-        return BestArtworks(ds, DatasetOptions.BEST_ARTWORKS.value["collate_fn"])
-
+        return LocalArtworksDataset(ds, DatasetOptions.BEST_ARTWORKS.value["collate_fn"])
     else:
         # TODO add support for other datasets
         pass
