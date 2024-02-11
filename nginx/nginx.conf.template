@@ -59,5 +59,9 @@ http {
             add_header Access-Control-Allow-Origin *;
             alias /usr/share/nginx/best_artworks/;
         }
+        location /wikiart/ {
+            add_header Access-Control-Allow-Origin *;
+            alias /usr/share/nginx/wikiart/;
+        }
     }
 }
