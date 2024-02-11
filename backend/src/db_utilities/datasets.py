@@ -114,7 +114,7 @@ def best_artworks_collate_fn(batch):
 # SUPPORT DATASET FOR IMAGES
 
 class SupportDatasetForImages(TorchDataset):
-    def __init__(self, root_dir):
+    def __init__(self, root_dir, separator="-"):
         self.root_dir = root_dir
         self.file_list = []
 
@@ -124,13 +124,13 @@ class SupportDatasetForImages(TorchDataset):
 
         # Check that filenames start with a number, and that the indexes go from 0 to len(file_list) - 1
         for file in self.file_list:
-            if not file.split("-")[0].isdigit():
+            if not file.split(separator)[0].isdigit():
                 raise Exception("Filenames must start with a number.")
-            elif int(file.split("-")[0]) >= len(self.file_list) or int(file.split("-")[0]) < 0:
+            elif int(file.split(separator)[0]) >= len(self.file_list) or int(file.split(separator)[0]) < 0:
                 raise Exception("Indexes must go from 0 to len(file_list) - 1.")
 
         # Sort file list by index
-        self.file_list.sort(key=lambda x: int(x.split("-")[0]))
+        self.file_list.sort(key=lambda x: int(x.split(separator)[0]))
         self.transform = None
 
     def append_transform(self, transform):
@@ -164,7 +164,7 @@ class SupportDatasetForImagesBestArtworks(SupportDatasetForImages):
 
 class SupportDatasetForImagesWikiArt(SupportDatasetForImages):
     def __init__(self, root_dir):
-        super().__init__(root_dir)
+        super().__init__(root_dir, "_")
 
     def __getitem__(self, idx):
         img_name = os.path.join(self.root_dir, self.file_list[idx])
