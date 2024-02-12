@@ -26,7 +26,8 @@ def parsing():
     flags = {"database": DEFAULT_DATABASE_NAME,
              "collection": DatasetOptions.BEST_ARTWORKS.value["name"],
              "repopulate": False,
-             "images": False}
+             "images": False,
+             "directory": DatasetOptions.BEST_ARTWORKS.value["directory"]}
 
     # Parsing argument
     arguments, values = getopt.getopt(arguments, options, long_options)
@@ -46,8 +47,13 @@ def parsing():
         if arg in ("-d", "--database"):
             flags["database"] = val
         elif arg in ("-c", "--collection"):
-            if val in [dataset.value for dataset in DatasetOptions]:
+            if val in [dataset.value["name"] for dataset in DatasetOptions]:
                 flags["collection"] = val
+                # Get directory name
+                for dataset in DatasetOptions:
+                    if dataset.value["name"] == val:
+                        flags["directory"] = dataset.value["directory"]
+                        break
             else:
                 raise ValueError("The collection must have one of the following names: "
                                  + str([dataset.value["name"] for dataset in DatasetOptions]))

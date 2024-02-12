@@ -162,9 +162,6 @@ def create_image_to_tile_collection(images_to_tile: dict, collection_name: str, 
 
 
 def create_tiling(entities) -> tuple[list[list[list[dict]]], int, list[list[dict]]]:
-    # Remember that DatasetOptions.BEST_ARTWORKS.value["zoom_levels"] contains the number of zoom levels required by
-    # the dataset.
-
     # The first zoom level consists of a low resolution image with all the artworks displayed. The second zoom level
     # consists of a grid of 2x2 tiles, each containing a portion of the embedding space, whose size is the same across
     # all zoom levels. The third zoom level consists of a grid of 4x4 tiles, each containing a portion of the embedding
@@ -251,7 +248,7 @@ def create_tiling(entities) -> tuple[list[list[list[dict]]], int, list[list[dict
 
 
 def save_image(representative_entities, dataset_collection, zoom_level, tile_x_index, tile_y_index, x_min, x_max,
-               y_min, y_max):
+               y_min, y_max, directory):
     # Create image
     image = Image.new("RGB", (IMAGE_WIDTH * 2, IMAGE_HEIGHT * 2))
     max_width = (IMAGE_WIDTH * 2) / 10
@@ -269,7 +266,7 @@ def save_image(representative_entities, dataset_collection, zoom_level, tile_x_i
         # Get image path
         path = "/" + result[0]["path"]
         # Open image
-        artwork = Image.open(os.getenv(BEST_ARTWORKS_DIR) + path)
+        artwork = Image.open(os.getenv(directory) + path)
         # Save width and height information
         entity["representative"]["width"] = artwork.size[0]
         entity["representative"]["height"] = artwork.size[1]
@@ -289,19 +286,19 @@ def save_image(representative_entities, dataset_collection, zoom_level, tile_x_i
         image.paste(artwork, (x, y))
 
     # Delete image if it exists
-    if os.path.exists(os.getenv(BEST_ARTWORKS_DIR) + "/zoom_levels_clusters/"
+    if os.path.exists(os.getenv(directory) + "/zoom_levels_clusters/"
                       + str(zoom_level) + "_" + str(tile_x_index) + "_"
                       + str(tile_y_index) + ".png"):
-        os.remove(os.getenv(BEST_ARTWORKS_DIR) + "/zoom_levels_clusters/"
+        os.remove(os.getenv(directory) + "/zoom_levels_clusters/"
                   + str(zoom_level) + "_" + str(tile_x_index) + "_"
                   + str(tile_y_index) + ".png")
     # Save image
-    image.save(os.getenv(BEST_ARTWORKS_DIR) + "/zoom_levels_clusters/"
+    image.save(os.getenv(directory) + "/zoom_levels_clusters/"
                + str(zoom_level) + "_" + str(tile_x_index) + "_"
                + str(tile_y_index) + ".png")
 
 
-def add_width_and_height_information(representative_entities, dataset_collection):
+def add_width_and_height_information(representative_entities, dataset_collection, directory):
     for entity in representative_entities:
         # Get path of image from database
         # Search image
@@ -312,7 +309,7 @@ def add_width_and_height_information(representative_entities, dataset_collection
         # Get image path
         path = "/" + result[0]["path"]
         # Open image
-        artwork = Image.open(os.getenv(BEST_ARTWORKS_DIR) + path)
+        artwork = Image.open(os.getenv(directory) + path)
         # Get width and height
         entity["representative"]["width"] = artwork.size[0]
         entity["representative"]["height"] = artwork.size[1]
@@ -424,7 +421,7 @@ def merge_clusters(old_cluster_representatives_in_current_tile, temp_cluster_rep
 
 
 def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name,
-                       images_to_tile_collection_name, repopulate, save_images):
+                       images_to_tile_collection_name, repopulate, save_images, directory):
     # Take entire embedding space for zoom level 0, then divide each dimension into 2^zoom_levels intervals.
     # Each interval is a tile. For each tile, find clusters and cluster representatives. Keep track of
     # the number of entities in each cluster. For the last zoom level, show all the entities in each tile.
@@ -433,6 +430,8 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
     # assign it to both tiles.
     # First, get tiling
     tiling, max_zoom_level, coordinate_ranges = create_tiling(entities)
+
+    print(f"Max zoom level: {max_zoom_level}")
 
     # For each zoom level, loop over tiles and if a tile has more than MAX_IMAGES_PER_TILE images, perform clustering
     # with k-means and keep track of the number of entities in each cluster. Then, for each cluster, find the entity
@@ -444,9 +443,9 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
     images_to_tile = {}
 
     if save_images:
-        if not os.path.exists(os.getenv(BEST_ARTWORKS_DIR) + "/zoom_levels_clusters/"):
+        if not os.path.exists(os.getenv(directory) + "/zoom_levels_clusters/"):
             # Create directory
-            os.mkdir(os.getenv(BEST_ARTWORKS_DIR) + "/zoom_levels_clusters/")
+            os.mkdir(os.getenv(directory) + "/zoom_levels_clusters/")
 
     for zoom_level in range(max_zoom_level + 1):
         zoom_levels[zoom_level] = {}
@@ -527,7 +526,7 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
 
                     if save_images:
                         save_image(representative_entities, dataset_collection, zoom_level, tile_x_index, tile_y_index,
-                                   x_min, x_max, y_min, y_max)
+                                   x_min, x_max, y_min, y_max, directory)
 
                     assert (sum([cluster["number_of_entities"] + 1 for cluster in representative_entities])
                             == len(entities_in_tile))
@@ -535,7 +534,7 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                     # Add width and height information to representative_entities. Do it only if save_images is False,
                     # because otherwise the information is already there.
                     if not save_images:
-                        add_width_and_height_information(representative_entities, dataset_collection)
+                        add_width_and_height_information(representative_entities, dataset_collection, directory)
 
                     # Save information for tile in zoom_levels. Cluster representatives are the entities themselves.
                     zoom_levels[zoom_level][(tile_x_index, tile_y_index)] = {
@@ -643,7 +642,7 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                     # Save result as images for visualization
                     if save_images:
                         save_image(representative_entities, dataset_collection, zoom_level, tile_x_index,
-                                   tile_y_index, x_min, x_max, y_min, y_max)
+                                   tile_y_index, x_min, x_max, y_min, y_max, directory)
 
                     assert (sum([cluster["number_of_entities"] + 1 for cluster in representative_entities])
                             == len(entities_in_tile))
@@ -651,7 +650,7 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                     # Add width and height information to cluster_representatives_entities. Do it only if save_images
                     # is False, because otherwise the information is already there.
                     if not save_images:
-                        add_width_and_height_information(representative_entities, dataset_collection)
+                        add_width_and_height_information(representative_entities, dataset_collection, directory)
 
                     # Save information for tile in zoom_levels.
                     zoom_levels[zoom_level][(tile_x_index, tile_y_index)] = {
@@ -734,4 +733,5 @@ if __name__ == "__main__":
     # Create zoom levels
     if entities is not None:
         create_zoom_levels(entities, collection, flags["collection"] + "_zoom_levels_clusters",
-                           flags["collection"] + "_image_to_tile", flags["repopulate"], flags["images"])
+                           flags["collection"] + "_image_to_tile", flags["repopulate"], flags["images"],
+                           flags["directory"])

@@ -230,8 +230,9 @@ class SupportSamplerForImages(Sampler):
 
 class DatasetOptions(Enum):
     # The name of the enum variable should equal the name of the dataset
-    WIKIART = {"name": "wikiart", "collate_fn": wikiart_collate_fn, "zoom_levels": 8}
-    BEST_ARTWORKS = {"name": "best_artworks", "collate_fn": best_artworks_collate_fn, "zoom_levels": 7}
+    WIKIART = {"name": "wikiart", "collate_fn": wikiart_collate_fn, "zoom_levels": 10, "directory": WIKIART_DIR}
+    BEST_ARTWORKS = {"name": "best_artworks", "collate_fn": best_artworks_collate_fn, "zoom_levels": 7,
+                     "directory": BEST_ARTWORKS_DIR}
 
 
 # DATASET ABSTRACT CLASS
