@@ -406,7 +406,7 @@ const ClustersMap = (props) => {
         fetchFirst7ZoomLevels(getUrlForFirst7ZoomLevels(props.selectedDataset, props.host), null, tilesCache.current)
             .then(() => {
                 // Get cluster data for the first zoom level
-                const data = tilesCache.current.get(0 + "-" + 0 + "-" + 0)
+                const data = tilesCache.current.get("0-0-0");
                 // Update the limits of the embedding space
                 minX.current = data["tile_coordinate_range"]["x_min"];
                 maxX.current = data["tile_coordinate_range"]["x_max"];

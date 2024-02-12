@@ -17,6 +17,8 @@ from ..CONSTANTS import *
 
 # from .create_and_populate_zoom_levels_collection import plot_heat_map
 
+# Increase pixel limit
+Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 
 MAX_IMAGES_PER_TILE = 40
 NUMBER_OF_CLUSTERS = 30

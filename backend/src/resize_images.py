@@ -4,7 +4,7 @@ import sys
 import PIL.Image
 from dotenv import load_dotenv
 
-from ..src.db_utilities.datasets import DatasetOptions
+from .db_utilities.datasets import DatasetOptions
 from .CONSTANTS import *
 
 # Increase pixel limit

@@ -100,6 +100,12 @@ const NeighborsCarousel = (props) => {
                 let images = [];
                 let first = true;
                 for (const image of data) {
+                    // const new_image = {
+                    //     path: image.path,
+                    //     index: image.index,
+                    //     author: image.author,
+                    //     width: image.width
+                    // }
                     // noinspection JSUnresolvedVariable
                     images.push(
                         {

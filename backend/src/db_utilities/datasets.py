@@ -85,6 +85,7 @@ def wikiart_collate_fn(batch):
             "height": [x["height"] for x in batch],
             "genre": [x["genre"] for x in batch],
             "author": [x["author"] for x in batch],
+            "title": [x["title"] for x in batch],
             "date": [x["date"] for x in batch]
         }
     except Exception as e:
@@ -183,6 +184,7 @@ class SupportDatasetForImagesWikiArt(SupportDatasetForImages):
             'height': height,
             'genre': '',
             'author': '',
+            'title': '',
             'date': -1,
         }
 
@@ -206,8 +208,15 @@ class SupportDatasetForImagesWikiArt(SupportDatasetForImages):
                 if title_elements[i] == "s" and i > 0:
                     title_elements[i - 1] = title_elements[i - 1] + "'s"
 
+            # Then, assign single l to next word with "l'"
+            for i in range(len(title_elements)):
+                if title_elements[i] == "l" and i < len(title_elements) - 1:
+                    title_elements[i + 1] = "l'" + title_elements[i + 1]
+
             # Remove all standalone "s" from the list
             title_elements = [x for x in title_elements if x != "s"]
+            # Remove all standalone "l" from the list
+            title_elements = [x for x in title_elements if x != "l"]
             # Capitalize first letter of each word
             return_value['title'] = " ".join(title_elements).capitalize()
 

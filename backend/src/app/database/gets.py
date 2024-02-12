@@ -243,7 +243,7 @@ def get_neighbors(index: int, collection: Collection, top_k: int) -> List[dict]:
         anns_field=EMBEDDING_VECTOR_FIELD_NAME,
         param=search_params,
         limit=top_k,
-        output_fields=["index", "author", "path", "width", "height"]
+        output_fields=["index", "author", "path", "width", "height", "genre", "date", "title"]
     )
     # Return results
     return [hit.to_dict()["entity"] for hit in results[0]]
@@ -257,15 +257,18 @@ def get_first_7_zoom_levels(collection: Collection) -> List[dict]:
     @return:
     """
     # Define limit on number of entities
-    limit = max(collection.num_entities, sum([4 ** i for i in range(0, 8)]))
+    limit = min(collection.num_entities, 21845)
     results = []
-    for i in range(0, limit, 16384):
+    i = 0
+    while i < limit:
+        search_limit = min(16384, limit - i)
         # Search image
         results += collection.query(
-            expr=f"index in {list(range(i, min(i + 16384, collection.num_entities)))}",
+            expr=f"index in {list(range(i, i + search_limit))}",
             output_fields=["*"],
-            limit=16384
+            limit=search_limit
         )
+        i += 16384
 
     # Convert all float values to int
     if len(results) > 0:
