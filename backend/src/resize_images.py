@@ -4,6 +4,7 @@ import sys
 import PIL.Image
 from dotenv import load_dotenv
 
+from ..src.db_utilities.datasets import DatasetOptions
 from .CONSTANTS import *
 
 # Increase pixel limit
@@ -13,8 +14,16 @@ PIL.Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 def resize_images(dataset_name):
     # Takes images from specified dataset and resizes them to a max width and height while maintaining aspect ratio.
     # Save images in subdirectory of dataset directory called "resized_images"
-    # Define path to directory
-    directory_path = os.path.join(os.getenv(HOME), dataset_name)
+    # Get directory path
+    directory_path = ""
+    for dataset in DatasetOptions:
+        if dataset.value["name"] == dataset_name:
+            directory_path = os.path.join(os.getenv(HOME), os.getenv(dataset.value["directory"]))
+            break
+    if directory_path == "":
+        print(f"Dataset {dataset_name} does not exist.")
+        sys.exit(1)
+
     # First, check if the directory exists
     if not os.path.isdir(directory_path):
         print(f"Directory {directory_path} does not exist.")

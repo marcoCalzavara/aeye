@@ -25,8 +25,8 @@ def delete_collection(connection=False, collection_name=None):
                 sys.exit(1)
 
         # Choose a database and switch to the newly created database
-        db_name = input("Database name: ('default' for default database): ")
-        if db_name == "default":
+        db_name = input("Database name: (enter for default database): ")
+        if db_name == "":
             db_name = DEFAULT_DATABASE_NAME
 
         if db_name not in db.list_database():
