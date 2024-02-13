@@ -8,12 +8,11 @@ import PIL.Image
 from dotenv import load_dotenv
 from pymilvus import utility, db, Collection
 
-from .DatasetPreprocessor import DatasetPreprocessor
+from torch.utils.data import Dataset as TorchDataset
 from .create_embeddings_collection import create_embeddings_collection
-from .datasets import DatasetOptions, get_dataset_object
+from .datasets import DatasetOptions
 from .utils import create_connection
 from ..CONSTANTS import *
-from ..embeddings_model.CLIPEmbeddings import ClipEmbeddings
 
 # Increase pixel limit
 PIL.Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
@@ -77,7 +76,73 @@ def parsing():
     return flags
 
 
-def insert_title(collection: Collection, dataloader):
+class SupportDatasetForImages(TorchDataset):
+    def __init__(self, root_dir, separator="_"):
+        self.root_dir = root_dir
+        self.file_list = []
+
+        for file in os.listdir(root_dir):
+            if not os.path.isdir(os.path.join(self.root_dir, file)):
+                self.file_list.append(file)
+
+        # Check that filenames start with a number, and that the indexes go from 0 to len(file_list) - 1
+        for file in self.file_list:
+            if not file.split(separator)[0].isdigit():
+                raise Exception("Filenames must start with a number.")
+            elif int(file.split(separator)[0]) >= len(self.file_list) or int(file.split(separator)[0]) < 0:
+                raise Exception("Indexes must go from 0 to len(file_list) - 1.")
+
+        # Sort file list by index
+        self.file_list.sort(key=lambda x: int(x.split(separator)[0]))
+        self.transform = None
+
+    def __getitem__(self, idx):
+        # Create dictionary to return
+        return_value = {
+            'index': idx,
+            'path': self.file_list[idx],
+            'genre': '',
+            'author': '',
+            'title': '',
+            'date': -1,
+        }
+
+        # Get elements from filename. Remove initial number and extension, and split by "_"
+        elements = self.file_list[idx].removesuffix(".jpg").split("_")[1:]
+        if len(elements) > 0:
+            return_value['genre'] = " ".join(elements[0].split("-"))
+        if len(elements) > 1:
+            # Get author and capitalize first letter of each word
+            return_value['author'] = " ".join(elements[1].split("-")).capitalize()
+        if len(elements) > 2:
+            # If at the end there are 4 consecutive numbers, it is a date. Remove it from the title and assign it to
+            # date
+            title_elements = elements[2].split("-")
+            if len(title_elements) > 0 and title_elements[-1].isdigit() and len(title_elements[-1]) == 4:
+                return_value['date'] = int(title_elements[-1])
+                title_elements = title_elements[:-1]
+
+            # First, assign single s to previous word with "'s"
+            for i in range(len(title_elements)):
+                if title_elements[i] == "s" and i > 0:
+                    title_elements[i - 1] = title_elements[i - 1] + "'s"
+
+            # Then, assign single l to next word
+            for i in range(len(title_elements)):
+                if title_elements[i] == "l" and i < len(title_elements) - 1:
+                    title_elements[i + 1] = "l'" + title_elements[i + 1]
+
+            # Remove all standalone "s" from the list
+            title_elements = [x for x in title_elements if x != "s"]
+            # Remove all standalone "l" from the list
+            title_elements = [x for x in title_elements if x != "l"]
+            # Capitalize first letter of each word
+            return_value['title'] = " ".join(title_elements).capitalize()
+
+        return return_value
+
+
+def insert_title(collection: Collection, dataset):
     print("Adding title...")
     # Load collection in memory
     collection.load()
@@ -100,10 +165,14 @@ def insert_title(collection: Collection, dataloader):
         print("Error in update_metadata. Update failed!")
         return
 
+    # Sort entities by index
+    entities = sorted(entities, key=lambda x: x["index"])
+
     # Update vectors
     for i in range(len(entities)):
+        assert entities[i]["index"] == entities[i]["index"]
         # Add title to the entity
-        entities[i]["title"] = dataloader.dataset.data[entities[i]["index"]]["title"]
+        entities[i]["title"] = dataset[i]["title"]
 
     try:
         # Insert entities in a new collection
@@ -172,12 +241,9 @@ if __name__ == "__main__":
 
     # Get dataset object
     print(f"Getting dataset {flags['dataset']}...")
-    dataset = get_dataset_object(flags["dataset"])
 
-    # Create an embedding object
-    embeddings = ClipEmbeddings(device=DEVICE)
-    # Create dataset preprocessor
-    dp = DatasetPreprocessor(embeddings, [])
+    # Create dataset
+    dataset = SupportDatasetForImages(os.path.join(os.getenv(HOME), os.getenv(WIKIART_DIR)))
 
     # Get data and populate database
     with (warnings.catch_warnings()):
@@ -185,12 +251,8 @@ if __name__ == "__main__":
 
         print("Starting processing data...")
 
-        # Create dataloader
-        dataloader = dataset.get_dataloader(flags["batch_size"], NUM_WORKERS, embeddings.processData,
-                                            is_missing_indexes=False, start=0, end=dataset.get_size())
-
         # Add data to vector store
-        insert_title(collection, dataloader)
+        insert_title(collection, dataset)
 
     print("Process finished!")
     sys.exit(0)
