@@ -42,10 +42,10 @@ export default function SelectDataset(props) {
     const [dataset, setDataset] = React.useState(props.datasets !== undefined ? props.datasets[0] : undefined);
     const [showDatasetList, setShowDatasetList] = React.useState(false);
 
-    const handleChange = (event) => {
-        console.log(event.target.value);
-        setDataset(event.target.value);
-        // TODO: Send dataset choice to server.
+    const handleChange = (dataset) => {
+        console.log(dataset);
+        setDataset(dataset);
+        props.setSelectedDataset(dataset);
     };
 
     return (
@@ -79,9 +79,9 @@ export default function SelectDataset(props) {
                             marginBottom: "10px"
                         }
                     } className="flex flex-row items-center justify-items-start w-full" key={index}>
-                        <button onClick={() => handleChange}>
+                        <button onClick={() => handleChange(d)}>
                             <SlCheck style={newIconStyle} color={
-                                dataset === dataset ?
+                                d === dataset ?
                                     "green"
                                     :
                                     "white"

@@ -9,13 +9,10 @@ import {getTilesToFetchCurrentZoomLevel} from "./utilities";
 import {getUrlForImage} from "../utilities";
 
 const DURATION = 4; // seconds
+const SPRITEPOOLSIZE = 800;
 
-// function getUrlForClusterData(zoom_level, tile_x, tile_y, dataset, host = "") {
-//     return `${host}/api/clusters?zoom_level=${zoom_level}&tile_x=${tile_x}&tile_y=${tile_y}&collection=${dataset}_zoom_levels_clusters`;
-// }
-
-function getUrlForFirst7ZoomLevels(dataset, host = "") {
-    return `${host}/api/first_7_zoom_levels?collection=${dataset}_zoom_levels_clusters`;
+function getUrlForFirstTiles(dataset, host = "") {
+    return `${host}/api/first-tiles?collection=${dataset}_zoom_levels_clusters`;
 }
 
 export function fetchClusterData(url) {
@@ -51,7 +48,7 @@ export function fetchClusterData(url) {
  * @param tilesCache The tiles cache is used to fetch the tiles. The tiles cache is an LRU cache.
  * @returns {Promise<unknown>}
  */
-export function fetchFirst7ZoomLevels(url, signal, tilesCache) {
+export function fetchFirstTiles(url, signal, tilesCache) {
     return fetch(url, {
             method: 'GET'
         }
@@ -177,7 +174,7 @@ const ClustersMap = (props) => {
     // Define map for sprites global coordinates
     const spritesGlobalInfo = useRef(new Map());
     // Define sprite pool of available sprites
-    const spritePool = useRef(new Array(800));
+    const spritePool = useRef(new Array(SPRITEPOOLSIZE));
     // Define max width and height of a sprite. These values depend on the size of the viewport.
     const maxWidth = useRef(props.width / 10);
     const maxHeight = useRef(props.height / 10);
@@ -256,14 +253,14 @@ const ClustersMap = (props) => {
         // Set as interactive
         sprite.interactive = true;
         sprite.cursor = "pointer";
-        sprite.interactiveChildren = true;
         // Set main texture
         sprite.texture = PIXI.Texture.from(getUrlForImage(path, props.selectedDataset, props.host));
+        // Set z-index of sprite to 10
+        sprite.zIndex = 10;
 
         // Save global coordinates of the artwork
         spritesGlobalInfo.current.set(index, {
             x: global_x, y: global_y, width: width, height: height, path: path,
-            num_of_entities: num_of_entities,
             is_in_previous_zoom_level: is_in_previous_zoom_level
         });
 
@@ -287,15 +284,6 @@ const ClustersMap = (props) => {
         // Make sprite interactive if the values of alpha is bigger than 0.2
         sprite.interactive = sprite.alpha > 0.2;
 
-        // Make sprite not visible if outside the stage
-        /*sprite.visible = artwork_position.x >= -2*maxWidth.current
-            && artwork_position.x <= props.width + 2*maxWidth.current
-            && artwork_position.y >= -2*maxHeight.current
-            && artwork_position.y <= props.height + 2*maxHeight.current;*/
-
-        // On click, create rectangle with the sprite inside on the right and some text on the left. Make everything unclickable,
-        // such that the user has to click on the rectangle to close it. The rectangle should be at the center of the screen,
-        // and it should appear smoothly on click on the sprite.
         // Remove all pointer down listeners
         sprite.removeAllListeners();
 
@@ -331,24 +319,22 @@ const ClustersMap = (props) => {
         // Reset zoom level
         zoomLevel.current = 0;
         depth.current = 0;
-        // Move all sprites back to the sprite pool
-        for (let index of sprites.current.keys()) {
-            let sprite = sprites.current.get(index);
-            // Complete reset of sprite
-            sprite.removeAllListeners();
-            // Remove sprite from stage
-            container.current.removeChild(sprite);
-            // Add sprite back to sprite pool
-            spritePool.current.push(sprites.current.get(index));
-        }
+        // Remove all children from stage
+        app.stage.removeChildren();
+        // Set container to null
+        container.current = null;
+        // Reset sprites
+        sprites.current.clear();
+        // Recreate sprite pool
+        spritePool.current = new Array(SPRITEPOOLSIZE);
         // Reset sprites global info
         spritesGlobalInfo.current.clear();
         // Reset tiles on stage
         tilesOnStage.current.clear();
         // Clear tiles cache
         tilesCache.current.clear();
-        // Make sure spritePool contains 800 sprites
-        console.assert(spritePool.current.length === 800);
+        // Make sure spritePool contains SPRITEPOOLSIZE sprites
+        console.assert(spritePool.current.length === SPRITEPOOLSIZE);
     }
 
     // Create useEffect for initialization of the component. This is called every time the selected dataset changes.
@@ -368,42 +354,17 @@ const ClustersMap = (props) => {
 
         // Add handlers to stage
         container.current.hitArea = new PIXI.Rectangle(0, 0, props.width, props.height);
+        container.current.sortableChildren = true;
         container.current.interactive = true;
-        container.sortableChildren = true;
-        container.current
-            .on('pointerdown', handleMouseDown)
-            .on('pointerup', handleMouseUp)
-            .on('pointermove', handleMouseMove)
-            .on('wheel', handleMouseWheel);
-
-        // Create hammer. Bind it to the gesture area.
-        // noinspection all
-        hammer.current = new Hammer(app.view);
-        // Disable all gestures except pinch
-        hammer.current.get('pan').set({enable: false});
-        hammer.current.get('swipe').set({enable: false});
-        hammer.current.get('tap').set({enable: false});
-        hammer.current.get('press').set({enable: false});
-        hammer.current.get('rotate').set({enable: false});
-        hammer.current.get('pinch').set({enable: true});
-        hammer.current.on('pinchstart', handlePinchStart);
-        hammer.current.on('pinch', handlePinch);
-
-        // // Get tile coordinates of tiles at the next zoom level.
-        // const tiles_level_1 = [];
-        // for (let i = 0; i < 2; i++) {
-        //     for (let j = 0; j < 2; j++) {
-        //         tiles_level_1.push({x: i, y: j});
-        //     }
-        // }
+        container.current.inteactiveChildren = true;
 
         // Populate the sprite pool
         for (let i = 0; i < spritePool.current.length; i++) {
             spritePool.current[i] = new PIXI.Sprite();
         }
 
-        // Fetch first 7 zoom levels
-        fetchFirst7ZoomLevels(getUrlForFirst7ZoomLevels(props.selectedDataset, props.host), null, tilesCache.current)
+        // Fetch first zoom levels
+        fetchFirstTiles(getUrlForFirstTiles(props.selectedDataset, props.host), null, tilesCache.current)
             .then(() => {
                 // Get cluster data for the first zoom level
                 const data = tilesCache.current.get("0-0-0");
@@ -439,64 +400,30 @@ const ClustersMap = (props) => {
 
                 // Save artworks in tiles
                 // noinspection JSUnresolvedVariable
-                tilesOnStage.current.set(zoomLevel.current + "-0-0",
+                tilesOnStage.current.set("0-0-0",
                     data["clusters_representatives"]["entities"].map(entity => entity["representative"]["index"]));
             }).then(() => {
-            props.setInitialLoadingDone(true);
-        });
+                props.setInitialLoadingDone(true);
+                // Add all handlers to the stage
+                container.current
+                    .on('pointerdown', handleMouseDown)
+                    .on('pointerup', handleMouseUp)
+                    .on('pointermove', handleMouseMove)
+                    .on('wheel', handleMouseWheel);
 
-        // // Fetch cluster data from the server
-        // tilesCache.current.fetch(getUrlForClusterData(0, 0, 0, props.selectedDataset, props.host))
-        //     .then(data => {
-        //         // Update the limits of the embedding space
-        //         minX.current = data["tile_coordinate_range"]["x_min"];
-        //         maxX.current = data["tile_coordinate_range"]["x_max"];
-        //         minY.current = data["tile_coordinate_range"]["y_min"];
-        //         maxY.current = data["tile_coordinate_range"]["y_max"];
-        //
-        //         // Update the effective position of the stage
-        //         effectivePosition.current.x = minX.current;
-        //         effectivePosition.current.y = minY.current;
-        //
-        //         // Update effective size of the stage
-        //         effectiveWidth.current = maxX.current - minX.current;
-        //         effectiveHeight.current = maxY.current - minY.current;
-        //
-        //         // Populate the sprite pool
-        //         for (let i = 0; i < spritePool.current.length; i++) {
-        //             spritePool.current[i] = new PIXI.Sprite();
-        //         }
-        //
-        //         // Loop over artworks in tile and add them to the stage. Take the sprites from the sprite pool.
-        //         // noinspection JSUnresolvedVariable
-        //         for (let i = 0; i < data["clusters_representatives"]["entities"].length; i++) {
-        //             // Add sprite to stage
-        //             addSpriteToStage(
-        //                 data["clusters_representatives"]["entities"][i]["representative"]["index"],
-        //                 data["clusters_representatives"]["entities"][i]["representative"]["path"],
-        //                 data["clusters_representatives"]["entities"][i]["representative"]["width"],
-        //                 data["clusters_representatives"]["entities"][i]["representative"]["height"],
-        //                 data["clusters_representatives"]["entities"][i]["representative"]["low_dimensional_embedding_x"],
-        //                 data["clusters_representatives"]["entities"][i]["representative"]["low_dimensional_embedding_y"],
-        //                 data["clusters_representatives"]["entities"][i]["number_of_entities"],
-        //                 true
-        //             );
-        //         }
-        //         // Save artworks in tiles
-        //         // noinspection JSUnresolvedVariable
-        //         tilesOnStage.current.set(zoomLevel.current + "-0-0",
-        //             data["clusters_representatives"]["entities"].map(entity => entity["representative"]["index"]));
-        //     })
-        //     .catch(error => {
-        //         // Handle any errors that occur during the fetch operation
-        //         console.error('Error:', error);
-        //     });
-        //
-        // // Fetch data for the next zoom level
-        // tiles_level_1.map(tile => {
-        //     // noinspection JSIgnoredPromiseFromCall
-        //     tilesCache.current.fetch(getUrlForClusterData(1, tile.x, tile.y, props.selectedDataset, props.host))
-        // });
+                // Create hammer. Bind it to the gesture area.
+                // noinspection all
+                hammer.current = new Hammer(app.view);
+                // Disable all gestures except pinch
+                hammer.current.get('pan').set({enable: false});
+                hammer.current.get('swipe').set({enable: false});
+                hammer.current.get('tap').set({enable: false});
+                hammer.current.get('press').set({enable: false});
+                hammer.current.get('rotate').set({enable: false});
+                hammer.current.get('pinch').set({enable: true});
+                hammer.current.on('pinchstart', handlePinchStart);
+                hammer.current.on('pinch', handlePinch);
+        });
     }, [props.selectedDataset]);
 
     useEffect(() => {
@@ -530,13 +457,15 @@ const ClustersMap = (props) => {
             }
             // Update set sprite on pointer down
             // Remove pointer down listener
-            sprites.current.get(index).removeListener('pointerdown');
-            sprites.current.get(index).on('pointerdown', () => {
-                props.prevClickedImageIndex.current = props.clickedImageIndex;
-                props.setClickedImageIndex(spritesGlobalInfo.current.get(index).index);
-                props.setShowCarousel(true);
-                props.setMenuOpen(false);
-            });
+            if (sprites.current.get(index).interactive) {
+                sprites.current.get(index).removeListener('pointerdown');
+                sprites.current.get(index).on('pointerdown', () => {
+                    props.prevClickedImageIndex.current = props.clickedImageIndex;
+                    props.setClickedImageIndex(spritesGlobalInfo.current.get(index).index);
+                    props.setShowCarousel(true);
+                    props.setMenuOpen(false);
+                });
+            }
         }
     }, [props.width, props.height]);
 
@@ -707,25 +636,9 @@ const ClustersMap = (props) => {
                 data["clusters_representatives"]["entities"].map(entity => entity["representative"]["index"]));
         });
 
-        // // Fetch all other tiles that are not visible. This is done to speed up transitions to other zoom levels.
-        // if (effective_zoom_level < props.maxZoomLevel) {
-        //     tiles.get(effective_zoom_level + 1).map(tile => {
-        //         // noinspection JSIgnoredPromiseFromCall
-        //         tilesCache.current.fetch(getUrlForClusterData(effective_zoom_level + 1, tile.x, tile.y, props.selectedDataset, props.host));
-        //     });
-        // }
-        //
-        // if (effective_zoom_level > 0) {
-        //     tiles.get(effective_zoom_level - 1).map(tile => {
-        //         // noinspection JSIgnoredPromiseFromCall
-        //         tilesCache.current.fetch(getUrlForClusterData(effective_zoom_level - 1, tile.x, tile.y, props.selectedDataset, props.host));
-        //     });
-        // }
-
         // Do asserts to check that everything is correct
         console.assert(sprites.current.size === spritesGlobalInfo.current.size);
-        console.assert(sprites.current.size + spritePool.current.length === 800);
-        console.assert(tilesOnStage.current.size <= 14);
+        console.assert(sprites.current.size + spritePool.current.length === SPRITEPOOLSIZE);
     }
 
     const updateStageThrottled = throttle(updateStage, 50);

@@ -44,16 +44,20 @@ def resize_images(dataset_name):
 
     # Loop over files in dataset directory
     for filename in os.listdir(directory_path):
-        # Check if file is an image
-        if not filename.endswith(".jpg"):
+        try:
+            # Check if file is an image
+            if not filename.endswith(".jpg"):
+                continue
+            # Load image
+            image = PIL.Image.open(os.path.join(directory_path, filename))
+            # Compute height and width using resizing factor
+            # Resize image
+            image.thumbnail((RESIZING_WIDTH, RESIZING_HEIGHT), PIL.Image.ANTIALIAS)
+            # Save image
+            image.save(os.path.join(resized_images_dir, filename))
+        except Exception as e:
+            print(f"Error resizing image {filename}: {e}")
             continue
-        # Load image
-        image = PIL.Image.open(os.path.join(directory_path, filename))
-        # Compute height and width using resizing factor
-        # Resize image
-        image.thumbnail((RESIZING_WIDTH, RESIZING_HEIGHT), PIL.Image.ANTIALIAS)
-        # Save image
-        image.save(os.path.join(resized_images_dir, filename))
 
     print("Done resizing images.")
 

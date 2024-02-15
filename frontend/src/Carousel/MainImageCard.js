@@ -16,27 +16,34 @@ export default function MainImageCard({placeholderSrc, src, width, maxWidth, cur
                 maxWidth: maxWidth,
                 border: "2px solid",
                 borderColor: "rgb(59 59 62 / 1)",
-                backgroundColor: "rgb(49 49 52 / 1)",
-                marginLeft: "2%",
-                marginRight: "2%"
+                backgroundColor: "rgb(49 49 52 / 1)"
             }
         } className="h-image pointer-events-auto">
-            <CardContent sx={{height: '20%', width: '28%'}}>
-                <Typography variant="h1" className="font-carousel" sx={{
+            <Typography variant="h1" className="font-carousel" sx={{
                     backgroundColor: "transparent",
                     fontStyle: 'italic',
                     fontFamily: 'Roboto Slab, serif',
                     color: 'white',
-                    lineHeight: '1.1'
+                    lineHeight: '1.1',
+                    padding: '3%',
+                    width: '30%',
+                    height: '100%',
                 }}>
-                    {text}
-                </Typography>
-            </CardContent>
+                    {text.map((t, index) => {
+                        return (
+                            <span key={index}>
+                                {t}
+                                <br/>
+                                <br/>
+                            </span>
+                        );
+                    })}
+            </Typography>
             <ProgressiveImage
                 placeholderSrc={placeholderSrc}
                 src={src}
                 width={width}
-                maxWidth="68%"
+                maxWidth="70%"
                 cursor={cursor}
                 objectFit={objectFit}
             />

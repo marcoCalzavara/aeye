@@ -10,7 +10,7 @@ const StickyBar = (props) => {
         <div
             id="sticky-bar"
             className={`fixed top-0 w-full h-sticky flex flex-row justify-between items-center flex-gaps-1 bg-zinc-950
-             px-1/80 border-b-2 border-zinc-800 z-20 hover:opacity-100 stickyBarOpacity transition-opacity duration-300 ${props.menuOpen ? 'opacity-100' : 'opacity-10'}`}>
+             px-1/80 border-b-2 border-zinc-800 hover:opacity-100 stickyBarOpacity transition-opacity duration-300 ${props.menuOpen ? 'opacity-100' : 'opacity-10'}`}>
             <div className="w-1/10 h-2/3">
                 <a href="https://disco.ethz.ch/"
                    className="w-full h-full text-white text-lg md:text-xl font-bold flex items-center">

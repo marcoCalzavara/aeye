@@ -78,7 +78,7 @@ def get_image_from_text(collection: Collection = Depends(dataset_collection_name
             raise HTTPException(status_code=505, detail="Milvus error")
 
 
-@app.get("/api/clusters")
+@app.get("/api/tiles")
 def get_clusters_data(zoom_level: int,
                       tile_x: int,
                       tile_y: int,
@@ -153,7 +153,7 @@ def get_neighbours(index: int, k: int, collection: Collection = Depends(dataset_
             raise HTTPException(status_code=505, detail="Milvus error")
 
 
-@app.get("/api/first_7_zoom_levels")
+@app.get("/api/first-tiles")
 def get_all_clusters(collection: Collection = Depends(clusters_collection_name_getter)):
     if collection is None:
         # Collection not found, return 404

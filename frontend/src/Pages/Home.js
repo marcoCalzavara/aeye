@@ -170,6 +170,12 @@ const Home = (props) => {
         }
     }
 
+    useEffect(() => {
+        // Restore initial state for everything related to the carousel
+        setClickedImageIndex(-1);
+        setShowCarousel(false);
+    }, [selectedDataset]);
+
     return (
         <>
             {(selectedDataset !== null && datasetInfo.get(selectedDataset) !== undefined) &&
@@ -180,7 +186,6 @@ const Home = (props) => {
                                setShowCarousel={setShowCarousel}
                                datasets={datasets}
                                selectedDataset={selectedDataset}
-                               setSelectedDataset={setSelectedDataset}
                                menuOpen={menuOpen}
                                setMenuOpen={setMenuOpen}
                     />
@@ -212,7 +217,7 @@ const Home = (props) => {
                                          setInitialLoadingDone={setInitialLoadingDone}/>
                         </Stage>
                         <div id="carousel"
-                             className="w-full bg-transparent carousel-container flex flex-col items-center justify-center"
+                             className="z-50 w-full bg-transparent carousel-container flex flex-col items-center justify-center"
                              style={
                                  {
                                      marginTop: {showCarousel} ? '0' : getCarouselContainerMarginTop(),
@@ -222,7 +227,7 @@ const Home = (props) => {
                              }>
                             {clickedImageIndex !== -1 && (
                                 <button
-                                    className="mb-1 flex flex-row items-center justify-center button pointer-events-auto z-50"
+                                    className="z-50 mb-1 flex flex-row items-center justify-center button pointer-events-auto"
                                     /*style={
                                         {
                                             width: "43px",
@@ -241,8 +246,8 @@ const Home = (props) => {
                                 </button>
                             )}
                             <div
-                                className={`flex flex-col items-center justify-center bg-transparent carousel-div height-transition ${
-                                    showCarousel && clickedImageIndex !== -1 ? 'open' : 'close'}`}>
+                                className={`z-50 flex flex-col items-center justify-center bg-transparent carousel-div max-h-carousel-plus-image
+                                 height-transition ${showCarousel && clickedImageIndex !== -1 ? 'open' : 'close'}`}>
                                 {clickedImageIndex !== -1 &&
                                     <NeighborsCarousel host={host.current} clickedImageIndex={clickedImageIndex}
                                                        selectedDataset={selectedDataset}/>}

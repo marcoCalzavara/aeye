@@ -33,6 +33,25 @@ const responsive = {
     }
 };
 
+const generateText = (image) => {
+    const author = image.author.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    let text = ["Author: " + author + "."];
+    if (image.title !== undefined) {
+        // Capitalize first letter of each word
+        const title = image.title.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        text.push("Title: " + title + ".");
+    }
+    if (image.genre !== undefined) {
+        text.push("Genre: " + image.genre + ".");
+    }
+    if (image.date !== undefined) {
+        if (image.date !== -1) {
+            text.push("Date: " + image.date + ".");
+        }
+    }
+    return text;
+}
+
 function fetchNeighbors(index, k, host, dataset) {
     // The function takes in an index of an image, and fetches the nearest neighbors of the image from the server.
     // Then it populates the state images with the fetched images.
@@ -82,7 +101,7 @@ const NeighborsCarousel = (props) => {
     // and text is the text associated to the image.
     const [images, setImages] = useState([]);
     const [captions, setCaptions] = useState([]);
-    const [image, setImage] = useState("");
+    const [image, setImage] = useState(null);
 
 
     useEffect(() => {
@@ -100,24 +119,35 @@ const NeighborsCarousel = (props) => {
                 let images = [];
                 let first = true;
                 for (const image of data) {
-                    // const new_image = {
-                    //     path: image.path,
-                    //     index: image.index,
-                    //     author: image.author,
-                    //     width: image.width
-                    // }
+                    // noinspection JSUnresolvedVariable
+                    const new_image = {
+                        path: image.path,
+                        index: image.index,
+                        author: image.author,
+                        width: image.width
+                    }
+                    // noinspection JSUnresolvedVariable
+                    if (image.genre !== undefined) {
+                        // noinspection JSUnresolvedVariable
+                        new_image.genre = image.genre;
+                    }
+                    // noinspection JSUnresolvedVariable
+                    if (image.title !== undefined) {
+                        // noinspection JSUnresolvedVariable
+                        new_image.title = image.title;
+                    }
+                    // noinspection JSUnresolvedVariable
+                    if (image.date !== undefined) {
+                        // noinspection JSUnresolvedVariable
+                        new_image.date = image.date;
+                    }
                     // noinspection JSUnresolvedVariable
                     images.push(
-                        {
-                            path: image.path,
-                            index: image.index,
-                            author: image.author,
-                            width: image.width
-                        }
+                        new_image
                     );
                     if (first) {
                         // noinspection JSUnresolvedVariable
-                        setImage(image);
+                        setImage(new_image);
                         first = false;
                     }
                 }
@@ -141,10 +171,15 @@ const NeighborsCarousel = (props) => {
             });
     }, [props.clickedImageIndex]);
 
+    useEffect(() => {
+        setImage(null);
+        setImages([]);
+    }, [props.selectedDataset]);
+
     return (
         <>
             {/* Place space for the main image of the carousel */}
-            {image.path !== "" &&
+            {image &&
                 <div className="h-image flex flex-row justify-center items-center pointer-events-auto margin-between-images-bottom">
                     <MainImageCard placeholderSrc={getUrlForImage(image.path, props.selectedDataset, props.host)}
                                    src={`${props.host}/${props.selectedDataset}/${image.path}`}
@@ -152,7 +187,7 @@ const NeighborsCarousel = (props) => {
                                    maxWidth="90%"
                                    cursor="pointer"
                                    objectFit="fit"
-                                   text={"Author: " + image.author}/>
+                                   text={generateText(image)}/>
                 </div>
 
             }
