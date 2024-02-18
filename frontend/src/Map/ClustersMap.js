@@ -291,7 +291,6 @@ const ClustersMap = (props) => {
             props.prevClickedImageIndex.current = props.clickedImageIndex;
             props.setClickedImageIndex(index);
             props.setShowCarousel(true);
-            props.setMenuOpen(false);
         });
 
         sprite.on('pointerenter', () => {
@@ -373,6 +372,8 @@ const ClustersMap = (props) => {
                 maxX.current = data["tile_coordinate_range"]["x_max"];
                 minY.current = data["tile_coordinate_range"]["y_min"];
                 maxY.current = data["tile_coordinate_range"]["y_max"];
+
+                console.log(minX.current, maxX.current, minY.current, maxY.current)
 
                 // Update the effective position of the stage
                 effectivePosition.current.x = minX.current;
@@ -463,7 +464,6 @@ const ClustersMap = (props) => {
                     props.prevClickedImageIndex.current = props.clickedImageIndex;
                     props.setClickedImageIndex(spritesGlobalInfo.current.get(index).index);
                     props.setShowCarousel(true);
-                    props.setMenuOpen(false);
                 });
             }
         }

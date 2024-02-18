@@ -120,8 +120,6 @@ const Home = (props) => {
     const [selectedDataset, setSelectedDataset] = useState(null);
     // Define state for dataset info
     const [datasetInfo, setDatasetInfo] = useState(null);
-    // Define state for menu open
-    const [menuOpen, setMenuOpen] = useState(false);
     // Define state to know if initial loading is done
     const [initialLoadingDone, setInitialLoadingDone] = useState(false);
     // Define variable for first render for animation
@@ -186,16 +184,17 @@ const Home = (props) => {
                                setShowCarousel={setShowCarousel}
                                datasets={datasets}
                                selectedDataset={selectedDataset}
-                               menuOpen={menuOpen}
-                               setMenuOpen={setMenuOpen}
+                               setSelectedDataset={setSelectedDataset}
+                               page={props.page}
+                               setPage={props.setPage}
                     />
-                    <HamburgerMenu
-                        menuOpen={menuOpen}
-                        setMenuOpen={setMenuOpen}
-                        datasets={datasets}
-                        setSelectedDataset={setSelectedDataset}
-                        setPage={props.setPage}
-                    />
+                    {/*<HamburgerMenu*/}
+                    {/*    menuOpen={menuOpen}*/}
+                    {/*    setMenuOpen={setMenuOpen}*/}
+                    {/*    datasets={datasets}*/}
+                    {/*    setSelectedDataset={setSelectedDataset}*/}
+                    {/*    setPage={props.setPage}*/}
+                    {/*/>*/}
                     <div className="bg-black flex flex-col items-center justify-center mt-sticky m-canvas-side mainContentOpacity">
                         <Stage width={dimensionsStage.width}
                                height={dimensionsStage.height}
@@ -213,7 +212,6 @@ const Home = (props) => {
                                          prevClickedImageIndex={prevClickedImageIndex}
                                          clickedImageIndex={clickedImageIndex}
                                          setClickedImageIndex={setClickedImageIndex}
-                                         setMenuOpen={setMenuOpen}
                                          setInitialLoadingDone={setInitialLoadingDone}/>
                         </Stage>
                         <div id="carousel"

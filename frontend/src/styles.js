@@ -14,6 +14,7 @@ export const itemsStyle = {
 };
 
 export const iconStyle = {
-    width: getResponsiveMenuItemHeight().replace("px", "") * 0.75 + "px",
-    height: getResponsiveMenuItemHeight().replace("px", "") * 0.75 + "px",
+    width: getResponsiveMenuItemHeight().replace("px", "") * 1 + "px",
+    height: getResponsiveMenuItemHeight().replace("px", "") * 1 + "px",
+    color: "white"
 };

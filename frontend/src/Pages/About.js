@@ -11,8 +11,9 @@ const About = (props) => {
     return (
         <div hidden={props.page !== "about"}>
             <StickyBar hasSearchBar={false}
-                       menuOpen={menuOpen}
-                       setMenuOpen={setMenuOpen}/>
+                       page={props.page}
+                       setPage={props.setPage}
+            />
             <div id="about-page" style={
                 {
                     position: "absolute",
@@ -23,7 +24,7 @@ const About = (props) => {
                     height: "100%",
                 }
             }>
-                <HamburgerMenu menuOpen={menuOpen} setMenuOpen={setMenuOpen} setPage={props.setPage}/>
+                {/*<HamburgerMenu menuOpen={menuOpen} setMenuOpen={setMenuOpen} setPage={props.setPage}/>*/}
                 About page yet to be implemented.
             </div>
         </div>

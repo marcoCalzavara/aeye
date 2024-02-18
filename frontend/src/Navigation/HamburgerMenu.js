@@ -2,7 +2,6 @@
 import {slide as Menu} from 'react-burger-menu'
 import './hamburgerMenu.css';
 import SelectDataset from "./SelectDataset";
-import {Link} from "react-router-dom";
 import {SlHome, SlQuestion} from "react-icons/sl";
 import {iconStyle, itemsStyle} from "../styles";
 

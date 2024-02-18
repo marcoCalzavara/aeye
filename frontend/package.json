@@ -6,6 +6,7 @@
     "@emotion/react": "latest",
     "@emotion/styled": "latest",
     "@jest/globals": "^29.7.0",
+    "@mui/base": "^5.0.0-beta.36",
     "@mui/icons-material": "latest",
     "@mui/material": "latest",
     "@mui/system": "latest",
@@ -24,6 +25,7 @@
     "react-router-dom": "latest",
     "react-scripts": "^5.0.1",
     "react-zoom-pan-pinch": "^3.3.0",
+    "reactjs-popup": "^2.0.6",
     "web-vitals": "latest"
   },
   "scripts": {
