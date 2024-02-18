@@ -82,7 +82,8 @@ export default function SearchBar(props) {
     }
 
     return (
-        <div className="w-searchbar h-searchbar flex justify-between items-center z-10 bg-white rounded-full searchBar">
+        <div className={`w-searchbar h-searchbar flex justify-between items-center z-10 bg-white rounded-full 
+        ${props.searchBarIsClicked ? 'searchBarPositionTransition' : 'searchBarCentered'}`}>
             <InputBase
                 className="w-98 h-full pl-3 font-bar"
                 label={"Search Images by Text"}

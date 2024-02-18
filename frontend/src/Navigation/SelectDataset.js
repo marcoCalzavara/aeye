@@ -23,7 +23,6 @@ const SelectDataset = (props) => {
     const [open, setOpen] = React.useState(false);
 
     const handleChange = (dataset) => {
-        console.log(dataset);
         setDataset(dataset);
         props.setSelectedDataset(dataset);
     };

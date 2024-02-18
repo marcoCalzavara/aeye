@@ -17,7 +17,7 @@ import {
     getCarouselContainerMarginBottom,
 
 } from "../utilities";
-import HamburgerMenu from "../Navigation/HamburgerMenu";
+// import HamburgerMenu from "../Navigation/HamburgerMenu";
 
 
 function fetchAvailableDatasets(host) {
@@ -122,8 +122,6 @@ const Home = (props) => {
     const [datasetInfo, setDatasetInfo] = useState(null);
     // Define state to know if initial loading is done
     const [initialLoadingDone, setInitialLoadingDone] = useState(false);
-    // Define variable for first render for animation
-    const firstRender = useRef(true);
 
     useEffect(() => {
         // Define function for updating the dimensions of the stage
@@ -187,6 +185,7 @@ const Home = (props) => {
                                setSelectedDataset={setSelectedDataset}
                                page={props.page}
                                setPage={props.setPage}
+                               searchBarIsClicked={props.searchBarIsClicked}
                     />
                     {/*<HamburgerMenu*/}
                     {/*    menuOpen={menuOpen}*/}
@@ -212,7 +211,9 @@ const Home = (props) => {
                                          prevClickedImageIndex={prevClickedImageIndex}
                                          clickedImageIndex={clickedImageIndex}
                                          setClickedImageIndex={setClickedImageIndex}
-                                         setInitialLoadingDone={setInitialLoadingDone}/>
+                                         setInitialLoadingDone={setInitialLoadingDone}
+                                         searchBarIsClicked={props.searchBarIsClicked}
+                            />
                         </Stage>
                         <div id="carousel"
                              className="z-50 w-full bg-transparent carousel-container flex flex-col items-center justify-center"

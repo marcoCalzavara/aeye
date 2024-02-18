@@ -1,13 +1,10 @@
 /* Page for the About section of the website */
-import React, {useState} from 'react';
+import React from 'react';
 import StickyBar from "../Navigation/StickyBar";
 import {getResponsiveHeight} from "../utilities";
-import HamburgerMenu from "../Navigation/HamburgerMenu";
+// import HamburgerMenu from "../Navigation/HamburgerMenu";
 
 const About = (props) => {
-    // Define state for menu open
-    const [menuOpen, setMenuOpen] = useState(false);
-
     return (
         <div hidden={props.page !== "about"}>
             <StickyBar hasSearchBar={false}

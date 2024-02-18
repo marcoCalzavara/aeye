@@ -23,7 +23,9 @@ const StickyBar = (props) => {
             {props.hasSearchBar &&
                 <SearchBar host={props.host} setSearchData={setSearchData.current}
                            setShowCarousel={props.setShowCarousel}
-                           selectedDataset={props.selectedDataset}/>
+                           selectedDataset={props.selectedDataset}
+                           searchBarIsClicked={props.searchBarIsClicked}
+                />
             }
             <div className="w-1/10 h-2/3 flex flex-row justify-end">
                 {/*<Hamburger color={"white"} toggle={props.setMenuOpen} toggled={props.menuOpen}/>*/}

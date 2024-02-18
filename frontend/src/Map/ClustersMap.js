@@ -10,6 +10,7 @@ import {getUrlForImage} from "../utilities";
 
 const DURATION = 4; // seconds
 const SPRITEPOOLSIZE = 800;
+const BLURSTRENGTH = 4;
 
 function getUrlForFirstTiles(dataset, host = "") {
     return `${host}/api/first-tiles?collection=${dataset}_zoom_levels_clusters`;
@@ -204,6 +205,10 @@ const ClustersMap = (props) => {
     // Define constant for transition steps and depth steps
     const initial_transition_step = 100;
     const depthStep = 0.02;
+    // Create a ref that will store the current value of showCarousel
+    const showCarouselRef = useRef(props.showCarousel);
+    // Create a ref that will store the current value of the clicked search bar
+    const searchBarIsClickedRef = useRef(props.searchBarIsClicked);
 
     const mapGlobalCoordinatesToStageCoordinates = (global_x, global_y) => {
         // Map global coordinates to stage coordinates
@@ -226,7 +231,7 @@ const ClustersMap = (props) => {
     }
 
     const addSpriteToStage = (index, path, width, height, global_x, global_y, num_of_entities,
-                              is_in_previous_zoom_level) => {
+                              is_in_previous_zoom_level, blur=false) => {
         // Get sprite from sprite pool
         const sprite = spritePool.current.pop();
 
@@ -270,6 +275,11 @@ const ClustersMap = (props) => {
         sprite.x = artwork_position.x;
         sprite.y = artwork_position.y;
 
+        // Blur sprite if necessary
+        if (blur) {
+            sprite.filters = [new BlurFilter(BLURSTRENGTH)];
+        }
+
         // Set alpha proportional to the depth
         if (is_in_previous_zoom_level || depth.current === 0) {
             sprite.alpha = 1;
@@ -284,7 +294,7 @@ const ClustersMap = (props) => {
         // Make sprite interactive if the values of alpha is bigger than 0.2
         sprite.interactive = sprite.alpha > 0.2;
 
-        // Remove all pointer down listeners
+        // Remove all listeners
         sprite.removeAllListeners();
 
         sprite.on('pointerdown', () => {
@@ -295,14 +305,14 @@ const ClustersMap = (props) => {
 
         sprite.on('pointerenter', () => {
             // Deactivate blur filter if present
-            if (sprite.filters !== null && sprite.filters.length > 0) {
+            if (searchBarIsClickedRef.current && sprite.filters !== null && sprite.filters.length > 0) {
                 sprite.filters[0].enabled = false;
             }
         });
 
         sprite.on('pointerleave', () => {
             // Reactivate blur filter if present
-            if (sprite.filters !== null && sprite.filters.length > 0) {
+            if (showCarouselRef.current && sprite.filters !== null && sprite.filters.length > 0) {
                 sprite.filters[0].enabled = true;
             }
         });
@@ -373,8 +383,6 @@ const ClustersMap = (props) => {
                 minY.current = data["tile_coordinate_range"]["y_min"];
                 maxY.current = data["tile_coordinate_range"]["y_max"];
 
-                console.log(minX.current, maxX.current, minY.current, maxY.current)
-
                 // Update the effective position of the stage
                 effectivePosition.current.x = minX.current;
                 effectivePosition.current.y = minY.current;
@@ -395,7 +403,8 @@ const ClustersMap = (props) => {
                         data["clusters_representatives"]["entities"][i]["representative"]["low_dimensional_embedding_x"],
                         data["clusters_representatives"]["entities"][i]["representative"]["low_dimensional_embedding_y"],
                         data["clusters_representatives"]["entities"][i]["number_of_entities"],
-                        true
+                        true,
+                        !props.searchBarIsClicked
                     );
                 }
 
@@ -426,6 +435,19 @@ const ClustersMap = (props) => {
                 hammer.current.on('pinch', handlePinch);
         });
     }, [props.selectedDataset]);
+
+    useEffect(() => {
+        // Update ref for clicked search bar
+        searchBarIsClickedRef.current = props.searchBarIsClicked;
+        // Deactivate blur filter from all sprites
+        for (let child of container.current.children) {
+            if (!props.showCarousel) {
+                if (child.filters !== null && child.filters.length > 0) {
+                    child.filters[0].enabled = false;
+                }
+            }
+        }
+    }, [props.searchBarIsClicked]);
 
     useEffect(() => {
         // Resize container and set hit area
@@ -480,6 +502,8 @@ const ClustersMap = (props) => {
 
 
     useEffect(() => {
+        // Update ref for showCarousel
+        showCarouselRef.current = props.showCarousel;
         // Block movement of the stage if the carousel is shown
         container.current.interactive = !props.showCarousel;
         // Set mouse down to false
@@ -490,12 +514,14 @@ const ClustersMap = (props) => {
             if (props.showCarousel) {
                 // Make sprite blurry
                 if (child.filters === null || child.filters.length === 0) {
-                    child.filters = [new BlurFilter(2)];
+                    child.filters = [new BlurFilter(BLURSTRENGTH)];
                 } else
                     child.filters[0].enabled = true;
             } else {
-                // Remove blur filter
-                child.filters = [];
+                // Deactivate blur filter if present
+                if (child.filters !== null && child.filters.length > 0) {
+                    child.filters[0].enabled = false;
+                }
             }
         }
     }, [props.showCarousel]);
