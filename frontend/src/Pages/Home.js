@@ -122,6 +122,10 @@ const Home = (props) => {
     const [datasetInfo, setDatasetInfo] = useState(null);
     // Define state to know if initial loading is done
     const [initialLoadingDone, setInitialLoadingDone] = useState(false);
+    // Define state for change of page
+    const [pageHasChanged, setPageHasChanged] = useState(false);
+    // Define ref for previous page
+    const prevPage = useRef(props.page);
 
     useEffect(() => {
         // Define function for updating the dimensions of the stage
@@ -158,19 +162,29 @@ const Home = (props) => {
         };
     }, []);
 
-
-    const invertShownCarousel = () => {
-        if (clickedImageIndex !== -1) {
-            setShowCarousel(!showCarousel);
-            prevClickedImageIndex.current = clickedImageIndex;
-        }
-    }
-
     useEffect(() => {
         // Restore initial state for everything related to the carousel
         setClickedImageIndex(-1);
         setShowCarousel(false);
     }, [selectedDataset]);
+
+    useEffect(() => {
+        if (props.page === "about" && prevPage.current === "home") {
+            setPageHasChanged(true);
+            setShowCarousel(false);
+            prevPage.current = "about";
+        }
+    }, [props.page]);
+
+    useEffect(() => {
+        setPageHasChanged(false);
+        prevPage.current = "home";
+        // Show carousel if the clicked image index is different from -1
+        if (clickedImageIndex !== -1) {
+            setShowCarousel(true);
+            prevClickedImageIndex.current = clickedImageIndex;
+        }
+    }, [clickedImageIndex]);
 
     return (
         <>
@@ -236,7 +250,13 @@ const Home = (props) => {
                                         }
                                     }*/
                                     onPointerDown={() => {
-                                        invertShownCarousel();
+                                        if (clickedImageIndex !== -1) {
+                                            setShowCarousel(!showCarousel);
+                                            console.log(prevClickedImageIndex.current, clickedImageIndex);
+                                            prevClickedImageIndex.current = clickedImageIndex;
+                                        }
+                                        setPageHasChanged(false);
+                                        prevPage.current = "home";
                                     }}>
                                     {showCarousel ?
                                         <TfiAngleDown style={{zIndex: 1000, fontWeight: 2000}}
@@ -245,8 +265,9 @@ const Home = (props) => {
                                 </button>
                             )}
                             <div
-                                className={`z-50 flex flex-col items-center justify-center bg-transparent carousel-div max-h-carousel-plus-image
-                                 height-transition ${showCarousel && clickedImageIndex !== -1 ? 'open' : 'close'}`}>
+                                className={`z-50 flex flex-col items-center justify-center bg-transparent carousel-div max-h-carousel-plus-image 
+                                ${!pageHasChanged ? (showCarousel && clickedImageIndex !== -1 ? 'height-transition open' : 'height-transition close') : ''}
+                                ${pageHasChanged ? 'max-height-transition-close' : ''}`}>
                                 {clickedImageIndex !== -1 &&
                                     <NeighborsCarousel host={host.current} clickedImageIndex={clickedImageIndex}
                                                        selectedDataset={selectedDataset}/>}

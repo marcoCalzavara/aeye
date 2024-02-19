@@ -147,6 +147,10 @@
     animation-name: closeAnimation;
 }
 
+.max-height-transition-close {
+    max-height: 0;
+}
+
 /* Media queries for the height of the carousel */
 
 @media (min-width: 320px) and (max-width: 480px) {
