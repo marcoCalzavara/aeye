@@ -10,6 +10,7 @@
     "@mui/icons-material": "latest",
     "@mui/material": "latest",
     "@mui/system": "latest",
+    "@pixi/filter-kawase-blur": "^5.1.1",
     "@pixi/react": "latest",
     "@use-gesture/react": "^10.3.0",
     "hamburger-react": "latest",
