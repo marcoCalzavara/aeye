@@ -84,42 +84,6 @@ export function fetchFirstTiles(url, signal, tilesCache) {
 
 }
 
-function makeSpritePulse(sprite) {
-    // Make the image pulse for 4 seconds
-    const ticker = new PIXI.Ticker();
-    const originalWidth = sprite.width;
-    const originalHeight = sprite.height;
-    const originalX = sprite.x;
-    const originalY = sprite.y;
-    const startTime = performance.now();
-
-    ticker.add(() => {
-        const now = performance.now();
-        const elapsed = (now - startTime) / 1000; // convert to seconds
-
-        if (elapsed > DURATION) {
-            // Decrease z-index of sprite
-            sprite.zIndex = 0;
-            // Stop the ticker after 5 seconds
-            ticker.stop();
-        } else {
-            // Calculate scale factor using a sine function
-            const scaleFactor = 1 + 0.5 * Math.abs(Math.sin(elapsed / (0.2 * Math.PI)));
-
-            // Calculate the difference in size before and after scaling
-            const diffWidth = originalWidth * scaleFactor - originalWidth;
-            const diffHeight = originalHeight * scaleFactor - originalHeight;
-            // Adjust the x and y coordinates of the sprite by half of the difference in size
-            sprite.x = originalX - diffWidth / 2;
-            sprite.y = originalY - diffHeight / 2;
-            // Increase size of sprite from the center
-            sprite.width = originalWidth * scaleFactor;
-            sprite.height = originalHeight * scaleFactor;
-        }
-    });
-    ticker.start();
-}
-
 function throttle(func, limit) {
     // Throttle function. The function func is called at most once every limit milliseconds.
     let inThrottle;
@@ -182,13 +146,21 @@ const ClustersMap = (props) => {
     // Define sprite pool of available sprites
     const spritePool = useRef(new Array(SPRITEPOOLSIZE));
     // Define max width and height of a sprite. These values depend on the size of the viewport.
-    const maxWidth = useRef(props.width / 10);
-    const maxHeight = useRef(props.height / 10);
+    const maxWidth = useRef(props.stageWidth / 10);
+    const maxHeight = useRef(props.stageHeight / 10);
+    // Define refs for height and width of the stage and of the embedding space, and also for the overflowX.
+    const stageWidth = useRef(props.stageWidth);
+    const stageHeight = useRef(props.stageHeight);
+    const width = useRef(props.width);
+    const height = useRef(props.height);
+    const overflowX = useRef(Math.round(props.overflowX / 2));
     // Define state for limits of embedding space. These values are initialized when the component is mounted and never change.
     const minX = useRef(0);
     const maxX = useRef(0);
     const minY = useRef(0);
     const maxY = useRef(0);
+    const realMinX = useRef(0);
+    const realMaxX = useRef(0);
     // Define boolean for mouse down
     const mouseDown = useRef(false);
     // Define state for tiles which are currently on stage
@@ -217,8 +189,8 @@ const ClustersMap = (props) => {
 
     const mapGlobalCoordinatesToStageCoordinates = (global_x, global_y) => {
         // Map global coordinates to stage coordinates
-        const stage_x = ((global_x - effectivePosition.current.x) * (props.width - maxWidth.current)) / effectiveWidth.current;
-        const stage_y = ((global_y - effectivePosition.current.y) * (props.height - maxHeight.current)) / effectiveHeight.current;
+        const stage_x = ((global_x - effectivePosition.current.x) * (width.current - maxWidth.current)) / effectiveWidth.current - overflowX.current;
+        const stage_y = ((global_y - effectivePosition.current.y) * (height.current - maxHeight.current)) / effectiveHeight.current;
         return {
             x: stage_x,
             y: stage_y
@@ -227,15 +199,51 @@ const ClustersMap = (props) => {
 
     const mapStageCoordinatesToGlobalCoordinates = (stage_x, stage_y) => {
         // Map stage coordinates to global coordinates
-        const global_x = (stage_x * effectiveWidth.current) / props.width;
-        const global_y = (stage_y * effectiveHeight.current) / props.height;
+        const global_x = (stage_x * effectiveWidth.current) / width.current;
+        const global_y = (stage_y * effectiveHeight.current) / height.current;
         return {
             x: global_x + effectivePosition.current.x,
             y: global_y + effectivePosition.current.y
         }
     }
 
-    const blurSprites = (sprite, blur) => {
+    const makeSpritePulse = (sprite) => {
+        // Make the image pulse for 4 seconds
+        const ticker = new PIXI.Ticker();
+        const originalWidth = sprite.width;
+        const originalHeight = sprite.height;
+        const originalX = sprite.x;
+        const originalY = sprite.y;
+        const startTime = performance.now();
+
+        ticker.add(() => {
+            const now = performance.now();
+            const elapsed = (now - startTime) / 1000; // convert to seconds
+
+            if (elapsed > DURATION) {
+                // Decrease z-index of sprite
+                sprite.zIndex = 0;
+                // Stop the ticker after 5 seconds
+                ticker.stop();
+            } else {
+                // Calculate scale factor using a sine function
+                const scaleFactor = 1 + 0.5 * Math.abs(Math.sin(elapsed / (0.2 * Math.PI)));
+
+                // Calculate the difference in size before and after scaling
+                const diffWidth = originalWidth * scaleFactor - originalWidth;
+                const diffHeight = originalHeight * scaleFactor - originalHeight;
+                // Adjust the x and y coordinates of the sprite by half of the difference in size
+                sprite.x = originalX - diffWidth / 2;
+                sprite.y = originalY - diffHeight / 2;
+                // Increase size of sprite from the center
+                sprite.width = originalWidth * scaleFactor;
+                sprite.height = originalHeight * scaleFactor;
+            }
+        });
+        ticker.start();
+    }
+
+    const blurSprite = (sprite, blur) => {
         // Set blur strength proportional to the depth
         if (!blur) {
             sprite.filters[0].blur = 0;
@@ -279,13 +287,8 @@ const ClustersMap = (props) => {
         const width = spritesGlobalInfo.current.get(index).width;
         const height = spritesGlobalInfo.current.get(index).height;
         const aspect_ratio = width / height;
-        if (width > height) {
-            sprites.current.get(index).width = maxWidth.current * scale;
-            sprites.current.get(index).height = maxWidth.current * scale / aspect_ratio;
-        } else {
-            sprites.current.get(index).height = maxHeight.current * scale;
-            sprites.current.get(index).width = maxHeight.current * scale * aspect_ratio;
-        }
+        sprites.current.get(index).height = maxHeight.current * scale;
+        sprites.current.get(index).width = maxHeight.current * scale * aspect_ratio;
     }
 
     const setSpriteHandlers = (sprite, index) => {
@@ -356,7 +359,7 @@ const ClustersMap = (props) => {
         sprite.filters[1].enabled = blur;
 
         // Set blur strength proportional to the depth
-        blurSprites(sprite, !is_in_previous_zoom_level);
+        blurSprite(sprite, !is_in_previous_zoom_level);
 
         // Set sprite handlers
         setSpriteHandlers(sprite, index);
@@ -403,7 +406,8 @@ const ClustersMap = (props) => {
         container.current.cursor = 'grab';
 
         // Add handlers to stage
-        container.current.hitArea = new PIXI.Rectangle(0, 0, props.width, props.height);
+        // noinspection all
+        container.current.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
         container.current.sortableChildren = true;
         container.current.interactive = true;
         container.current.inteactiveChildren = true;
@@ -418,19 +422,26 @@ const ClustersMap = (props) => {
             .then(() => {
                 // Get cluster data for the first zoom level
                 const data = tilesCache.current.get("0-0-0");
+
                 // Update the limits of the embedding space
-                minX.current = data["tile_coordinate_range"]["x_min"];
-                maxX.current = data["tile_coordinate_range"]["x_max"];
+                realMinX.current = data["tile_coordinate_range"]["x_min"];
+                realMaxX.current = data["tile_coordinate_range"]["x_max"];
                 minY.current = data["tile_coordinate_range"]["y_min"];
                 maxY.current = data["tile_coordinate_range"]["y_max"];
 
-                // Update the effective position of the stage
-                effectivePosition.current.x = minX.current;
-                effectivePosition.current.y = minY.current;
-
                 // Update effective size of the stage
-                effectiveWidth.current = maxX.current - minX.current;
+                effectiveWidth.current = realMaxX.current - realMinX.current;
                 effectiveHeight.current = maxY.current - minY.current;
+
+                // Compute overflowX, minX, and maX. We want to allow additional movement in the x direction in order to
+                // make all the artworks visible.
+                const overflowX_embedding_space = Math.max(overflowX.current * effectiveWidth.current / width.current, 0);
+                minX.current = realMinX.current - overflowX_embedding_space;
+                maxX.current = realMaxX.current + overflowX_embedding_space;
+
+                // Update the effective position of the stage
+                effectivePosition.current.x = realMinX.current;
+                effectivePosition.current.y = minY.current;
 
                 // Loop over artworks in tile and add them to the stage. Take the sprites from the sprite pool.
                 // noinspection JSUnresolvedVariable
@@ -512,16 +523,37 @@ const ClustersMap = (props) => {
         }
     }, [props.searchBarIsClicked]);
 
-    // TODO deal with this a bit
     useEffect(() => {
+        // Update ref for stage width and height and width and height of the embedding space, and also for the overflowX.
+        stageWidth.current = props.stageWidth;
+        stageHeight.current = props.stageHeight;
+        width.current = props.width;
+        height.current = props.height;
+        overflowX.current = Math.round(props.overflowX / 2);
+
         // Resize container and set hit area
-        container.current.hitArea = new PIXI.Rectangle(0, 0, props.width, props.height);
+        // noinspection all
+        container.current.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
+
+        // Save current minX and maxX
+        const prevMinX = minX.current;
+        const prevMaxX = maxX.current;
+        // Update minX and maxX
+        const overflowX_embedding_space = Math.max(overflowX.current * effectiveWidth.current / width.current, 0);
+        minX.current = realMinX.current - overflowX_embedding_space;
+        maxX.current = realMaxX.current + overflowX_embedding_space;
+
+        // // Update effective position of the stage.
+        const factor = (maxX.current - minX.current) === (prevMaxX - prevMinX) ? 1 : (maxX.current - minX.current) / (prevMaxX - prevMinX);
+        effectivePosition.current.x = factor * (effectivePosition.current.x - prevMinX) + minX.current;
 
         // Update max width and height of a sprite and update all sprites
-        maxWidth.current = props.width / 10;
-        maxHeight.current = props.height / 10;
+        maxWidth.current = stageWidth.current / 10;
+        maxHeight.current = stageHeight.current / 10;
 
         for (let index of sprites.current.keys()) {
+            // Update size of sprite
+            scaleSprite(index);
             // Get position of artwork in stage coordinates.
             const artwork_position = mapGlobalCoordinatesToStageCoordinates(
                 spritesGlobalInfo.current.get(index).x,
@@ -530,30 +562,8 @@ const ClustersMap = (props) => {
             // Set position of sprite
             sprites.current.get(index).x = artwork_position.x;
             sprites.current.get(index).y = artwork_position.y;
-
-            // Update size of sprite
-            const width = spritesGlobalInfo.current.get(index).width;
-            const height = spritesGlobalInfo.current.get(index).height;
-            const aspect_ratio = width / height;
-            if (width > height) {
-                sprites.current.get(index).width = maxWidth.current;
-                sprites.current.get(index).height = maxWidth.current / aspect_ratio;
-            } else {
-                sprites.current.get(index).height = maxHeight.current;
-                sprites.current.get(index).width = maxHeight.current * aspect_ratio;
-            }
-            // Update set sprite on pointer down
-            // Remove pointer down listener
-            if (sprites.current.get(index).interactive) {
-                sprites.current.get(index).removeListener('pointerdown');
-                sprites.current.get(index).on('pointerdown', () => {
-                    props.prevClickedImageIndex.current = props.clickedImageIndex;
-                    props.setClickedImageIndex(spritesGlobalInfo.current.get(index).index);
-                    props.setShowCarousel(true);
-                });
-            }
         }
-    }, [props.width, props.height]);
+    }, [props.width, props.height, props.overflowX, props.stageWidth, props.stageHeight]);
 
     useEffect(() => {
         // This effect is called when the search data changes.
@@ -608,6 +618,7 @@ const ClustersMap = (props) => {
         const number_of_tiles = 2 ** next_zoom_level;
         const tile_step_x = (maxX.current - minX.current) / number_of_tiles;
         const tile_step_y = (maxY.current - minY.current) / number_of_tiles;
+        const tile_step_x_for_sprites = (realMaxX.current - realMinX.current) / number_of_tiles;
 
         // Get tile coordinates of the tile that contains the upper left corner of the stage.
         const tile_x = Math.min(Math.floor((effectivePosition.current.x - minX.current) / tile_step_x), number_of_tiles - 1);
@@ -632,7 +643,7 @@ const ClustersMap = (props) => {
                         continue;
                     }
                     const spriteGlobalPosition = spritesGlobalInfo.current.get(index);
-                    const tile_x = Math.min(Math.floor((spriteGlobalPosition.x - minX.current) / tile_step_x), number_of_tiles - 1);
+                    const tile_x = Math.min(Math.floor((spriteGlobalPosition.x - realMinX.current) / tile_step_x_for_sprites), number_of_tiles - 1);
                     const tile_y = Math.min(Math.floor((spriteGlobalPosition.y - minY.current) / tile_step_y), number_of_tiles - 1);
                     if (!visible_tiles.some(visible_tile =>
                         visible_tile.x === tile_x && visible_tile.y === tile_y)) {
@@ -700,7 +711,7 @@ const ClustersMap = (props) => {
                         artwork_position.y : sprites.current.get(index).y;
 
                     // Set strength of blur filter proportional to the depth
-                    blurSprites(sprites.current.get(index), !data["clusters_representatives"]["entities"][j]["is_in_previous_zoom_level"]);
+                    blurSprite(sprites.current.get(index), !data["clusters_representatives"]["entities"][j]["is_in_previous_zoom_level"]);
                     // Set size of sprite
                     scaleSprite(index);
                 }
@@ -903,8 +914,8 @@ const ClustersMap = (props) => {
         // If mouse is down, then move the stage
         if (mouseDown.current) {
             // Get mouse position. Transform movement of the mouse to movement in the embedding space.
-            const mouse_x = ((-event.movementX) * effectiveWidth.current) / props.width;
-            const mouse_y = ((-event.movementY) * effectiveHeight.current) / props.height;
+            const mouse_x = ((-event.movementX) * effectiveWidth.current) / width.current;
+            const mouse_y = ((-event.movementY) * effectiveHeight.current) / height.current;
             // Change the effective position of the stage. Make sure that it does not exceed the limits of the embedding space.
             const new_x = Math.max(
                 Math.min(effectivePosition.current.x + mouse_x, maxX.current - effectiveWidth.current), minX.current);
@@ -1045,7 +1056,7 @@ const ClustersMap = (props) => {
         const translation_x = global_mouse_position.x - effectivePosition.current.x
         const translation_y = global_mouse_position.y - effectivePosition.current.y;
         // Change the effective size of the stage.
-        effectiveWidth.current = (maxX.current - minX.current) / (2 ** (zoomLevel.current + depth.current));
+        effectiveWidth.current = (realMaxX.current - realMinX.current) / (2 ** (zoomLevel.current + depth.current));
         effectiveHeight.current = (maxY.current - minY.current) / (2 ** (zoomLevel.current + depth.current));
 
         // Change the effective position of the stage. Make sure that it does not exceed the limits of the embedding space.

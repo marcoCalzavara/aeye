@@ -11,14 +11,16 @@ import Typography from "@mui/material/Typography";
 import {TfiAngleDown, TfiAngleUp} from "react-icons/tfi";
 import {
     getResponsiveHeight,
-    getResponsiveMargin,
     getButtonSize,
+    getResponsiveMargin,
     getCarouselContainerMarginTop,
     getCarouselContainerMarginBottom,
 
 } from "../utilities";
 // import HamburgerMenu from "../Navigation/HamburgerMenu";
 
+
+const ASPECT_RATIO = 16 / 9;
 
 function fetchAvailableDatasets(host) {
     let url = host + '/api/collection-names';
@@ -98,13 +100,35 @@ function extractHost() {
     return in_host.substring(0, i) + '80';
 }
 
-const Home = (props) => {
-    const [dimensionsStage, setDimensionsStage] = useState({
-        width: document.documentElement.clientWidth - 2 * getResponsiveMargin().replace('px', ''),
-        height: document.documentElement.clientHeight - getResponsiveHeight().replace('px', '')
+const computeStageDimensions = () => {
+    return {
+        width: window.innerWidth - 2 * getResponsiveMargin().replace('px', ''),
+        height: window.innerHeight - getResponsiveHeight().replace('px', '')
             - getCarouselContainerMarginTop().replace('px', '') - getCarouselContainerMarginBottom().replace('px', '')
             - getButtonSize().replace('px', '')
-    });
+    };
+}
+
+const computeEmbeddingStateDimensions = () => {
+    // First, get height, then adjust width based on aspect ratio
+    const height = window.innerHeight - getResponsiveHeight().replace('px', '')
+        - getCarouselContainerMarginTop().replace('px', '') - getCarouselContainerMarginBottom().replace('px', '')
+        - getButtonSize().replace('px', '');
+    const width = Math.ceil(height * ASPECT_RATIO);
+
+    return {
+        width: width,
+        height: height
+    };
+}
+
+const Home = (props) => {
+    // Define state for the dimensions of the stage
+    const [dimensionsStage, setDimensionsStage] = useState(computeStageDimensions());
+    // Define state for the dimensions of the embedding state
+    const [dimensionsEmbeddingState, setDimensionsEmbeddingState] = useState(computeEmbeddingStateDimensions());
+    // Define state for the overflow along the x-axis
+    const [overflowX, setOverflowX] = useState(dimensionsEmbeddingState.width - dimensionsStage.width);
     // Define host
     let host = useRef(extractHost());
     // Define data from text search
@@ -130,22 +154,17 @@ const Home = (props) => {
     useEffect(() => {
         // Define function for updating the dimensions of the stage
         const updateDimensions = () => {
-            setDimensionsStage({
-                width: document.documentElement.clientWidth - 2 * getResponsiveMargin(),
-                height: document.documentElement.clientHeight - getResponsiveHeight().replace('px', '')
-                    - getCarouselContainerMarginTop().replace('px', '') - getCarouselContainerMarginBottom().replace('px', '')
-                    - getButtonSize().replace('px', '')
-            });
+            const newDimensionsStage = computeStageDimensions();
+            const newDimensionsEmbeddingState = computeEmbeddingStateDimensions();
+            setDimensionsStage(newDimensionsStage);
+            setDimensionsEmbeddingState(newDimensionsEmbeddingState);
+            setOverflowX(newDimensionsEmbeddingState.width - newDimensionsStage.width);
         };
         // Add event listener
-        document.documentElement.addEventListener('resize', updateDimensions);
+        window.addEventListener('resize', updateDimensions);
 
         // Fetch available datasets
         fetchAvailableDatasets(host.current)
-            /**
-             * @param data {object} - Response from the server
-             * @param data.collections {array} - Array of available datasets
-             */
             .then(data => {
                 setDatasets(data.collections);
                 setSelectedDataset(data.collections[0]);
@@ -158,7 +177,7 @@ const Home = (props) => {
 
         // Return cleanup function for removing the event listener
         return () => {
-            document.documentElement.removeEventListener('resize', updateDimensions);
+            window.removeEventListener('resize', updateDimensions);
         };
     }, []);
 
@@ -214,8 +233,11 @@ const Home = (props) => {
                                raf={true}
                                renderOnComponentChange={false}
                                options={{backgroundColor: 0x000000}}>
-                            <ClustersMap width={dimensionsStage.width}
-                                         height={dimensionsStage.height}
+                            <ClustersMap width={dimensionsEmbeddingState.width}
+                                         height={dimensionsEmbeddingState.height}
+                                         overflowX={overflowX}
+                                         stageWidth={dimensionsStage.width}
+                                         stageHeight={dimensionsStage.height}
                                          host={host.current}
                                          selectedDataset={selectedDataset}
                                          maxZoomLevel={datasetInfo.get(selectedDataset)}
@@ -241,18 +263,9 @@ const Home = (props) => {
                             {clickedImageIndex !== -1 && (
                                 <button
                                     className="z-50 mb-1 flex flex-row items-center justify-center button pointer-events-auto"
-                                    /*style={
-                                        {
-                                            width: "43px",
-                                            height: "43px",
-                                            borderRadius: "50%",
-                                            backgroundColor: "rgba(255, 255, 255, 0.1)",
-                                        }
-                                    }*/
                                     onPointerDown={() => {
                                         if (clickedImageIndex !== -1) {
                                             setShowCarousel(!showCarousel);
-                                            console.log(prevClickedImageIndex.current, clickedImageIndex);
                                             prevClickedImageIndex.current = clickedImageIndex;
                                         }
                                         setPageHasChanged(false);
