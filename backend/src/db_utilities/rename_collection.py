@@ -2,15 +2,11 @@ import getpass
 import os
 import sys
 
-import PIL.Image
 from dotenv import load_dotenv
 from pymilvus import utility, db
 
 from .utils import create_connection
 from ..CONSTANTS import *
-
-# Increase pixel limit
-PIL.Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 
 
 if __name__ == "__main__":
@@ -28,7 +24,7 @@ if __name__ == "__main__":
         load_dotenv(os.getenv(ENV_FILE_LOCATION))
 
     # Get arguments
-    flags = {"database": "aiplusart", "collection": "best_artworks"}
+    flags = {"database": DEFAULT_DATABASE_NAME, "collection": "best_artworks"}
 
     choice = input("Use root user? (y/n) ")
     if choice == "y":
@@ -42,6 +38,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Try creating a connection and selecting a database. If it fails, exit.
+    print("The default database is " + flags["database"] + ".")
+    choice = input("Select database (enter to keep default): ")
+    if choice != "":
+        flags["database"] = choice
     try:
         create_connection(user, passwd)
         db.using_database(flags["database"])
@@ -51,7 +51,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Get the collection object
-    old_collection_name = "temp_" + flags["collection"] + "_zoom_levels_clusters"
-    new_collection_name = flags["collection"] + "_zoom_levels_clusters"
+    old_collection_name = input("Enter the old collection name: ")
+    new_collection_name = input("Enter the new collection name: ")
     # Rename collection
-    utility.rename_collection(old_collection_name, new_collection_name, new_db_name="aiplusart")
+    utility.rename_collection(old_collection_name, new_collection_name, new_db_name=flags["database"])

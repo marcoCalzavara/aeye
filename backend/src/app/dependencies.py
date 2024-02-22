@@ -29,6 +29,7 @@ class HelperCollection:
 
 class CollectionNameGetter:
     def __init__(self, suffix: str = ""):
+        # Define lock for the collection name getter
         self.lock = threading.Lock()
         self.collections = {}
         # Get collections from DatasetOptions
@@ -48,28 +49,23 @@ class CollectionNameGetter:
     def _call(self, collection: str = Query(...)) -> Collection | None:
         pass
 
-    def check_counter(self, collection_name: str):
-        # If the counter is 0, the collection is not loaded. Load it (the counter will be set to COUNTER_MAX_VALUE
-        # later).
-        if self.collections[collection_name].counter == 0:
-            self.collections[collection_name].load()
-
     def update_counters(self, collection_name: str):
         # Log all counters before updating them
         # print(f"Before update. Counters: {[(key, self.collections[key].counter) for key in self.collections.keys()]}")
         # Loop over collections. If the collection is not the one that was queried, decrement its counter. Else, if
         # the collection is the one that was queried, set its counter to COUNTER_MAX_VALUE.
         for key in self.collections.keys():
+            self.collections[key].lock.acquire()
             if key != collection_name:
-                self.collections[key].lock.acquire()
-                self.collections[key].counter -= 1
-                if self.collections[key].counter == 0:
+                if self.collections[key].counter == 1:
                     self.collections[key].release()
-                self.collections[key].lock.release()
+                self.collections[key].counter = max(0, self.collections[key].counter - 1)
             else:
-                self.collections[key].lock.acquire()
+                if self.collections[key].counter == 0:
+                    self.collections[key].load()
                 self.collections[key].counter = COUNTER_MAX_VALUE
-                self.collections[key].lock.release()
+            self.collections[key].lock.release()
+
         # Log all counters after updating them
         # print(f"After update. Counters: {[(key, self.collections[key].counter) for key in self.collections.keys()]}")
 
@@ -80,8 +76,6 @@ class DatasetCollectionNameGetter(CollectionNameGetter):
 
     def _call(self, collection: str = Query(...)) -> Collection | None:
         if collection in self.collections.keys():
-            # Check if the collection must be loaded
-            self.check_counter(collection)
             # Update counter for all collections
             self.update_counters(collection)
             # Return the requested collection
@@ -96,8 +90,6 @@ class ClustersCollectionNameGetter(CollectionNameGetter):
 
     def _call(self, collection: str = Query(...)) -> Collection | None:
         if collection in self.collections.keys():
-            # Check if the collection must be loaded
-            self.check_counter(collection)
             # Update counter for all collections
             self.update_counters(collection)
             # Return the requested collection
@@ -112,8 +104,6 @@ class ImageToTileCollectionNameGetter(CollectionNameGetter):
 
     def _call(self, collection: str = Query(...)) -> Collection | None:
         if collection in self.collections.keys():
-            # Check if the collection must be loaded
-            self.check_counter(collection)
             # Update counter for all collections
             self.update_counters(collection)
             # Return the requested collection
