@@ -33,14 +33,6 @@ export function fetchClusterData(url) {
             }
             return response.json();
         })
-        .then(data => {
-            // Transform data["representatives"]["entities"] from an array of strings to an array of objects
-            const entities = data["clusters_representatives"]["entities"];
-            for (let i = 0; i < entities.length; i++) {
-                entities[i] = JSON.parse(entities[i]);
-            }
-            return data;
-        })
         .catch(error => {
             // Handle any errors that occur during the fetch operation
             console.error('Error:', error);
@@ -69,13 +61,14 @@ export function fetchFirstTiles(url, signal, tilesCache) {
         .then(data => {
             // Save data in the cache. Use the triple of zoom level, tile x and tile y as key.
             // noinspection JSUnresolvedVariable
+            let range;
             for (let tile of data) {
-                // Transform data["representatives"]["entities"] from an array of strings to an array of objects
-                for (let i = 0; i < tile["clusters_representatives"]["entities"].length; i++) {
-                    tile["clusters_representatives"]["entities"][i] = JSON.parse(tile["clusters_representatives"]["entities"][i]);
+                tilesCache.set(tile["zoom_plus_tile"][0] + "-" + tile["zoom_plus_tile"][1] + "-" + tile["zoom_plus_tile"][2], tile["entities"]);
+                if (tile["zoom_plus_tile"][0] === 0) {
+                    range = tile["range"];
                 }
-                tilesCache.set(tile["zoom_plus_tile"][0] + "-" + tile["zoom_plus_tile"][1] + "-" + tile["zoom_plus_tile"][2], tile);
             }
+            return range;
         })
         .catch(error => {
             // Handle any errors that occur during the fetch operation
@@ -169,6 +162,8 @@ const ClustersMap = (props) => {
     const tilesCache = useRef(new LRUCache({
         max: 25000, // This is more or less 25MB
         fetchMethod: fetchClusterData,
+        updateAgeOnHas: true,
+        updateAgeOnGet: true
     }));
 
     // Define state for the app1
@@ -419,15 +414,15 @@ const ClustersMap = (props) => {
 
         // Fetch first zoom levels
         fetchFirstTiles(getUrlForFirstTiles(props.selectedDataset, props.host), null, tilesCache.current)
-            .then(() => {
+            .then((range) => {
                 // Get cluster data for the first zoom level
                 const data = tilesCache.current.get("0-0-0");
 
                 // Update the limits of the embedding space
-                realMinX.current = data["tile_coordinate_range"]["x_min"];
-                realMaxX.current = data["tile_coordinate_range"]["x_max"];
-                minY.current = data["tile_coordinate_range"]["y_min"];
-                maxY.current = data["tile_coordinate_range"]["y_max"];
+                realMinX.current = range["x_min"];
+                realMaxX.current = range["x_max"];
+                minY.current = range["y_min"];
+                maxY.current = range["y_max"];
 
                 // Update effective size of the stage
                 effectiveWidth.current = realMaxX.current - realMinX.current;
@@ -445,46 +440,46 @@ const ClustersMap = (props) => {
 
                 // Loop over artworks in tile and add them to the stage. Take the sprites from the sprite pool.
                 // noinspection JSUnresolvedVariable
-                for (let i = 0; i < data["clusters_representatives"]["entities"].length; i++) {
+                for (let i = 0; i < data.length; i++) {
                     // Add sprite to stage
                     addSpriteToStage(
-                        data["clusters_representatives"]["entities"][i]["representative"]["index"],
-                        data["clusters_representatives"]["entities"][i]["representative"]["path"],
-                        data["clusters_representatives"]["entities"][i]["representative"]["width"],
-                        data["clusters_representatives"]["entities"][i]["representative"]["height"],
-                        data["clusters_representatives"]["entities"][i]["representative"]["low_dimensional_embedding_x"],
-                        data["clusters_representatives"]["entities"][i]["representative"]["low_dimensional_embedding_y"],
+                        data[i]["index"],
+                        data[i]["path"],
+                        data[i]["width"],
+                        data[i]["height"],
+                        data[i]["x"],
+                        data[i]["y"],
                         true,
                         !props.searchBarIsClicked
                     );
                 }
                 // noinspection JSUnresolvedVariable
                 tilesOnStage.current.set("0-0-0",
-                    data["clusters_representatives"]["entities"].map(entity => entity["representative"]["index"]));
+                    data.map(entity => entity["index"]));
 
                 // Add artworks from the second zoom level to the stage
                 const tile_indexes = ["1-0-0", "1-0-1", "1-1-0", "1-1-1"];
                 for (let tile_index of tile_indexes) {
                     const data = tilesCache.current.get(tile_index);
                     // noinspection JSUnresolvedVariable
-                    for (let i = 0; i < data["clusters_representatives"]["entities"].length; i++) {
+                    for (let i = 0; i < data.length; i++) {
                         // Add sprite to stage
-                        if (!sprites.current.has(data["clusters_representatives"]["entities"][i]["representative"]["index"])) {
+                        if (!sprites.current.has(data[i]["index"])) {
                             addSpriteToStage(
-                                data["clusters_representatives"]["entities"][i]["representative"]["index"],
-                                data["clusters_representatives"]["entities"][i]["representative"]["path"],
-                                data["clusters_representatives"]["entities"][i]["representative"]["width"],
-                                data["clusters_representatives"]["entities"][i]["representative"]["height"],
-                                data["clusters_representatives"]["entities"][i]["representative"]["low_dimensional_embedding_x"],
-                                data["clusters_representatives"]["entities"][i]["representative"]["low_dimensional_embedding_y"],
-                                data["clusters_representatives"]["entities"][i]["is_in_previous_zoom_level"],
+                                data[i]["index"],
+                                data[i]["path"],
+                                data[i]["width"],
+                                data[i]["height"],
+                                data[i]["x"],
+                                data[i]["y"],
+                                data[i]["in_previous"],
                                 !props.searchBarIsClicked
                             );
                         }
                     }
                     // noinspection JSUnresolvedVariable
                     tilesOnStage.current.set(tile_index,
-                        data["clusters_representatives"]["entities"].map(entity => entity["representative"]["index"]));
+                        data.map(entity => entity["index"]));
                 }
             }).then(() => {
             props.setInitialLoadingDone(true);
@@ -677,27 +672,27 @@ const ClustersMap = (props) => {
 
             // Loop over artworks in tile and add them to the stage.
             // noinspection JSUnresolvedVariable
-            for (let j = 0; j < data["clusters_representatives"]["entities"].length; j++) {
+            for (let j = 0; j < data.length; j++) {
                 // Increment count
                 count += 1;
                 // Get index
-                const index = data["clusters_representatives"]["entities"][j]["representative"]["index"];
+                const index = data[j]["index"];
                 // Check if the artwork is already on stage. If it is not, add it to the stage.
                 if (!sprites.current.has(index)) {
                     // Add sprite to stage
                     addSpriteToStage(
                         index,
-                        data["clusters_representatives"]["entities"][j]["representative"]["path"],
-                        data["clusters_representatives"]["entities"][j]["representative"]["width"],
-                        data["clusters_representatives"]["entities"][j]["representative"]["height"],
-                        data["clusters_representatives"]["entities"][j]["representative"]["low_dimensional_embedding_x"],
-                        data["clusters_representatives"]["entities"][j]["representative"]["low_dimensional_embedding_y"],
-                        data["clusters_representatives"]["entities"][j]["is_in_previous_zoom_level"],
+                        data[j]["path"],
+                        data[j]["width"],
+                        data[j]["height"],
+                        data[j]["x"],
+                        data[j]["y"],
+                        data[j]["in_previous"],
                     );
                 }
                 else {
                     spritesGlobalInfo.current.get(index).is_in_previous_zoom_level
-                        = data["clusters_representatives"]["entities"][j]["is_in_previous_zoom_level"];
+                        = data[j]["in_previous"];
                     // Get position of artwork in stage coordinates.
                     const artwork_position = mapGlobalCoordinatesToStageCoordinates(
                         spritesGlobalInfo.current.get(index).x,
@@ -711,7 +706,7 @@ const ClustersMap = (props) => {
                         artwork_position.y : sprites.current.get(index).y;
 
                     // Set strength of blur filter proportional to the depth
-                    blurSprite(sprites.current.get(index), !data["clusters_representatives"]["entities"][j]["is_in_previous_zoom_level"]);
+                    blurSprite(sprites.current.get(index), !data[j]["in_previous"]);
                     // Set size of sprite
                     scaleSprite(index);
                 }
@@ -719,7 +714,7 @@ const ClustersMap = (props) => {
             // Save artworks in tiles
             // noinspection JSUnresolvedVariable
             tilesOnStage.current.set(next_zoom_level + "-" + tile.x + "-" + tile.y,
-                data["clusters_representatives"]["entities"].map(entity => entity["representative"]["index"]));
+                data.map(entity => entity["index"]));
         });
         // Do asserts to check that everything is correct
         console.assert(count === sprites.current.size);

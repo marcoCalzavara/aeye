@@ -17,14 +17,12 @@ def test_get_collection_names():
 
 def test_get_collection_info():
     # Create request
-    collection = "best_artworks"
-    response = client.get("/api/collection-info", params={"collection": collection})
+    response = client.get("/api/collection-info", params={"collection": "best_artworks"})
     assert response.status_code == 200
-    assert response.json() == {"number_of_entities": 7947, "zoom_levels": 5}
+    assert response.json() == {"number_of_entities": 7947, "zoom_levels": 7}
 
     # Make second request to test that status code is 404 when collection is not found
-    collection = "test_collection"
-    response = client.get("/api/collection-info", params={"collection": collection})
+    response = client.get("/api/collection-info", params={"collection": "test_collection"})
     assert response.status_code == 404
 
 
@@ -39,29 +37,22 @@ def test_get_image_from_text():
     assert response.json()["author"] == "Henri de Toulouse"
 
 
-def test_get_clusters_data():
-    response = client.get("/api/clusters", params={"zoom_level": 0,
-                                                   "tile_x": 0,
-                                                   "tile_y": 0,
-                                                   "collection": "best_artworks_zoom_levels_clusters"})
+def test_get_tiles():
+    response = client.get("/api/tiles", params={"indexes": [2881, 5432],
+                                                "collection": "best_artworks_zoom_levels_clusters"})
     assert response.status_code == 200
-    assert response.json().keys() == {"index", ZOOM_LEVEL_VECTOR_FIELD_NAME, "clusters_representatives",
-                                      "tile_coordinate_range"}
-    assert response.json()["clusters_representatives"].keys() == {"entities"}
-    assert list(response.json()["tile_coordinate_range"].keys()) == ['x_min', 'x_max', 'y_min', 'y_max']
-    assert response.json()[ZOOM_LEVEL_VECTOR_FIELD_NAME] == [0, 0, 0]
+    # Check that the response is a list
+    assert isinstance(response.json(), list)
+    # Check that the response has the same length as the request
+    assert len(response.json()) == 2
+    # Check that the response has the same keys as the request
+    for i in range(len(response.json())):
+        assert response.json()[i].keys() == {"index", "entities"}
+    assert response.json()[0]["index"] == 2881
+    assert response.json()[1]["index"] == 5432
 
     # Make second request to test that status code is 404 when collection is not found
-    response = client.get("/api/clusters", params={"zoom_level": 0,
-                                                   "tile_x": 0,
-                                                   "tile_y": 0,
-                                                   "collection": "test_collection"})
-    assert response.status_code == 404
-    # Check that the server returns 404 when the tile data is not found
-    response = client.get("/api/clusters", params={"zoom_level": 0,
-                                                   "tile_x": 1,
-                                                   "tile_y": 1,
-                                                   "collection": "best_artworks_zoom_levels_clusters"})
+    response = client.get("/api/tiles", params={"indexes": [2881, 5432], "collection": "test_collection"})
     assert response.status_code == 404
 
 
@@ -103,23 +94,17 @@ def test_get_neighbours():
     assert response.status_code == 404
 
 
-def test_get_caption():
-    response = client.get("/api/caption", params={"collection": "best_artworks", "index": 2881})
+def test_get_first_tiles():
+    response = client.get("/api/first-tiles", params={"collection": "best_artworks_zoom_levels_clusters"})
     assert response.status_code == 200
-    assert response.json().keys() == {"caption"}
+    assert isinstance(response.json(), list)
+    # Check keys
+    assert response.json()[0].keys() == {"index", ZOOM_LEVEL_VECTOR_FIELD_NAME, "entities", "range"}
+    for i in range(1, len(response.json())):
+        assert response.json()[i].keys() == {"index", ZOOM_LEVEL_VECTOR_FIELD_NAME, "entities"}
 
-
-def test_get_all_clusters():
-    response = client.get("/api/all-clusters", params={"collection": "best_artworks_zoom_levels_clusters"})
-    assert response.status_code == 200
-    assert response.json().keys() == {"clusters"}
-    assert len(response.json()["clusters"]) == 5
-    assert response.json()["clusters"][0].keys() == {"index", ZOOM_LEVEL_VECTOR_FIELD_NAME, "clusters_representatives",
-                                                     "tile_coordinate_range"}
-    assert response.json()["clusters"][0]["clusters_representatives"].keys() == {"entities"}
-    assert list(response.json()["clusters"][0]["tile_coordinate_range"].keys()) == ['x_min', 'x_max', 'y_min', 'y_max']
-    assert response.json()["clusters"][0][ZOOM_LEVEL_VECTOR_FIELD_NAME] == [0, 0, 0]
+    assert list(response.json()["clusters"][0]["range"].keys()) == ['x_min', 'x_max', 'y_min', 'y_max']
 
     # Make second request to test that status code is 404 when collection is not found
-    response = client.get("/api/all-clusters", params={"collection": "test_collection"})
+    response = client.get("/api/first-tiles", params={"collection": "test_collection"})
     assert response.status_code == 404

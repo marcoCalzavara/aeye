@@ -57,121 +57,21 @@ def get_image_info_from_text_embedding(collection: Collection, text_embeddings: 
 
 
 @timeit
-def get_grid_data(zoom_level: int, tile_x: int, tile_y: int, collection: Collection) -> dict:
+def get_tiles(indexes: List[int], collection: Collection) -> dict:
     """
-    Get the data for a tile at a specific zoom level from the collection.
-    @param zoom_level:
-    @param tile_x:
-    @param tile_y:
+    Get tiles from their indexes.
+    @param indexes:
     @param collection:
     @return:
     """
-    # Define search parameters
-    search_params = {
-        "metric_type": L2_METRIC,
-        "offset": 0
-    }
     # Search image
-    results = collection.search(
-        data=[[zoom_level, tile_x, tile_y]],
-        anns_field=ZOOM_LEVEL_VECTOR_FIELD_NAME,
-        param=search_params,
-        limit=1,
-        output_fields=["images", ZOOM_LEVEL_VECTOR_FIELD_NAME]
+    result = collection.query(
+        expr=f"index in {indexes}",
+        output_fields=["index", "entities", "range"]
     )
-    # The returned data point has the following format:
-    # {
-    #     "index": id_of_image,
-    #     "zoom_plus_tile": [zoom_level, tile_x, tile_y],
-    #     "images": {
-    #         "indexes": [id_1, id_2, ...],
-    #         "x_cell": [x_1, x_2, ...],
-    #         "y_cell": [y_1, y_2, ...],
-    #     }
-    # }
+    # The returned data is a list of entities.
 
-    return results[0][0].to_dict()
-
-
-@timeit
-def get_map_data(zoom_level: int, image_x: int, image_y: int, collection: Collection) -> dict:
-    """
-    Get the data for a zoom level from the collection.
-    @param zoom_level:
-    @param image_x:
-    @param image_y:
-    @param collection:
-    @return:
-    """
-    # Define search parameters
-    search_params = {
-        "metric_type": L2_METRIC,
-        "offset": 0
-    }
-    # Search image
-    results = collection.search(
-        data=[[zoom_level, image_x, image_y]],
-        anns_field=ZOOM_LEVEL_VECTOR_FIELD_NAME,
-        param=search_params,
-        limit=1,
-        output_fields=["images", "path_to_image", ZOOM_LEVEL_VECTOR_FIELD_NAME]
-    )
-    # The returned data point has the following format:
-    # {
-    #     "index": id_of_image,
-    #     "zoom_plus_tile": [zoom_level, tile_x, tile_y],
-    #     "images": {
-    #         "has_info": bool,
-    #         ?"artwork_width": artwork_width,
-    #         ?"artwork_height": artwork_height,
-    #         ?"images": [id_1, id_2, ...],
-    #         ?"x_cell": [x_1, x_2, ...],
-    #         ?"y_cell": [y_1, y_2, ...]
-    #     }
-    # }
-
-    return results[0][0].to_dict()
-
-
-@timeit
-def get_clusters_data(zoom_level: int, tile_x: int, tile_y: int, collection: Collection) -> dict:
-    """
-    Get the data for a tile at a specific zoom level from the collection.
-    @param zoom_level:
-    @param tile_x:
-    @param tile_y:
-    @param collection:
-    @return:
-    """
-    # Define search parameters
-    search_params = {
-        "metric_type": L2_METRIC,
-        "offset": 0
-    }
-    # Search image
-    results = collection.search(
-        data=[[zoom_level, tile_x, tile_y]],
-        anns_field=ZOOM_LEVEL_VECTOR_FIELD_NAME,
-        param=search_params,
-        limit=1,
-        output_fields=["*"]
-    )
-    # The returned data point has the following format:
-    # {
-    #     "index": id,
-    #     "zoom_plus_tile": [zoom_level, tile_x, tile_y],
-    #     "clusters_representatives": {
-    #        "entities": [e1, e2, ...],
-    #     },
-    #     "tile_coordinate_range": {
-    #         max_x: max_x,
-    #         min_x: min_x,
-    #         max_y: max_y,
-    #         min_y: min_y
-    #     }
-    # }
-
-    return results[0][0].to_dict()
+    return result
 
 
 @timeit
@@ -250,9 +150,9 @@ def get_neighbors(index: int, collection: Collection, top_k: int) -> List[dict]:
 
 
 @timeit
-def get_first_7_zoom_levels(collection: Collection) -> List[dict]:
+def get_first_tiles(collection: Collection) -> List[dict]:
     """
-    Get all clusters from the collection.
+    Get tiles from first 7 zoom levels.
     @param collection:
     @return:
     """

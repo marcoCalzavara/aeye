@@ -36,7 +36,7 @@ def load_vectors_from_collection(collection: Collection) -> list | None:
     # Load collection in memory
     collection.load()
     # Get low dimensional embeddings attributes
-    low_dim_attributes = (["index", "author", "path"] +
+    low_dim_attributes = (["index", "path"] +
                           ["low_dimensional_embedding_" + COORDINATES[i] for i in range(len(COORDINATES))])
 
     # Get elements from collection
@@ -83,17 +83,27 @@ def create_clusters_collection(zoom_levels,
     entities_to_insert = []
     for zoom_level in zoom_levels:
         for tile in zoom_levels[zoom_level]:
+            # Modify values in zoom_levels[zoom_level][tile]["cluster_representatives"]
+            new_representatives = []
+            for representative in zoom_levels[zoom_level][tile]["cluster_representatives"]:
+                new_representative = {"index": representative["representative"]["index"],
+                                      "path": representative["representative"]["path"],
+                                      "x": float(representative["representative"]["low_dimensional_embedding_x"]),
+                                      "y": float(representative["representative"]["low_dimensional_embedding_y"]),
+                                      "width": representative["representative"]["width"],
+                                      "height": representative["representative"]["height"],
+                                      "in_previous": representative["in_previous"]}
+                new_representatives.append(new_representative)
+
             # Create entity
             entity = {
                 "index": index,
                 ZOOM_LEVEL_VECTOR_FIELD_NAME: [zoom_level, tile[0], tile[1]],
-                "clusters_representatives": {
-                    "entities": [json.dumps(representative, cls=NumpyEncoder) for representative in
-                                 zoom_levels[zoom_level][tile]["cluster_representatives"]],
-                }
+                "entities": new_representatives
             }
             if zoom_level == 0:
-                entity["tile_coordinate_range"] = zoom_levels[zoom_level][tile]["tile_coordinate_range"]
+                entity["range"] = zoom_levels[zoom_level][tile]["tile_coordinate_range"]
+
             # Insert entity
             entities_to_insert.append(entity)
             # Increment index
@@ -369,7 +379,7 @@ def merge_clusters(old_cluster_representatives_in_current_tile, temp_cluster_rep
         {
             "representative": old_cluster_representatives_in_current_tile[k],
             "number_of_entities": 0,
-            "is_in_previous_zoom_level": True
+            "in_previous": True
         }
         for k in range(len(old_cluster_representatives_in_current_tile))
     ]
@@ -406,7 +416,7 @@ def merge_clusters(old_cluster_representatives_in_current_tile, temp_cluster_rep
                         "number_of_entities": sum([cluster["number_of_entities"] + 1
                                                    for cluster in
                                                    temp_cluster_representatives_entities[i:i + window - 1]]) - 1,
-                        "is_in_previous_zoom_level": False
+                        "in_previous": False
                     }
                 )
             else:
@@ -524,7 +534,9 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                         # Create entities list with same structure as cluster_representatives_entities
                         representative_entities = []
                         for entity in entities_in_tile:
-                            representative_entities.append({"representative": entity, "number_of_entities": 0})
+                            representative_entities.append({"representative": entity,
+                                                            "number_of_entities": 0,
+                                                            "in_previous": False})
 
                     if save_images:
                         save_image(representative_entities, dataset_collection, zoom_level, tile_x_index, tile_y_index,
@@ -600,7 +612,7 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                                 {
                                     "representative": old_cluster_representatives_in_current_tile[cluster],
                                     "number_of_entities": len(entities_in_cluster) - 1,
-                                    "is_in_previous_zoom_level": True
+                                    "in_previous": True
                                 }
                             )
 
@@ -616,7 +628,7 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                                 {
                                     "representative": min(entities_in_cluster, key=l2),
                                     "number_of_entities": len(entities_in_cluster) - 1,
-                                    "is_in_previous_zoom_level": False
+                                    "in_previous": False
                                 }
                             )
 

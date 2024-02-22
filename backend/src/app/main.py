@@ -1,16 +1,15 @@
+import logging
 from typing import List
 
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi_utils.timing import add_timing_middleware
 from pymilvus import db, MilvusException
-import logging
 
 from .database import gets
 from .dependencies import *
 from ..CONSTANTS import *
 from ..db_utilities.utils import create_connection
 from ..embeddings_model.CLIPEmbeddings import ClipEmbeddings
-
 
 # Create connection
 create_connection(ROOT_USER, ROOT_PASSWD)
@@ -79,23 +78,16 @@ def get_image_from_text(collection: Collection = Depends(dataset_collection_name
 
 
 @app.get("/api/tiles")
-def get_clusters_data(zoom_level: int,
-                      tile_x: int,
-                      tile_y: int,
-                      collection: Collection = Depends(clusters_collection_name_getter)):
+def get_tiles(indexes: List[int] = Query(...), collection: Collection = Depends(clusters_collection_name_getter)):
     if collection is None:
         # Collection not found, return 404
         raise HTTPException(status_code=404, detail="Collection not found")
     else:
         # Collection found, return tile data
         try:
-            tile_data = gets.get_clusters_data(zoom_level, tile_x, tile_y, collection)
-            # Check distance in tile data
-            if tile_data["distance"] > 0.:
-                # In the required tile is present in the database, the distance should be 0
-                raise HTTPException(status_code=404, detail="Tile data not found")
+            tile_data = gets.get_tiles(indexes, collection)
             # Return tile data
-            return tile_data["entity"]
+            return tile_data
         except MilvusException:
             # Milvus error, return code 505
             raise HTTPException(status_code=404, detail="Tile data not found")
@@ -154,14 +146,14 @@ def get_neighbours(index: int, k: int, collection: Collection = Depends(dataset_
 
 
 @app.get("/api/first-tiles")
-def get_all_clusters(collection: Collection = Depends(clusters_collection_name_getter)):
+def get_first_tiles(collection: Collection = Depends(clusters_collection_name_getter)):
     if collection is None:
         # Collection not found, return 404
         raise HTTPException(status_code=404, detail="Collection not found")
     else:
         # Collection found, return tile data
         try:
-            tile_data = gets.get_first_7_zoom_levels(collection)
+            tile_data = gets.get_first_tiles(collection)
             return tile_data
         except MilvusException:
             # Milvus error, return code 505

@@ -80,13 +80,13 @@ def clusters_collection(collection_name):
         dtype=DataType.FLOAT_VECTOR,
         dim=3
     )
-    clusters_representatives = FieldSchema(
-        name="clusters_representatives",
+    entities = FieldSchema(
+        name="entities",
         dtype=DataType.JSON
     )
     # Create collection schema
     schema = CollectionSchema(
-        fields=[index, zoom_level, clusters_representatives],
+        fields=[index, zoom_level, entities],
         description="zoom_levels_clusters",
         enable_dynamic_field=True
     )
