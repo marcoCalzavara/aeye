@@ -1,6 +1,6 @@
 // Component for showing the nearest neighbors of an image on click or on search.
 
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import Carousel from 'react-multi-carousel';
 import CarouselImageCard from "./CarouselImageCard";
 import 'react-multi-carousel/lib/styles.css';
@@ -102,6 +102,7 @@ const NeighborsCarousel = (props) => {
     const [images, setImages] = useState([]);
     const [captions, setCaptions] = useState([]);
     const [image, setImage] = useState(null);
+    const selectedDataset = useRef(props.selectedDataset);
 
 
     useEffect(() => {
@@ -113,7 +114,7 @@ const NeighborsCarousel = (props) => {
         setCaptions(captions);
 
         // Fetch neighbors from server
-        fetchNeighbors(props.clickedImageIndex, 10, props.host, props.selectedDataset)
+        fetchNeighbors(props.clickedImageIndex, 10, props.host, selectedDataset.current)
             .then(data => {
                 // Populate state images with the fetched images
                 let images = [];
@@ -172,6 +173,7 @@ const NeighborsCarousel = (props) => {
     }, [props.clickedImageIndex]);
 
     useEffect(() => {
+        selectedDataset.current = props.selectedDataset;
         setImage(null);
         setImages([]);
     }, [props.selectedDataset]);
@@ -181,8 +183,8 @@ const NeighborsCarousel = (props) => {
             {/* Place space for the main image of the carousel */}
             {image &&
                 <div className="h-image flex flex-row justify-center items-center pointer-events-auto margin-between-images-bottom">
-                    <MainImageCard placeholderSrc={getUrlForImage(image.path, props.selectedDataset, props.host)}
-                                   src={`${props.host}/${props.selectedDataset}/${image.path}`}
+                    <MainImageCard placeholderSrc={getUrlForImage(image.path, selectedDataset.current, props.host)}
+                                   src={`${props.host}/${selectedDataset.current}/${image.path}`}
                                    width={`${image.width}px`}
                                    maxWidth="90%"
                                    cursor="pointer"
@@ -222,7 +224,7 @@ const NeighborsCarousel = (props) => {
                     {images.map((image, index) => {
                         return <CarouselImageCard
                             key={index}
-                            url={getUrlForImage(image.path, props.selectedDataset, props.host)}
+                            url={getUrlForImage(image.path, selectedDataset.current, props.host)}
                             setImage={setImage}
                             image={image}/>
                     })}

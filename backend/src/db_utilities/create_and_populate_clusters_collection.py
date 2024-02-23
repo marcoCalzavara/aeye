@@ -531,12 +531,30 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                                                                  cosine_similarity_matrix)
 
                     else:
+                        # First, find out corresponding tile at the previous zoom level
+                        tile_x_prev = int(tile_x / 2)
+                        tile_y_prev = int(tile_y / 2)
+                        # Get cluster representatives from the tile at the previous zoom level
+                        representative_entities_prev = []
+                        if zoom_level != 0:
+                            representative_entities_prev = zoom_levels[zoom_level - 1][(tile_x_prev, tile_y_prev)][
+                                "cluster_representatives"]
                         # Create entities list with same structure as cluster_representatives_entities
                         representative_entities = []
                         for entity in entities_in_tile:
-                            representative_entities.append({"representative": entity,
-                                                            "number_of_entities": 0,
-                                                            "in_previous": False})
+                            # Check if the entity is in the previous zoom level
+                            in_previous = False
+                            for representative in representative_entities_prev:
+                                if entity["index"] == representative["index"]:
+                                    in_previous = True
+                                    break
+                            representative_entities.append(
+                                {
+                                    "representative": entity,
+                                    "number_of_entities": 0,
+                                    "in_previous": in_previous
+                                }
+                            )
 
                     if save_images:
                         save_image(representative_entities, dataset_collection, zoom_level, tile_x_index, tile_y_index,

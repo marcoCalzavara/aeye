@@ -5,7 +5,7 @@ import Hammer from "hammerjs";
 import {useApp} from "@pixi/react";
 import {LRUCache} from "lru-cache";
 import 'tailwindcss/tailwind.css';
-import {getTilesToFetchCurrentZoomLevel} from "./utilities";
+import {getTilesFromZoomLevel, convertIndexToTile, getTilesToFetch} from "./utilities";
 import {getUrlForImage} from "../utilities";
 
 const DURATION = 4; // seconds
@@ -21,17 +21,29 @@ function getUrlForFirstTiles(dataset, host = "") {
     return `${host}/api/first-tiles?collection=${dataset}_zoom_levels_clusters`;
 }
 
-export function fetchClusterData(url) {
+export function fetchTiles(indexes, tilesCache, pendingTiles, dataset, host) {
+    // Create url
+    const url = `${host}/api/tiles?indexes=${indexes.join("&indexes=")}&collection=${dataset}_zoom_levels_clusters`;
     return fetch(url,
         {
             method: 'GET',
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error('Cluster data could not be retrieved from the server.' +
+                throw new Error('Tile data could not be retrieved from the server.' +
                     ' Please try again later. Status: ' + response.status + ' ' + response.statusText);
             }
             return response.json();
+        })
+        .then(data => {
+            // Save data in the cache. Use the triple of zoom level, tile x and tile y as key.
+            for (let tile of data) {
+                // Get tile from index
+                const zoom_plus_tile = convertIndexToTile(tile["index"]);
+                tilesCache.set(zoom_plus_tile.zoom + "-" + zoom_plus_tile.x + "-" + zoom_plus_tile.y, tile["entities"]);
+                // Remove index from pending tiles
+                pendingTiles.delete(tile["index"]);
+            }
         })
         .catch(error => {
             // Handle any errors that occur during the fetch operation
@@ -40,7 +52,7 @@ export function fetchClusterData(url) {
 }
 
 /**
- * The function fetches the first 7 zoom levels in one unique batch at the beginning of the execution of the application.
+ * The function fetches the first few zoom levels in one unique batch at the beginning of the execution of the application.
  * @param url
  * @param signal
  * @param tilesCache The tiles cache is used to fetch the tiles. The tiles cache is an LRU cache.
@@ -161,11 +173,11 @@ const ClustersMap = (props) => {
     // Define least recently used cache for tiles. Use fetchTileData to fetch tiles.
     const tilesCache = useRef(new LRUCache({
         max: 25000, // This is more or less 25MB
-        fetchMethod: fetchClusterData,
         updateAgeOnHas: true,
         updateAgeOnGet: true
     }));
-
+    // Define set for pending tiles
+    const pendingTiles = useRef(new Set());
     // Define state for the app1
     const app = useApp()
     // Create container for the stage
@@ -619,12 +631,29 @@ const ClustersMap = (props) => {
         const tile_x = Math.min(Math.floor((effectivePosition.current.x - minX.current) / tile_step_x), number_of_tiles - 1);
         const tile_y = Math.min(Math.floor((effectivePosition.current.y - minY.current) / tile_step_y), number_of_tiles - 1);
 
-        // Get tiles
-        // const tiles = getTilesToFetch(tile_x, tile_y, effective_zoom_level, props.maxZoomLevel);
-        // Get visible tiles. The visible tiles are the tiles at the current zoom level.
-        // const visible_tiles = tiles.get(effective_zoom_level);
+        // Get indexes of tiles to fetch
+        let indexes = getTilesToFetch(tile_x, tile_y, next_zoom_level, props.maxZoomLevel, tilesCache.current);
+        // Filter out the indexes that are in the cache or in the pending tiles
+        let zoom_plus_tile;
+        indexes = indexes.filter(index => {
+            zoom_plus_tile = convertIndexToTile(index);
+            return !tilesCache.current.has(zoom_plus_tile.zoom + "-" + zoom_plus_tile.x + "-" + zoom_plus_tile.y) &&
+                !pendingTiles.current.has(index);
+        });
+        // Add the indexes to the pending tiles
+        indexes.map(index => {
+            if (!tilesCache.current.has(index)) {
+                pendingTiles.current.add(index);
+            }
+        });
 
-        const visible_tiles = getTilesToFetchCurrentZoomLevel(tile_x, tile_y, next_zoom_level);
+        // Create promise with null
+        let fetchPromise = Promise.resolve(null);
+        if (indexes.length > 0) {
+            fetchPromise = fetchTiles(indexes, tilesCache.current, pendingTiles.current, props.selectedDataset, props.host);
+        }
+        // Get visible tiles
+        const visible_tiles = getTilesFromZoomLevel(tile_x, tile_y, next_zoom_level);
 
         // Remove tiles and sprites of tiles that are not visible
         for (let tile of tilesOnStage.current.keys()) {
@@ -666,8 +695,13 @@ const ClustersMap = (props) => {
         let count = 0;
 
         // Fetch data for the visible tiles if it is not in the cache
-        visible_tiles.map(tile => {
-            //tilesCache.current.fetch(getUrlForClusterData(effective_zoom_level, tile.x, tile.y, props.selectedDataset, props.host))
+        visible_tiles.map(async tile => {
+            // Stop execution if the tilesCache does not contain the tile
+            if (!tilesCache.current.has(next_zoom_level + "-" + tile.x + "-" + tile.y)) {
+                console.log("Awaiting...");
+                await fetchPromise;
+            }
+            // Get data from tilesCache
             const data = tilesCache.current.get(next_zoom_level + "-" + tile.x + "-" + tile.y);
 
             // Loop over artworks in tile and add them to the stage.
@@ -689,10 +723,8 @@ const ClustersMap = (props) => {
                         data[j]["y"],
                         data[j]["in_previous"],
                     );
-                }
-                else {
-                    spritesGlobalInfo.current.get(index).is_in_previous_zoom_level
-                        = data[j]["in_previous"];
+                } else {
+                    spritesGlobalInfo.current.get(index).is_in_previous_zoom_level = data[j]["in_previous"];
                     // Get position of artwork in stage coordinates.
                     const artwork_position = mapGlobalCoordinatesToStageCoordinates(
                         spritesGlobalInfo.current.get(index).x,

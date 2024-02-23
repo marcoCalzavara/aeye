@@ -152,12 +152,12 @@ def get_neighbors(index: int, collection: Collection, top_k: int) -> List[dict]:
 @timeit
 def get_first_tiles(collection: Collection) -> List[dict]:
     """
-    Get tiles from first 7 zoom levels.
+    Get tiles from first few zoom levels.
     @param collection:
     @return:
     """
     # Define limit on number of entities
-    limit = min(collection.num_entities, 21845)
+    limit = min(collection.num_entities, 1365)
     results = []
     i = 0
     while i < limit:
