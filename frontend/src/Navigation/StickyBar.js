@@ -1,7 +1,7 @@
 import React, {useRef} from 'react';
 import SearchBar from "./SearchBar";
 // import {Spin as Hamburger} from 'hamburger-react'
-import { TfiInfoAlt, TfiClose } from "react-icons/tfi";
+import {TfiClose, TfiInfoAlt} from "react-icons/tfi";
 import {iconStyle} from "../styles";
 import SelectDataset from "./SelectDataset";
 
@@ -12,14 +12,8 @@ const StickyBar = (props) => {
     return (
         <div
             id="sticky-bar"
-            className="fixed top-0 w-full h-sticky flex flex-row justify-between items-center flex-gaps-1 bg-zinc-950
-             px-1/80 border-b-2 border-zinc-800 stickyBarOpacity">
-            <div className="w-1/10 h-2/3">
-                <a href="https://disco.ethz.ch/"
-                   className="w-full h-full text-white text-lg md:text-xl font-bold flex items-center">
-                    DISCOLab
-                </a>
-            </div>
+            className="fixed top-0 w-full h-sticky flex flex-row justify-between items-center flex-gaps-1 bg-transparent px-1/80">
+            <div className="w-1/10 h-2/3"/>
             {props.hasSearchBar &&
                 <SearchBar host={props.host} setSearchData={setSearchData.current}
                            setShowCarousel={props.setShowCarousel}

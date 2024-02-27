@@ -1,33 +1,20 @@
 /* Define variables for height of the carousel */
 :root {
-    --h-carousel-320: 180px;
-    --h-carousel-480: 180px;
-    --h-carousel-768: 180px;
-    --h-carousel-1024: 200px;
-    --h-carousel-1200: 230px;
     --w-carousel-320: 50%;
     --w-carousel-480: 50%;
     --w-carousel-768: 60%;
     --w-carousel-1024: 55%;
     --w-carousel-1200: 50%;
-    --h-carousel-plus-image-320: 700px;
-    --h-carousel-plus-image-480: 700px;
-    --h-carousel-plus-image-768: 700px;
-    --h-carousel-plus-image-1024: 750px;
-    --h-carousel-plus-image-1200: 850px;
-    --margin-between-images: 20px;
 }
 
 .carousel-container {
     background: transparent;
-    margin-bottom: var(--carousel-container-margin-bottom);
     pointer-events: none;
 }
 
 .carousel-div {
     background: transparent;
     width: 100%;
-    z-index: 9;
     overflow: hidden;
 }
 
@@ -37,20 +24,9 @@
 }
 
 .button {
+    flex: 0 0 auto;
     height: var(--button-size);
     width: var(--button-size);
-}
-
-.main-img{
-    border-bottom: 20px;
-}
-
-.transform-component-module_wrapper__SPB86 {
-    height: 80% !important;
-}
-
-.react-multiple-carousel__arrow {
-    pointer-events: auto;
 }
 
 /* Media queries for the width of the carousel */
@@ -87,56 +63,32 @@
 
 /* Media queries for the height for the sliding transitions */
 
-
-@media (min-width: 320px) and (max-width: 480px) {
-    :root {
-        --height-transition: var(--h-carousel-plus-image-320);
-    }
-}
-
-@media (min-width: 481px) and (max-width: 768px) {
-    :root {
-        --height-transition: var(--h-carousel-plus-image-480);
-    }
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
-    :root {
-        --height-transition: var(--h-carousel-plus-image-768);
-    }
-}
-
-@media (min-width: 1025px) and (max-width: 1200px) {
-    :root {
-        --height-transition: var(--h-carousel-plus-image-1024);
-    }
-}
-
-@media (min-width: 1201px) {
-    :root {
-        --height-transition: var(--h-carousel-plus-image-1200);
-    }
-}
-
 .max-h-carousel-plus-image {
     max-height: var(--height-transition);
 }
 
 @keyframes openAnimation {
-    0% { max-height: 0; }
-    100% { max-height: var(--height-transition); }
+    0% {
+        max-height: 0;
+    }
+    100% {
+        max-height: var(--height-transition);
+    }
 }
 
 @keyframes closeAnimation {
-    0% { max-height: var(--height-transition); }
-    100% { max-height: 0; }
+    0% {
+        max-height: var(--height-transition);
+    }
+    100% {
+        max-height: 0;
+    }
 }
 
 .height-transition {
     animation-duration: 1s;
     animation-fill-mode: both;
     overflow: hidden;
-    animation-timing-function: cubic-bezier(0, 0.5, 0, 0.5);
 }
 
 .height-transition.open {
@@ -145,6 +97,7 @@
 
 .height-transition.close {
     animation-name: closeAnimation;
+    animation-timing-function: cubic-bezier(0.1, 0.4, 0, 0.5);
 }
 
 .max-height-transition-close {
@@ -183,102 +136,8 @@
     }
 }
 
-/* Media queries for the font-size of the carousel */
-
-@media (min-width: 320px) and (max-width: 480px) {
-    .font-carousel {
-        font-size: 12px !important;
-    }
-}
-
-@media (min-width: 481px) and (max-width: 768px) {
-    .font-carousel {
-        font-size: 12px !important;
-    }
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
-    .font-carousel {
-        font-size: 12px !important;
-    }
-}
-
-@media (min-width: 1025px) and (max-width: 1200px) {
-    .font-carousel {
-        font-size: 14px !important;
-    }
-}
-
-@media (min-width: 1201px) {
-    .font-carousel {
-        font-size: 14px !important;
-    }
-}
-
-/* Media queries for the height of the carousel plus image */
-
-@media (min-width: 320px) and (max-width: 480px) {
-    .h-carousel-plus-image {
-        height: var(--h-carousel-plus-image-320);
-    }
-}
-
-@media (min-width: 481px) and (max-width: 768px) {
-    .h-carousel-plus-image {
-        height: var(--h-carousel-plus-image-480);
-    }
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
-    .h-carousel-plus-image {
-        height: var(--h-carousel-plus-image-768);
-    }
-}
-
-@media (min-width: 1025px) and (max-width: 1200px) {
-    .h-carousel-plus-image {
-        height: var(--h-carousel-plus-image-1024);
-    }
-}
-
-@media (min-width: 1201px) {
-    .h-carousel-plus-image {
-        height: var(--h-carousel-plus-image-1200);
-    }
-}
-
-/* Media queries for the height of the image */
+/* Margin between images */
 
 .margin-between-images-bottom {
     margin-bottom: var(--margin-between-images);
-}
-
-@media (min-width: 320px) and (max-width: 480px) {
-    .h-image {
-        max-height: calc(calc(var(--h-carousel-plus-image-320) - var(--h-carousel-320)) - var(--margin-between-images));
-    }
-}
-
-@media (min-width: 481px) and (max-width: 768px) {
-    .h-image {
-        max-height: calc(calc(var(--h-carousel-plus-image-480) - var(--h-carousel-480)) - var(--margin-between-images));
-    }
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
-    .h-image {
-        max-height: calc(calc(var(--h-carousel-plus-image-768) - var(--h-carousel-768)) - var(--margin-between-images));
-    }
-}
-
-@media (min-width: 1025px) and (max-width: 1200px) {
-    .h-image {
-        max-height: calc(calc(var(--h-carousel-plus-image-1024) - var(--h-carousel-1024)) - var(--margin-between-images));
-    }
-}
-
-@media (min-width: 1201px) {
-    .h-image {
-        max-height: calc(calc(var(--h-carousel-plus-image-1200) - var(--h-carousel-1200)) - var(--margin-between-images));
-    }
 }

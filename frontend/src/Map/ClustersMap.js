@@ -5,10 +5,10 @@ import Hammer from "hammerjs";
 import {useApp} from "@pixi/react";
 import {LRUCache} from "lru-cache";
 import 'tailwindcss/tailwind.css';
-import {getTilesFromZoomLevel, convertIndexToTile, getTilesToFetch} from "./utilities";
+import {convertIndexToTile, getTilesFromZoomLevel, getTilesToFetch} from "./utilities";
 import {getUrlForImage} from "../utilities";
 
-const DURATION = 4; // seconds
+const DURATION = 2; // seconds
 const SPRITEPOOLSIZE = 800;
 const BLURSTRENGTH = 1;
 const BLURSTRENGTHMAX = 2;
@@ -16,6 +16,9 @@ const BLURSTRENGTHMAX = 2;
 // const BLURSTRENGTHS = Array.from({length: NUMOFBLURSTRENGTHS}, (_, i) => i * BLURSTRENGTHMAX / (NUMOFBLURSTRENGTHS - 1));
 const QUALITY = 3;
 const INITIALALPHA = 0.5;
+// Define constant for transition steps and depth steps
+const INITIAL_TRANSITION_STEPS = 100;
+const DEPTH_STEP = 0.02;
 
 function getUrlForFirstTiles(dataset, host = "") {
     return `${host}/api/first-tiles?collection=${dataset}_zoom_levels_clusters`;
@@ -176,6 +179,8 @@ const ClustersMap = (props) => {
         updateAgeOnHas: true,
         updateAgeOnGet: true
     }));
+    // Define array of unresolved promises for fetching tiles
+    const unresolvedPromises = useRef([]);
     // Define set for pending tiles
     const pendingTiles = useRef(new Set());
     // Define state for the app1
@@ -186,9 +191,6 @@ const ClustersMap = (props) => {
     const hammer = useRef(null);
     // Define state for previous scale for pinching
     const previousScale = useRef(1);
-    // Define constant for transition steps and depth steps
-    const initial_transition_step = 100;
-    const depthStep = 0.02;
     // Create a ref that will store the current value of showCarousel
     const showCarouselRef = useRef(props.showCarousel);
     // Create a ref that will store the current value of the clicked search bar
@@ -234,7 +236,7 @@ const ClustersMap = (props) => {
                 ticker.stop();
             } else {
                 // Calculate scale factor using a sine function
-                const scaleFactor = 1 + 0.5 * Math.abs(Math.sin(elapsed / (0.2 * Math.PI)));
+                const scaleFactor = 1 + 0.5 * Math.abs(Math.sin(elapsed * Math.PI / (DURATION / 2)));
 
                 // Calculate the difference in size before and after scaling
                 const diffWidth = originalWidth * scaleFactor - originalWidth;
@@ -248,6 +250,11 @@ const ClustersMap = (props) => {
             }
         });
         ticker.start();
+    }
+
+    const openCarousel = (index) => {
+        props.setClickedImageIndex(index);
+        props.setShowCarousel(true);
     }
 
     const blurSprite = (sprite, blur) => {
@@ -325,7 +332,7 @@ const ClustersMap = (props) => {
         });
     }
 
-    const addSpriteToStage = (index, path, width, height, global_x, global_y, is_in_previous_zoom_level, blur=false) => {
+    const addSpriteToStage = (index, path, width, height, global_x, global_y, is_in_previous_zoom_level, blur = false) => {
         // Get sprite from sprite pool
         const sprite = spritePool.current.pop();
         // Add sprite to sprites
@@ -648,9 +655,8 @@ const ClustersMap = (props) => {
         });
 
         // Create promise with null
-        let fetchPromise = Promise.resolve(null);
         if (indexes.length > 0) {
-            fetchPromise = fetchTiles(indexes, tilesCache.current, pendingTiles.current, props.selectedDataset, props.host);
+            unresolvedPromises.current.push(fetchTiles(indexes, tilesCache.current, pendingTiles.current, props.selectedDataset, props.host));
         }
         // Get visible tiles
         const visible_tiles = getTilesFromZoomLevel(tile_x, tile_y, next_zoom_level);
@@ -698,8 +704,7 @@ const ClustersMap = (props) => {
         visible_tiles.map(async tile => {
             // Stop execution if the tilesCache does not contain the tile
             if (!tilesCache.current.has(next_zoom_level + "-" + tile.x + "-" + tile.y)) {
-                console.log("Awaiting...");
-                await fetchPromise;
+                await Promise.all(unresolvedPromises.current);
             }
             // Get data from tilesCache
             const data = tilesCache.current.get(next_zoom_level + "-" + tile.x + "-" + tile.y);
@@ -780,19 +785,29 @@ const ClustersMap = (props) => {
         final_effective_position_y = Math.max(Math.min(final_effective_position_y, maxY.current - effectiveHeight.current), minY.current);
 
         // Define steps
-        let step_x = (final_effective_position_x - effectivePosition.current.x) / initial_transition_step;
-        let step_y = (final_effective_position_y - effectivePosition.current.y) / initial_transition_step;
+        let step_x = (final_effective_position_x - effectivePosition.current.x) / INITIAL_TRANSITION_STEPS;
+        let step_y = (final_effective_position_y - effectivePosition.current.y) / INITIAL_TRANSITION_STEPS;
+
+        console.log("Step x: ", step_x, "Step y: ", step_y);
 
         // If both steps are 0, then we do not need to do anything
-        if (step_x <= 0.0001 && step_y <= 0.0001) {
+        if (Math.abs(step_x) <= 0.0001 && Math.abs(step_y) <= 0.0001) {
             return Promise.resolve();
         }
 
         // Define variable for transition steps
-        let transition_steps = initial_transition_step;
+        let transition_steps = INITIAL_TRANSITION_STEPS;
         // If the biggest step size is smaller than 0.005, halve the number of transition steps.
         if (Math.max(Math.abs(step_x), Math.abs(step_y)) < 0.005) {
-            transition_steps = Math.ceil(initial_transition_step / 2);
+            transition_steps = Math.ceil(INITIAL_TRANSITION_STEPS / 2);
+            step_x = (final_effective_position_x - effectivePosition.current.x) / transition_steps;
+            step_y = (final_effective_position_y - effectivePosition.current.y) / transition_steps;
+        } else if (Math.max(Math.abs(step_x), Math.abs(step_y)) > 0.01) {
+            transition_steps = Math.ceil(INITIAL_TRANSITION_STEPS * 4);
+            step_x = (final_effective_position_x - effectivePosition.current.x) / transition_steps;
+            step_y = (final_effective_position_y - effectivePosition.current.y) / transition_steps;
+        } else if (Math.max(Math.abs(step_x), Math.abs(step_y)) > 0.05) {
+            transition_steps = Math.ceil(INITIAL_TRANSITION_STEPS * 8);
             step_x = (final_effective_position_x - effectivePosition.current.x) / transition_steps;
             step_y = (final_effective_position_y - effectivePosition.current.y) / transition_steps;
         }
@@ -810,20 +825,24 @@ const ClustersMap = (props) => {
                     console.log("Translation ticker stopped");
                     // Stop ticker
                     translation_ticker.stop();
+                    // Update stage
+                    updateStage();
                     resolve();
                 } else {
-                    effectivePosition.current.x += step_x;
-                    effectivePosition.current.y += step_y;
-                    // Check if we have gone too far. If so, set the position to the target position.
-                    if (Math.sign(step_x) === Math.sign(effectivePosition.current.x - final_effective_position_x)
-                        && Math.sign(step_y) === Math.sign(effectivePosition.current.y - final_effective_position_y)) {
+                    // Check if adding the step would make us go over the target position. If so, set the position to the
+                    // target position.
+                    if (Math.sign(step_x) === Math.sign(final_effective_position_x - effectivePosition.current.x))
+                        effectivePosition.current.x += step_x;
+                    else
                         effectivePosition.current.x = final_effective_position_x;
+                    if (Math.sign(step_y) === Math.sign(final_effective_position_y - effectivePosition.current.y))
+                        effectivePosition.current.y += step_y;
+                    else
                         effectivePosition.current.y = final_effective_position_y;
-                    }
                     // Increment counter
                     counter++;
                     // Update stage
-                    updateStageThrottled();
+                    updateStage();
                 }
             });
 
@@ -839,17 +858,18 @@ const ClustersMap = (props) => {
             zoom_ticker.add(() => {
                 if (zoomLevel.current === tile[0] && depth.current === 0) {
                     // Stop ticker
-                    console.log("Zoom ticker stopped");
                     zoom_ticker.stop();
+                    // Update stage
+                    updateStage();
                     resolve();
                 } else {
                     // Change depth by 0.05. If the depth is -1 or 1, then change zoom level by 1 and reset depth sum or
                     // subtract 1 from delta.
                     let delta;
                     if (zoomLevel.current !== tile[0]) {
-                        delta = Math.sign(tile[0] - zoomLevel.current) * depthStep;
+                        delta = Math.sign(tile[0] - zoomLevel.current) * DEPTH_STEP;
                     } else {
-                        delta = -Math.sign(depth.current) * depthStep; // If depth is greater than 0, then we have to reduce
+                        delta = -Math.sign(depth.current) * DEPTH_STEP; // If depth is greater than 0, then we have to reduce
                         // depth by 0.05, hence we have to subtract 0.05 from delta. If depth is smaller than 0, then we have
                         // to increase depth by 0.05, hence we have to add 0.05 to delta.
                     }
@@ -867,7 +887,7 @@ const ClustersMap = (props) => {
                     const translation_x = position.x - effectivePosition.current.x
                     const translation_y = position.y - effectivePosition.current.y;
                     // Change the effective size of the stage.
-                    effectiveWidth.current = (maxX.current - minX.current) / (2 ** (zoomLevel.current + depth.current));
+                    effectiveWidth.current = (realMaxX.current - realMinX.current) / (2 ** (zoomLevel.current + depth.current));
                     effectiveHeight.current = (maxY.current - minY.current) / (2 ** (zoomLevel.current + depth.current));
 
                     // Change the effective position of the stage. Make sure that it does not exceed the limits of the embedding space.
@@ -888,7 +908,7 @@ const ClustersMap = (props) => {
                     }
 
                     // Update stage
-                    updateStageThrottled();
+                    updateStage();
                 }
             });
             zoom_ticker.start();
@@ -897,12 +917,16 @@ const ClustersMap = (props) => {
 
     // Create function for handling click on image or search
     const moveToImage = async (tile, image) => {
+        // Close the carousel if it is open
+        if (props.showCarousel) {
+            props.setShowCarousel(false);
+        }
+
         // Make container not interactive.
         container.current.interactive = false;
         container.current.interactiveChildren = false;
 
         // 1. Transition to the new location in the embedding space without changing the zoom level.
-
         // Wait for first translation ticker to finish
         await awaitTranslationTicker(image);
 
@@ -912,14 +936,18 @@ const ClustersMap = (props) => {
         // Wait for second translation ticker to finish
         await awaitTranslationTicker(image);
 
-        // Make container interactive again
-        container.current.interactive = true;
-        container.current.interactiveChildren = true;
-
         // 2. Pulse the sprite of the image that was clicked on.
         setTimeout(() => {
             pulseIfAvailable(image.index);
         }, 10);
+
+        // 3. Open the carousel after the transition is finished.
+        setTimeout(() => {
+            openCarousel(image.index);
+            // Make container interactive again
+            container.current.interactive = true;
+            container.current.interactiveChildren = true;
+        }, DURATION * 1000 + 10);
     }
 
     // Create handler for mouse down

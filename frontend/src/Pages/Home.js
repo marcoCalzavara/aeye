@@ -10,12 +10,10 @@ import ReactLoading from "react-loading";
 import Typography from "@mui/material/Typography";
 import {TfiAngleDown, TfiAngleUp} from "react-icons/tfi";
 import {
-    getResponsiveHeight,
     getButtonSize,
-    getResponsiveMargin,
-    getCarouselContainerMarginTop,
     getCarouselContainerMarginBottom,
-
+    getCarouselContainerMarginTop,
+    getResponsiveMargin,
 } from "../utilities";
 // import HamburgerMenu from "../Navigation/HamburgerMenu";
 
@@ -103,7 +101,7 @@ function extractHost() {
 const computeStageDimensions = () => {
     return {
         width: window.innerWidth - 2 * getResponsiveMargin().replace('px', ''),
-        height: window.innerHeight - getResponsiveHeight().replace('px', '')
+        height: window.innerHeight /*- getResponsiveHeight().replace('px', '')*/
             - getCarouselContainerMarginTop().replace('px', '') - getCarouselContainerMarginBottom().replace('px', '')
             - getButtonSize().replace('px', '')
     };
@@ -111,7 +109,7 @@ const computeStageDimensions = () => {
 
 const computeEmbeddingStateDimensions = () => {
     // First, get height, then adjust width based on aspect ratio
-    const height = window.innerHeight - getResponsiveHeight().replace('px', '')
+    const height = window.innerHeight /*- getResponsiveHeight().replace('px', '')*/
         - getCarouselContainerMarginTop().replace('px', '') - getCarouselContainerMarginBottom().replace('px', '')
         - getButtonSize().replace('px', '');
     const width = Math.ceil(height * ASPECT_RATIO);
@@ -227,7 +225,8 @@ const Home = (props) => {
                     {/*    setSelectedDataset={setSelectedDataset}*/}
                     {/*    setPage={props.setPage}*/}
                     {/*/>*/}
-                    <div className="bg-black flex flex-col items-center justify-center mt-sticky m-canvas-side mainContentOpacity">
+                    {/*<div className="bg-black flex flex-col items-center justify-center mt-sticky m-canvas-side mainContentOpacity">*/}
+                    <div className="bg-black flex flex-col items-center justify-center m-canvas-top m-canvas-side">
                         <Stage width={dimensionsStage.width}
                                height={dimensionsStage.height}
                                raf={true}
@@ -251,18 +250,18 @@ const Home = (props) => {
                                          searchBarIsClicked={props.searchBarIsClicked}
                             />
                         </Stage>
-                        <div id="carousel"
-                             className="z-50 w-full bg-transparent carousel-container flex flex-col items-center justify-center"
-                             style={
-                                 {
-                                     marginTop: {showCarousel} ? '0' : getCarouselContainerMarginTop(),
-                                     position: 'absolute',
-                                     bottom: {showCarousel} ? '0' : '-100%'
-                                 }
-                             }>
+                        <div
+                            className="w-full bg-transparent carousel-container flex flex-col items-center justify-center z-50"
+                            style={
+                                {
+                                    marginTop: {showCarousel} ? '0' : getCarouselContainerMarginTop(),
+                                    position: 'absolute',
+                                    bottom: {showCarousel} ? getCarouselContainerMarginBottom() : '-100%'
+                                }
+                            }>
                             {clickedImageIndex !== -1 && (
                                 <button
-                                    className="z-50 mb-1 flex flex-row items-center justify-center button pointer-events-auto"
+                                    className="mb-1 flex flex-row items-center justify-center button pointer-events-auto"
                                     onPointerDown={() => {
                                         if (clickedImageIndex !== -1) {
                                             setShowCarousel(!showCarousel);
@@ -277,12 +276,13 @@ const Home = (props) => {
                                         <TfiAngleUp style={{zIndex: 1000}} className="text-white button"/>}
                                 </button>
                             )}
-                            <div
-                                className={`z-50 flex flex-col items-center justify-center bg-transparent carousel-div max-h-carousel-plus-image 
-                                ${!pageHasChanged ? (showCarousel && clickedImageIndex !== -1 ? 'height-transition open' : 'height-transition close') : ''}
-                                ${pageHasChanged ? 'max-height-transition-close' : ''}`}>
+                            <div id="carousel-id"
+                                 className={`bg-transparent carousel-div max-h-carousel-plus-image flex flex-col items-center justify-center z-50
+                                 ${!pageHasChanged ? (showCarousel && clickedImageIndex !== -1 ? 'height-transition open' : 'height-transition close') : ''}
+                                 ${pageHasChanged ? 'max-height-transition-close' : ''}`}>
                                 {clickedImageIndex !== -1 &&
                                     <NeighborsCarousel host={host.current} clickedImageIndex={clickedImageIndex}
+                                                       setClickedImageIndex={setClickedImageIndex}
                                                        selectedDataset={selectedDataset}/>}
                             </div>
                         </div>

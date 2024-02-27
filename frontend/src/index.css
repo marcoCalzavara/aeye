@@ -10,11 +10,17 @@
     --h-sticky-1024: 84px;
     --h-sticky-1200: 90px;
 
-    --m-canvas-side-320: 15px;
-    --m-canvas-side-480: 20px;
-    --m-canvas-side-768: 32px;
-    --m-canvas-side-1024: 32px;
-    --m-canvas-side-1200: 32px;
+    --m-canvas-side-320: 10px;
+    --m-canvas-side-480: 15px;
+    --m-canvas-side-768: 20px;
+    --m-canvas-side-1024: 20px;
+    --m-canvas-side-1200: 20px;
+
+    --m-canvas-top-320: 10px;
+    --m-canvas-top-480: 15px;
+    --m-canvas-top-768: 20px;
+    --m-canvas-top-1024: 20px;
+    --m-canvas-top-1200: 20px;
 
     --searchbar-width-320: 200px;
     --searchbar-width-480: 300px;
@@ -38,6 +44,15 @@
     --button-size: 20px;
     --carousel-container-margin-top: 5px;
     --carousel-container-margin-bottom: 15px;
+
+
+    --margin-between-images: 20px;
+    --h-carousel-320: 180px;
+    --h-carousel-480: 180px;
+    --h-carousel-768: 180px;
+    --h-carousel-1024: 200px;
+    --h-carousel-1200: 220px;
+    --height-transition: 87vh;
 }
 
 /* Media queries for the height of the sticky bar */
@@ -138,6 +153,38 @@
     .m-canvas-side {
         margin-left: var(--m-canvas-side-1200);
         margin-right: var(--m-canvas-side-1200);
+    }
+}
+
+/* Media queries for the margin on the top of the canvas */
+
+@media (min-width: 320px) and (max-width: 480px) {
+    .m-canvas-top {
+        margin-top: var(--m-canvas-top-320);
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    .m-canvas-top {
+        margin-top: var(--m-canvas-top-480);
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .m-canvas-top {
+        margin-top: var(--m-canvas-top-768);
+    }
+}
+
+@media (min-width: 1025px) and (max-width: 1200px) {
+    .m-canvas-top {
+        margin-top: var(--m-canvas-top-1024);
+    }
+}
+
+@media (min-width: 1201px) {
+    .m-canvas-top {
+        margin-top: var(--m-canvas-top-1200);
     }
 }
 

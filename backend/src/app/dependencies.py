@@ -145,6 +145,7 @@ class Updater:
         self.lock = threading.Lock()
 
     def __call__(self):
+        print("Updater called")
         # Acquire lock
         self.lock.acquire()
         try:

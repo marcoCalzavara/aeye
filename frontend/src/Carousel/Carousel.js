@@ -9,6 +9,8 @@ import './carousel.css';
 import MainImageCard from "./MainImageCard";
 
 
+const NUM_OF_NEIGHBORS = 10;
+const TEMP_ARRAY = Array(NUM_OF_NEIGHBORS).fill({path: "", index: -1, author: "", width: 0, height: 0, genre: "", title: "", date: -1});
 const responsive = {
     desktop: {
         breakpoint: {
@@ -33,25 +35,6 @@ const responsive = {
     }
 };
 
-const generateText = (image) => {
-    const author = image.author.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-    let text = ["Author: " + author + "."];
-    if (image.title !== undefined) {
-        // Capitalize first letter of each word
-        const title = image.title.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-        text.push("Title: " + title + ".");
-    }
-    if (image.genre !== undefined) {
-        text.push("Genre: " + image.genre + ".");
-    }
-    if (image.date !== undefined) {
-        if (image.date !== -1) {
-            text.push("Date: " + image.date + ".");
-        }
-    }
-    return text;
-}
-
 function fetchNeighbors(index, k, host, dataset) {
     // The function takes in an index of an image, and fetches the nearest neighbors of the image from the server.
     // Then it populates the state images with the fetched images.
@@ -74,47 +57,29 @@ function fetchNeighbors(index, k, host, dataset) {
 }
 
 
-function fetchCaption(images, i, host, dataset) {
-    // The function takes in a list of images, and fetches the captions of the images from the server.
-    // Then it populates the state images with the fetched images.
-    const url = `${host}/api/caption?index=${images[i].index}&collection=${dataset}`;
-    return fetch(url,
-        {
-            method: 'GET',
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Caption could not be retrieved from the server.' +
-                    ' Please try again later. Status: ' + response.status + ' ' + response.statusText);
-            }
-            return response.json();
-        })
-        .catch(error => {
-            // Handle any errors that occur during the fetch operation
-            console.error('Error:', error);
-        });
-}
-
-
 const NeighborsCarousel = (props) => {
     // Define state for images to show. The state consists of pairs (path, text), where path is the path to the image
     // and text is the text associated to the image.
-    const [images, setImages] = useState([]);
-    const [captions, setCaptions] = useState([]);
-    const [image, setImage] = useState(null);
+    const [images, setImages] = useState(TEMP_ARRAY);
+    // const [captions, setCaptions] = useState([]);
+    const [image, setImage] = useState(TEMP_ARRAY[0]);
     const selectedDataset = useRef(props.selectedDataset);
 
 
     useEffect(() => {
         // Initialize captions to "Generating captions..."
-        let captions = [];
-        for (let i = 0; i < 10; i++) {
-            captions.push("Generating captions...");
-        }
-        setCaptions(captions);
+        // let captions = [];
+        // for (let i = 0; i < 10; i++) {
+        //     captions.push("Generating captions...");
+        // }
+        // setCaptions(captions);
+
+        // Empty the state images
+        setImages(TEMP_ARRAY);
+        setImage({path: "", index: -1, author: "", width: image.width, height: image.height, genre: "", title: "", date: -1});
 
         // Fetch neighbors from server
-        fetchNeighbors(props.clickedImageIndex, 10, props.host, selectedDataset.current)
+        fetchNeighbors(props.clickedImageIndex, NUM_OF_NEIGHBORS, props.host, selectedDataset.current)
             .then(data => {
                 // Populate state images with the fetched images
                 let images = [];
@@ -125,7 +90,8 @@ const NeighborsCarousel = (props) => {
                         path: image.path,
                         index: image.index,
                         author: image.author,
-                        width: image.width
+                        width: image.width,
+                        height: image.height
                     }
                     // noinspection JSUnresolvedVariable
                     if (image.genre !== undefined) {
@@ -155,7 +121,7 @@ const NeighborsCarousel = (props) => {
                 setImages(images);
                 return images
             })
-            .then(images => {
+            // .then(images => {
                 // Fetch captions from server
                 /*
                 for (let i = 0; i < images.length; i++) {
@@ -169,7 +135,7 @@ const NeighborsCarousel = (props) => {
                             });
                         });
                 } */
-            });
+            // });
     }, [props.clickedImageIndex]);
 
     useEffect(() => {
@@ -182,18 +148,12 @@ const NeighborsCarousel = (props) => {
         <>
             {/* Place space for the main image of the carousel */}
             {image &&
-                <div className="h-image flex flex-row justify-center items-center pointer-events-auto margin-between-images-bottom">
-                    <MainImageCard placeholderSrc={getUrlForImage(image.path, selectedDataset.current, props.host)}
-                                   src={`${props.host}/${selectedDataset.current}/${image.path}`}
-                                   width={`${image.width}px`}
-                                   maxWidth="90%"
-                                   cursor="pointer"
-                                   objectFit="fit"
-                                   text={generateText(image)}/>
-                </div>
+                <MainImageCard image={image}
+                               placeholderSrc={getUrlForImage(image.path, selectedDataset.current, props.host)}
+                               src={`${props.host}/${selectedDataset.current}/${image.path}`}/>
 
             }
-            <div className="w-full h-carousel flex flex-row justify-center items-center">
+            <div className="w-full h-carousel flex flex-row justify-center items-center pointer-events-auto">
                 <Carousel
                     additionalTransfrom={0}
                     arrows
@@ -225,8 +185,8 @@ const NeighborsCarousel = (props) => {
                         return <CarouselImageCard
                             key={index}
                             url={getUrlForImage(image.path, selectedDataset.current, props.host)}
-                            setImage={setImage}
-                            image={image}/>
+                            setClickedImageIndex={props.setClickedImageIndex}
+                            index={image.index}/>
                     })}
                 </Carousel>
             </div>

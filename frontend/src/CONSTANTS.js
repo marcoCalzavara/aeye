@@ -27,3 +27,15 @@ export const button_size = getComputedStyle(document.documentElement).getPropert
 export const carousel_container_margin_top = getComputedStyle(document.documentElement).getPropertyValue("--carousel-container-margin-top");
 
 export const carousel_container_margin_bottom = getComputedStyle(document.documentElement).getPropertyValue("--carousel-container-margin-bottom");
+
+export const height_transition = getComputedStyle(document.documentElement).getPropertyValue("--height-transition");
+
+export const margin_between_images_bottom = getComputedStyle(document.documentElement).getPropertyValue("--margin-between-images");
+
+export const responsive_carousel_heights = {
+    h_carousel_320: getComputedStyle(document.documentElement).getPropertyValue("--h-carousel-320"),
+    h_carousel_480: getComputedStyle(document.documentElement).getPropertyValue("--h-carousel-480"),
+    h_carousel_768: getComputedStyle(document.documentElement).getPropertyValue("--h-carousel-768"),
+    h_carousel_1024: getComputedStyle(document.documentElement).getPropertyValue("--h-carousel-1024"),
+    h_carousel_1200: getComputedStyle(document.documentElement).getPropertyValue("--h-carousel-1200"),
+};

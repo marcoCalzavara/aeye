@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import {useEffect, useState} from "react";
 
-const ProgressiveImg = ({ placeholderSrc, src, width, maxWidth, cursor, objectFit }) => {
+const ProgressiveImg = ({placeholderSrc, src, width, height, margin}) => {
     const [imgSrc, setImgSrc] = useState(placeholderSrc);
 
     useEffect(() => {
@@ -16,18 +16,22 @@ const ProgressiveImg = ({ placeholderSrc, src, width, maxWidth, cursor, objectFi
     }, [placeholderSrc]);
 
     return (
-        <img
-            {...{ src: imgSrc, width, cursor }}
-            alt={""}
-            style={{
-                objectFit: objectFit,
-                maxWidth: maxWidth,
-                maxHeight: "100%",
-                paddingRight: "2%",
-                paddingBottom: "2%",
-                paddingTop: "2%",
-            }}
-        />
+        <div style={{
+            marginTop: margin,
+            width: width,
+            height: height,
+        }}>
+            <img
+                {...{src: imgSrc}}
+                alt={"Main image"}
+                style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "fill",
+                    borderRadius: "5px",
+                }}
+            />
+        </div>
     );
 };
 export default ProgressiveImg;
