@@ -47,7 +47,7 @@ def test_get_tiles():
     assert len(response.json()) == 2
     # Check that the response has the same keys as the request
     for i in range(len(response.json())):
-        assert response.json()[i].keys() == {"index", "entities"}
+        assert response.json()[i].keys() == {"index", "data"}
     assert response.json()[0]["index"] == 2881
     assert response.json()[1]["index"] == 5432
 
@@ -99,9 +99,9 @@ def test_get_first_tiles():
     assert response.status_code == 200
     assert isinstance(response.json(), list)
     # Check keys
-    assert response.json()[0].keys() == {"index", ZOOM_LEVEL_VECTOR_FIELD_NAME, "entities", "range"}
+    assert response.json()[0].keys() == {"index", "data", "range"}
     for i in range(1, len(response.json())):
-        assert response.json()[i].keys() == {"index", ZOOM_LEVEL_VECTOR_FIELD_NAME, "entities"}
+        assert response.json()[i].keys() == {"index", "data"}
 
     assert list(response.json()["clusters"][0]["range"].keys()) == ['x_min', 'x_max', 'y_min', 'y_max']
 

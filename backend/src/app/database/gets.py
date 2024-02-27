@@ -67,7 +67,7 @@ def get_tiles(indexes: List[int], collection: Collection) -> dict:
     # Search image
     result = collection.query(
         expr=f"index in {indexes}",
-        output_fields=["index", "entities", "range"]
+        output_fields=["index", "data"]
     )
     # The returned data is a list of entities.
 
@@ -165,15 +165,10 @@ def get_first_tiles(collection: Collection) -> List[dict]:
         # Search image
         results += collection.query(
             expr=f"index in {list(range(i, i + search_limit))}",
-            output_fields=["*"],
+            output_fields=["index", "data", "range"],
             limit=search_limit
         )
         i += 16384
-
-    # Convert all float values to int
-    if len(results) > 0:
-        for result in results:
-            result[ZOOM_LEVEL_VECTOR_FIELD_NAME] = [int(x) for x in result[ZOOM_LEVEL_VECTOR_FIELD_NAME]]
 
     print(f"Number of entities: {len(results)}")
     # Return results

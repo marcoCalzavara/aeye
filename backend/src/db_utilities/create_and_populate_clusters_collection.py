@@ -35,9 +35,8 @@ class NumpyEncoder(json.JSONEncoder):
 def load_vectors_from_collection(collection: Collection) -> list | None:
     # Load collection in memory
     collection.load()
-    # Get low dimensional embeddings attributes
-    low_dim_attributes = (["index", "path"] +
-                          ["low_dimensional_embedding_" + COORDINATES[i] for i in range(len(COORDINATES))])
+    # Get attributes
+    attributes = (["index", "path", "width", "height"] + [COORDINATES[i] for i in range(len(COORDINATES))])
 
     # Get elements from collection
     entities = []
@@ -47,7 +46,7 @@ def load_vectors_from_collection(collection: Collection) -> list | None:
                 # Get SEARCH_LIMIT entities
                 query_result = collection.query(
                     expr=f"index in {list(range(i, i + SEARCH_LIMIT))}",
-                    output_fields=low_dim_attributes
+                    output_fields=attributes
                 )
                 # Add entities to the list of entities
                 entities += query_result
@@ -68,12 +67,6 @@ def create_clusters_collection(zoom_levels,
         num_entities = Collection(collection_name).num_entities
         print(f"Found collection {collection_name}. It has {num_entities} entities. Dropping it.")
         utility.drop_collection(collection_name)
-    elif utility.has_collection(collection_name) and not repopulate:
-        # Get number of entities in the collection
-        num_entities = Collection(collection_name).num_entities
-        print(f"Found collection {collection_name}. It has {num_entities} entities."
-              f" Not dropping it. Set repopulate to True to drop it.")
-        return
 
     # Create collection and index
     collection = clusters_collection(collection_name)
@@ -81,44 +74,52 @@ def create_clusters_collection(zoom_levels,
     # Populate collection
     index = 0
     entities_to_insert = []
-    for zoom_level in zoom_levels:
-        for tile in zoom_levels[zoom_level]:
-            # Modify values in zoom_levels[zoom_level][tile]["cluster_representatives"]
-            new_representatives = []
-            for representative in zoom_levels[zoom_level][tile]["cluster_representatives"]:
-                new_representative = {"index": representative["representative"]["index"],
-                                      "path": representative["representative"]["path"],
-                                      "x": float(representative["representative"]["low_dimensional_embedding_x"]),
-                                      "y": float(representative["representative"]["low_dimensional_embedding_y"]),
-                                      "width": representative["representative"]["width"],
-                                      "height": representative["representative"]["height"],
-                                      "in_previous": representative["in_previous"]}
-                new_representatives.append(new_representative)
+    for zoom_level in zoom_levels.keys():
+        for tile_x in zoom_levels[zoom_level].keys():
+            for tile_y in zoom_levels[zoom_level][tile_x].keys():
+                new_representatives = []
+                for representative in zoom_levels[zoom_level][tile_x][tile_y]["representatives"]:
+                    new_representative = {
+                        "index": int(representative["representative"]["index"]),
+                        "path": str(representative["representative"]["path"]),
+                        "x": float(representative["representative"]["x"]),
+                        "y": float(representative["representative"]["y"]),
+                        "width": int(representative["representative"]["width"]),
+                        "height": int(representative["representative"]["height"]),
+                        "in_previous": bool(representative["in_previous"])
+                    }
+                    new_representatives.append(new_representative)
 
-            # Create entity
-            entity = {
-                "index": index,
-                ZOOM_LEVEL_VECTOR_FIELD_NAME: [zoom_level, tile[0], tile[1]],
-                "entities": new_representatives
-            }
-            if zoom_level == 0:
-                entity["range"] = zoom_levels[zoom_level][tile]["tile_coordinate_range"]
+                # Create entity
+                entity = {
+                    "index": index,
+                    ZOOM_LEVEL_VECTOR_FIELD_NAME: [zoom_level, tile_x, tile_y],
+                    "data": new_representatives
+                }
 
-            # Insert entity
-            entities_to_insert.append(entity)
-            # Increment index
-            index += 1
+                if zoom_level == 0:
+                    entity["range"] = {
+                        "x_min": float(zoom_levels[zoom_level][tile_x][tile_y]["range"]["x_min"]),
+                        "x_max": float(zoom_levels[zoom_level][tile_x][tile_y]["range"]["x_max"]),
+                        "y_min": float(zoom_levels[zoom_level][tile_x][tile_y]["range"]["y_min"]),
+                        "y_max": float(zoom_levels[zoom_level][tile_x][tile_y]["range"]["y_max"])
+                    }
+
+                # Insert entity
+                entities_to_insert.append(entity)
+                # Increment index
+                index += 1
 
     # Insert entities in the collection
     # Insert entities in batches of INSERT_SIZE
     for i in range(0, len(entities_to_insert), INSERT_SIZE):
         try:
-            collection.insert(data=entities_to_insert[i:i + INSERT_SIZE])
-            # Flush data to disk
+            collection.insert(data=[entities_to_insert[j] for j in range(i, i + INSERT_SIZE)
+                                    if j < len(entities_to_insert)])
             collection.flush()
         except Exception as e:
-            print(e.__str__())
             print("Error in create_collection_with_zoom_levels.")
+            print(e.__str__())
             # Drop collection to avoid inconsistencies
             utility.drop_collection(collection_name)
             return
@@ -159,8 +160,8 @@ def create_image_to_tile_collection(images_to_tile: dict, collection_name: str, 
     # Insert entities in batches of INSERT_SIZE
     for i in range(0, len(entities_to_insert), INSERT_SIZE):
         try:
-            collection.insert(data=entities_to_insert[i:i + INSERT_SIZE])
-            # Flush data to disk
+            collection.insert(data=[entities_to_insert[j] for j in range(i, i + INSERT_SIZE)
+                                    if j < len(entities_to_insert)])
             collection.flush()
         except Exception as e:
             print(e.__str__())
@@ -173,15 +174,7 @@ def create_image_to_tile_collection(images_to_tile: dict, collection_name: str, 
     print(f"Successfully created collection {collection_name}.")
 
 
-def create_tiling(entities) -> tuple[list[list[list[dict]]], int, list[list[dict]]]:
-    # The first zoom level consists of a low resolution image with all the artworks displayed. The second zoom level
-    # consists of a grid of 2x2 tiles, each containing a portion of the embedding space, whose size is the same across
-    # all zoom levels. The third zoom level consists of a grid of 4x4 tiles, each containing a portion of the embedding
-    # space, and so on. The number of zoom levels is defined by the dataset.
-    # Each tile is an image of fixed size, so we can increase the overall perceived resolution by increasing the number
-    # of tiles. The number of tiles is 2^zoom_levels, so the number of tiles is doubled at each zoom level.
-    # Each image is 1280x920 pixels.
-
+def create_tiling(entities) -> tuple[list[list[list[dict]]], int]:
     # Randomly shuffle the entities.
     np.random.shuffle(entities)
 
@@ -189,64 +182,46 @@ def create_tiling(entities) -> tuple[list[list[list[dict]]], int, list[list[dict
     max_values = {}
     min_values = {}
     for coordinate in COORDINATES:
-        max_values[coordinate] = max([entity["low_dimensional_embedding_" + coordinate] for entity in entities])
-        min_values[coordinate] = min([entity["low_dimensional_embedding_" + coordinate] for entity in entities])
+        max_values[coordinate] = max([entity[coordinate] for entity in entities])
+        min_values[coordinate] = min([entity[coordinate] for entity in entities])
 
     # For reference, a tile is a list of dictionaries, each dictionary containing the following keys:
     # "index": index of the entity in the collection
-    # "low_dimensional_embedding_x": x coordinate of the entity in the embedding space
-    # "low_dimensional_embedding_y": y coordinate of the entity in the embedding space
+    # "x": x coordinate of the entity in the embedding space
+    # "y": y coordinate of the entity in the embedding space
 
-    # Find zoom level that allows to have tiles with at most MAX_IMAGES_PER_TILE images. We start from zoom level 5.
-    max_zoom_level = 5
+    # Find zoom level that allows to have tiles with at most MAX_IMAGES_PER_TILE images.
+    max_zoom_level = 0
     while True:
         # Define grid for entire embeddings space.
-        # Get the number of tiles in each dimension
         number_of_tiles = 2 ** max_zoom_level
         grid = [[[] for _ in range(number_of_tiles)] for _ in range(number_of_tiles)]
-        coordinate_ranges = [[] for _ in range(number_of_tiles)]
-
-        # Divide the range of values for each dimension into 2^zoom_levels intervals
-        x_grid_of_tiles_step = (max_values[COORDINATES[0]]
-                                - min_values[COORDINATES[0]]) / number_of_tiles
-        y_grid_of_tiles_step = (max_values[COORDINATES[1]]
-                                - min_values[COORDINATES[1]]) / number_of_tiles
-
-        # Populate coordinates_ranges
-        for x in range(number_of_tiles):
-            for y in range(number_of_tiles):
-                coordinate_ranges[x].append({
-                    "x": (min_values[COORDINATES[0]] + x * x_grid_of_tiles_step,
-                          min_values[COORDINATES[0]] + (x + 1) * x_grid_of_tiles_step),
-                    "y": (min_values[COORDINATES[1]] + y * y_grid_of_tiles_step,
-                          min_values[COORDINATES[1]] + (y + 1) * y_grid_of_tiles_step)
-                })
 
         # Associate each entity to a tile.
         for entity in entities:
             # Shift the values by the minimum value of both dimensions so that the minimum value is 0
-            x = entity["low_dimensional_embedding_" + COORDINATES[0]] - min_values[COORDINATES[0]]
-            y = entity["low_dimensional_embedding_" + COORDINATES[1]] - min_values[COORDINATES[1]]
+            x = entity[COORDINATES[0]] - min_values[COORDINATES[0]]
+            y = entity[COORDINATES[1]] - min_values[COORDINATES[1]]
 
             # Find the tile to which the entity belongs.
-            tile_x = min(int(x // x_grid_of_tiles_step), number_of_tiles - 1)
-            tile_y = min(int(y // y_grid_of_tiles_step), number_of_tiles - 1)
+            tile_x = min(int((x * number_of_tiles) // (max_values[COORDINATES[0]] - min_values[COORDINATES[0]])),
+                         number_of_tiles - 1)
+            tile_y = min(int((y * number_of_tiles) // (max_values[COORDINATES[1]] - min_values[COORDINATES[1]])),
+                         number_of_tiles - 1)
 
             # Add entity to the tile
             grid[tile_x][tile_y].append(entity)
 
-            # Check if the number of images in each tile is less than MAX_IMAGES_PER_TILE
-            if len(grid[tile_x][tile_y]) > MAX_IMAGES_PER_TILE:
-                break
-
         # Check if the number of images in each tile is less than MAX_IMAGES_PER_TILE
         max_images_per_tile = 0
+        tot_images = 0
         for row in grid:
             for tile in row:
                 if len(tile) > max_images_per_tile:
                     max_images_per_tile = len(tile)
-                if max_images_per_tile > MAX_IMAGES_PER_TILE:
-                    break
+                tot_images += len(tile)
+
+        assert tot_images == len(entities)
 
         if max_images_per_tile <= MAX_IMAGES_PER_TILE:
             break
@@ -256,11 +231,15 @@ def create_tiling(entities) -> tuple[list[list[list[dict]]], int, list[list[dict
     # Plot heat map of the grid
     # plot_heat_map(grid, number_of_tiles, max_zoom_level)
     # Return grid
-    return grid, max_zoom_level, coordinate_ranges
+    return grid, max_zoom_level
 
 
-def save_image(representative_entities, dataset_collection, zoom_level, tile_x_index, tile_y_index, x_min, x_max,
-               y_min, y_max, directory):
+def save_image(representative_entities, dataset_collection, zoom_level, tile_x_index, tile_y_index, directory):
+    # Get x_min, x_max, y_min, y_max
+    x_min = min([entity["x"] for entity in representative_entities])
+    x_max = max([entity["x"] for entity in representative_entities])
+    y_min = min([entity["y"] for entity in representative_entities])
+    y_max = max([entity["y"] for entity in representative_entities])
     # Create image
     image = Image.new("RGB", (IMAGE_WIDTH * 2, IMAGE_HEIGHT * 2))
     max_width = (IMAGE_WIDTH * 2) / 10
@@ -279,15 +258,12 @@ def save_image(representative_entities, dataset_collection, zoom_level, tile_x_i
         path = "/" + result[0]["path"]
         # Open image
         artwork = Image.open(os.getenv(directory) + path)
-        # Save width and height information
-        entity["representative"]["width"] = artwork.size[0]
-        entity["representative"]["height"] = artwork.size[1]
         # Resize image so that it has a maximum width of max_width or a maximum height of
         # max_height, but keep the aspect ratio
         artwork.thumbnail((max_width, max_height), Image.ANTIALIAS)
         # Add artwork to list
-        x = entity["representative"]["low_dimensional_embedding_x"]
-        y = entity["representative"]["low_dimensional_embedding_y"]
+        x = entity["representative"]["x"]
+        y = entity["representative"]["y"]
         # Get x and y coordinates of the representative entity in the image. Keep safe distance from
         # borders, i.e., use image size of IMAGE_WIDTH * 2 - max_width and IMAGE_HEIGHT * 2 -
         # max_height.
@@ -308,23 +284,6 @@ def save_image(representative_entities, dataset_collection, zoom_level, tile_x_i
     image.save(os.getenv(directory) + "/zoom_levels_clusters/"
                + str(zoom_level) + "_" + str(tile_x_index) + "_"
                + str(tile_y_index) + ".png")
-
-
-def add_width_and_height_information(representative_entities, dataset_collection, directory):
-    for entity in representative_entities:
-        # Get path of image from database
-        # Search image
-        result = dataset_collection.query(
-            expr=f"index in [{entity['representative']['index']}]",
-            output_fields=["path"]
-        )
-        # Get image path
-        path = "/" + result[0]["path"]
-        # Open image
-        artwork = Image.open(os.getenv(directory) + path)
-        # Get width and height
-        entity["representative"]["width"] = artwork.size[0]
-        entity["representative"]["height"] = artwork.size[1]
 
 
 def split_block(i, window, representative_entities, temp_cluster_representatives_entities,
@@ -441,9 +400,7 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
     # images that would be entirely covered by other images. If an image is on the line separating two tiles,
     # assign it to both tiles.
     # First, get tiling
-    tiling, max_zoom_level, coordinate_ranges = create_tiling(entities)
-
-    print(f"Max zoom level: {max_zoom_level}")
+    tiling, max_zoom_level = create_tiling(entities)
 
     # For each zoom level, loop over tiles and if a tile has more than MAX_IMAGES_PER_TILE images, perform clustering
     # with k-means and keep track of the number of entities in each cluster. Then, for each cluster, find the entity
@@ -460,48 +417,54 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
             os.mkdir(os.getenv(directory) + "/zoom_levels_clusters/")
 
     for zoom_level in range(max_zoom_level + 1):
+        print(f"Zoom level: {zoom_level}/{max_zoom_level}")
         zoom_levels[zoom_level] = {}
+
         # First tile goes from 0 to 2 ** (max_zoom_level - zoom_level) - 1, second tile goes from
         # 2 ** (max_zoom_level - zoom_level) to 2 ** (max_zoom_level - zoom_level) * 2 - 1, and so on.
         for tile_x in range(0, 2 ** max_zoom_level, 2 ** (max_zoom_level - zoom_level)):
+            # Get index of tile along x-axis
+            tile_x_index = int(tile_x // 2 ** (max_zoom_level - zoom_level))
+            zoom_levels[zoom_level][tile_x_index] = {}
+
             for tile_y in range(0, 2 ** max_zoom_level, 2 ** (max_zoom_level - zoom_level)):
-                # Get all entities in the tile
+                # Get index of tile along y-axis
+                tile_y_index = int(tile_y // 2 ** (max_zoom_level - zoom_level))
+                zoom_levels[zoom_level][tile_x_index][tile_y_index] = {}
+
+                # Get all entities in the current tile.
                 entities_in_tile = []
+                count = 0
                 for x in range(tile_x, tile_x + 2 ** (max_zoom_level - zoom_level)):
                     for y in range(tile_y, tile_y + 2 ** (max_zoom_level - zoom_level)):
                         # Get all entities in the tile
                         entities_in_tile += tiling[x][y]
+                        count += 1
 
-                # Get x and y range for current tile
-                x_min = coordinate_ranges[tile_x][tile_y]["x"][0]
-                x_max = coordinate_ranges[tile_x + 2 ** (max_zoom_level - zoom_level) - 1][tile_y]["x"][1]
-                y_min = coordinate_ranges[tile_x][tile_y]["y"][0]
-                y_max = coordinate_ranges[tile_x][tile_y + 2 ** (max_zoom_level - zoom_level) - 1]["y"][1]
+                assert count == 4 ** (max_zoom_level - zoom_level)
 
-                # Get index of tile
-                tile_x_index = int(tile_x / 2 ** (max_zoom_level - zoom_level))
-                tile_y_index = int(tile_y / 2 ** (max_zoom_level - zoom_level))
-
-                # Get cluster representatives that where selected in the previous zoom level and are in the current tile
-                # First, get index of tile from the previous zoom level which contains the current tile
-                previous_zoom_level_tile_x_index = int(tile_x_index / 2)
-                previous_zoom_level_tile_y_index = int(tile_y_index / 2)
+                # Get cluster representatives that where selected in the previous zoom level and are in the current
+                # tile. First, get index of tile from the previous zoom level which contains the current tile
+                previous_zoom_level_tile_x_index = int(tile_x_index // 2)
+                previous_zoom_level_tile_y_index = int(tile_y_index // 2)
                 # Get cluster representatives from previous zoom level
                 old_cluster_representatives_in_current_tile = []
                 if zoom_level != 0:
-                    previous_zoom_level_cluster_representatives = [representative["representative"] for representative
-                                                                   in
-                                                                   zoom_levels[zoom_level - 1][
-                                                                       (previous_zoom_level_tile_x_index,
-                                                                        previous_zoom_level_tile_y_index)][
-                                                                       "cluster_representatives"]]
+                    previous_zoom_level_cluster_representatives = \
+                        [representative["representative"] for representative in
+                         zoom_levels[zoom_level - 1][previous_zoom_level_tile_x_index]
+                         [previous_zoom_level_tile_y_index]["representatives"]]
+
                     # Get cluster representatives that are in the current tile.
                     # old_cluster_representatives_in_current_tile must be cluster representatives in the current tile.
                     for representative in previous_zoom_level_cluster_representatives:
-                        if (x_min <= representative["low_dimensional_embedding_x"] <= x_max
-                                and y_min <= representative["low_dimensional_embedding_y"] <= y_max):
-                            old_cluster_representatives_in_current_tile.append(representative)
+                        for entity in entities_in_tile:
+                            if entity["index"] == representative["index"]:
+                                old_cluster_representatives_in_current_tile.append(representative)
+                                break
 
+                # Define vector of representative entities
+                representative_entities = []
                 # Check if there are less than MAX_IMAGES_PER_TILE images in the tile.
                 if len(entities_in_tile) <= MAX_IMAGES_PER_TILE:
                     if zoom_level != max_zoom_level and len(entities_in_tile) > 1:
@@ -531,21 +494,11 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                                                                  cosine_similarity_matrix)
 
                     else:
-                        # First, find out corresponding tile at the previous zoom level
-                        tile_x_prev = int(tile_x / 2)
-                        tile_y_prev = int(tile_y / 2)
-                        # Get cluster representatives from the tile at the previous zoom level
-                        representative_entities_prev = []
-                        if zoom_level != 0:
-                            representative_entities_prev = zoom_levels[zoom_level - 1][(tile_x_prev, tile_y_prev)][
-                                "cluster_representatives"]
-                        # Create entities list with same structure as cluster_representatives_entities
-                        representative_entities = []
                         for entity in entities_in_tile:
                             # Check if the entity is in the previous zoom level
                             in_previous = False
-                            for representative in representative_entities_prev:
-                                if entity["index"] == representative["index"]:
+                            for old_rep in old_cluster_representatives_in_current_tile:
+                                if entity["index"] == old_rep["index"]:
                                     in_previous = True
                                     break
                             representative_entities.append(
@@ -556,28 +509,34 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                                 }
                             )
 
+                    # Check if the all the element in old_cluster_representatives_in_current_tile have in_previous
+                    # set to True.
+                    indexes = [old_rep["index"] for old_rep in old_cluster_representatives_in_current_tile]
+                    count = 0
+                    for rep in representative_entities:
+                        if rep["representative"]["index"] in indexes:
+                            count += 1
+                            assert rep["in_previous"]
+                        else:
+                            assert not rep["in_previous"]
+                    assert count == len(old_cluster_representatives_in_current_tile)
+
                     if save_images:
-                        save_image(representative_entities, dataset_collection, zoom_level, tile_x_index, tile_y_index,
-                                   x_min, x_max, y_min, y_max, directory)
+                        save_image(representative_entities, dataset_collection,
+                                   zoom_level, tile_x_index, tile_y_index, directory)
 
                     assert (sum([cluster["number_of_entities"] + 1 for cluster in representative_entities])
                             == len(entities_in_tile))
 
-                    # Add width and height information to representative_entities. Do it only if save_images is False,
-                    # because otherwise the information is already there.
-                    if not save_images:
-                        add_width_and_height_information(representative_entities, dataset_collection, directory)
-
                     # Save information for tile in zoom_levels. Cluster representatives are the entities themselves.
-                    zoom_levels[zoom_level][(tile_x_index, tile_y_index)] = {
-                        "cluster_representatives": representative_entities
-                    }
+                    zoom_levels[zoom_level][tile_x_index][tile_y_index]["representatives"] = representative_entities
+
                     if zoom_level == 0:
-                        zoom_levels[zoom_level][(tile_x_index, tile_y_index)]["tile_coordinate_range"] = {
-                            "x_min": x_min,
-                            "x_max": x_max,
-                            "y_min": y_min,
-                            "y_max": y_max
+                        zoom_levels[zoom_level][tile_x_index][tile_y_index]["range"] = {
+                            "x_min": min([entity["x"] for entity in entities_in_tile]),
+                            "x_max": max([entity["x"] for entity in entities_in_tile]),
+                            "y_min": min([entity["y"] for entity in entities_in_tile]),
+                            "y_max": max([entity["y"] for entity in entities_in_tile])
                         }
                     # Save mapping from images to tile
                     for representative in representative_entities:
@@ -588,17 +547,14 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
 
                 else:
                     # Get the coordinates of the entities in the tile
-                    coordinates = np.array([[entity["low_dimensional_embedding_x"],
-                                             entity["low_dimensional_embedding_y"]]
-                                            for entity in entities_in_tile])
+                    coordinates = np.array([[entity["x"], entity["y"]] for entity in entities_in_tile])
 
                     # Perform clustering
                     kmeans = ModifiedKMeans(n_clusters=NUMBER_OF_CLUSTERS, random_state=0, n_init=1, max_iter=1000)
 
                     if len(old_cluster_representatives_in_current_tile) > 0:
-                        fixed_centers = np.array([[entity["low_dimensional_embedding_x"],
-                                                   entity["low_dimensional_embedding_y"]]
-                                                  for entity in old_cluster_representatives_in_current_tile])
+                        fixed_centers = np.array([[entity["x"], entity["y"]] for entity in
+                                                  old_cluster_representatives_in_current_tile])
                     else:
                         fixed_centers = None
 
@@ -607,22 +563,23 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                     # Get the coordinates of the cluster representatives
                     cluster_representatives = kmeans.cluster_centers_
 
-                    # It is worth noting that cluster_representatives contains all cluster representatives that were
-                    # selected in the previous zoom level and are in the current tile.
-                    if len(old_cluster_representatives_in_current_tile) > 0:
-                        assert (cluster_representatives[0][0] == old_cluster_representatives_in_current_tile[0][
-                            "low_dimensional_embedding_x"] and
-                                cluster_representatives[0][1] == old_cluster_representatives_in_current_tile[0][
-                                    "low_dimensional_embedding_y"])
+                    # Assert that the number of cluster representatives is equal to NUMBER_OF_CLUSTERS
+                    assert len(cluster_representatives) == NUMBER_OF_CLUSTERS
+
+                    # Check that the first len(old_cluster_representatives_in_current_tile) cluster_representatives are
+                    # the same as the old_cluster_representatives_in_current_tile
+                    for i in range(len(old_cluster_representatives_in_current_tile)):
+                        assert (old_cluster_representatives_in_current_tile[i]["x"] == cluster_representatives[i][0])
+                        assert (old_cluster_representatives_in_current_tile[i]["y"] == cluster_representatives[i][1])
 
                     # Find the entity closest to the centroid of each cluster
                     temp_cluster_representatives_entities = []
+                    num_entities = 0
                     for cluster in range(NUMBER_OF_CLUSTERS):
                         # Get the entities in the cluster
                         entities_in_cluster = [entity for entity in entities_in_tile
-                                               if kmeans.predict(np.array([[entity["low_dimensional_embedding_x"],
-                                                                            entity["low_dimensional_embedding_y"]]]))[0]
-                                               == cluster]
+                                               if kmeans.predict(np.array([[entity["x"], entity["y"]]]))[0] == cluster]
+                        num_entities += len(entities_in_cluster)
 
                         if cluster < len(old_cluster_representatives_in_current_tile):
                             # Add old cluster representative to temp_cluster_representatives_entities
@@ -637,10 +594,8 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                         else:
                             # Get the entity closest to the centroid of the cluster
                             def l2(entity):
-                                return ((entity["low_dimensional_embedding_x"]
-                                         - cluster_representatives[cluster][0]) ** 2
-                                        + (entity["low_dimensional_embedding_y"]
-                                           - cluster_representatives[cluster][1]) ** 2)
+                                return ((entity["x"] - cluster_representatives[cluster][0]) ** 2
+                                        + (entity["y"] - cluster_representatives[cluster][1]) ** 2)
 
                             temp_cluster_representatives_entities.append(
                                 {
@@ -650,9 +605,10 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                                 }
                             )
 
+                    assert num_entities == len(entities_in_tile)
+
                     # Merge clusters if the embeddings of the representatives are too similar in terms of cosine
-                    # similarity
-                    # First, get full embedding vectors of the representatives
+                    # similarity. First, get full embedding vectors of the representatives.
                     indexes = [cluster["representative"]["index"] for cluster in temp_cluster_representatives_entities]
                     result = dataset_collection.query(
                         expr=f"index in {indexes}",
@@ -671,29 +627,36 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                                                              temp_cluster_representatives_entities,
                                                              cosine_similarity_matrix)
 
+                    # Check if the all the element in old_cluster_representatives_in_current_tile have in_previous
+                    # set to True.
+                    indexes = [old_rep["index"] for old_rep in old_cluster_representatives_in_current_tile]
+                    count = 0
+                    for rep in representative_entities:
+                        if rep["representative"]["index"] in indexes:
+                            count += 1
+                            assert rep["in_previous"]
+                        else:
+                            assert not rep["in_previous"]
+
+                    assert count == len(old_cluster_representatives_in_current_tile)
+
                     # Save result as images for visualization
                     if save_images:
-                        save_image(representative_entities, dataset_collection, zoom_level, tile_x_index,
-                                   tile_y_index, x_min, x_max, y_min, y_max, directory)
+                        save_image(representative_entities, dataset_collection,
+                                   zoom_level, tile_x_index, tile_y_index, directory)
 
                     assert (sum([cluster["number_of_entities"] + 1 for cluster in representative_entities])
                             == len(entities_in_tile))
 
-                    # Add width and height information to cluster_representatives_entities. Do it only if save_images
-                    # is False, because otherwise the information is already there.
-                    if not save_images:
-                        add_width_and_height_information(representative_entities, dataset_collection, directory)
-
                     # Save information for tile in zoom_levels.
-                    zoom_levels[zoom_level][(tile_x_index, tile_y_index)] = {
-                        "cluster_representatives": representative_entities
-                    }
+                    zoom_levels[zoom_level][tile_x_index][tile_y_index]["representatives"] = representative_entities
+
                     if zoom_level == 0:
-                        zoom_levels[zoom_level][(tile_x_index, tile_y_index)]["tile_coordinate_range"] = {
-                            "x_min": x_min,
-                            "x_max": x_max,
-                            "y_min": y_min,
-                            "y_max": y_max
+                        zoom_levels[zoom_level][tile_x_index][tile_y_index]["range"] = {
+                            "x_min": min([entity["x"] for entity in entities_in_tile]),
+                            "x_max": max([entity["x"] for entity in entities_in_tile]),
+                            "y_min": min([entity["y"] for entity in entities_in_tile]),
+                            "y_max": max([entity["y"] for entity in entities_in_tile])
                         }
                     # Save mapping from images to tile
                     for representative in representative_entities:
@@ -723,11 +686,6 @@ if __name__ == "__main__":
     # Get arguments
     flags = parsing()
 
-    if flags["images"]:
-        choice = input("Are you sure you want to save images? (y/n) ")
-        if choice.lower() != "y":
-            flags["images"] = False
-
     choice = input("Use root user? (y/n) ")
     if choice == "y":
         user = ROOT_USER
@@ -748,16 +706,24 @@ if __name__ == "__main__":
         print("Error in main. Connection failed!")
         sys.exit(1)
 
+    if utility.has_collection(flags["collection"] + "_zoom_levels_clusters") and not flags["repopulate"]:
+        # Get number of entities in the collection
+        num_entities = Collection(flags["collection"] + "_zoom_levels_clusters").num_entities
+        print(f"Found collection {flags['collection']}_zoom_levels_clusters'. It has {num_entities} entities."
+              f" Not dropping it. Set repopulate to True to drop it.")
+        sys.exit(1)
+
+    if flags["images"]:
+        choice = input("Are you sure you want to save images? (y/n) ")
+        if choice.lower() != "y":
+            flags["images"] = False
+
     # Choose a collection. If the collection does not exist, return.
     if flags["collection"] not in utility.list_collections():
-        print("Collection does not exist.")
+        print(f"The collection {flags['collection']}, which is needed for creating zoom levels, does not exist.")
         sys.exit(1)
     else:
         collection = Collection(flags["collection"])
-
-    # It is worth noting that the collection is among the DatasetOptions, so we can use the zoom levels from there.
-    # Get zoom levels by selecting the collection from the DatasetOptions by name
-    # zoom_levels = DatasetOptions[flags["collection"].upper()].value["zoom_levels"]
 
     # Load vectors from collection
     entities = load_vectors_from_collection(collection)

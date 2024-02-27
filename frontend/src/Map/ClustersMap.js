@@ -43,7 +43,7 @@ export function fetchTiles(indexes, tilesCache, pendingTiles, dataset, host) {
             for (let tile of data) {
                 // Get tile from index
                 const zoom_plus_tile = convertIndexToTile(tile["index"]);
-                tilesCache.set(zoom_plus_tile.zoom + "-" + zoom_plus_tile.x + "-" + zoom_plus_tile.y, tile["entities"]);
+                tilesCache.set(zoom_plus_tile.zoom + "-" + zoom_plus_tile.x + "-" + zoom_plus_tile.y, tile["data"]);
                 // Remove index from pending tiles
                 pendingTiles.delete(tile["index"]);
             }
@@ -78,8 +78,10 @@ export function fetchFirstTiles(url, signal, tilesCache) {
             // noinspection JSUnresolvedVariable
             let range;
             for (let tile of data) {
-                tilesCache.set(tile["zoom_plus_tile"][0] + "-" + tile["zoom_plus_tile"][1] + "-" + tile["zoom_plus_tile"][2], tile["entities"]);
-                if (tile["zoom_plus_tile"][0] === 0) {
+                // Convert index to tile
+                const zoom_plus_tile = convertIndexToTile(tile["index"]);
+                tilesCache.set(zoom_plus_tile.zoom + "-" + zoom_plus_tile.x + "-" + zoom_plus_tile.y, tile["data"]);
+                if (tile["tile"][0] === 0) {
                     range = tile["range"];
                 }
             }
@@ -624,6 +626,7 @@ const ClustersMap = (props) => {
     }
 
     const updateStage = () => {
+        console.log(zoomLevel.current, depth.current);
         // Get zoom level. Obs: We keep as tiles on stage the tiles at the next zoom level. This is because these tiles
         // also contain the artworks from the current zoom level.
         const next_zoom_level = Math.min(depth.current >= 0 ? zoomLevel.current + 1 : zoomLevel.current, props.maxZoomLevel);
@@ -641,10 +644,10 @@ const ClustersMap = (props) => {
         // Get indexes of tiles to fetch
         let indexes = getTilesToFetch(tile_x, tile_y, next_zoom_level, props.maxZoomLevel, tilesCache.current);
         // Filter out the indexes that are in the cache or in the pending tiles
-        let zoom_plus_tile;
+        let tile;
         indexes = indexes.filter(index => {
-            zoom_plus_tile = convertIndexToTile(index);
-            return !tilesCache.current.has(zoom_plus_tile.zoom + "-" + zoom_plus_tile.x + "-" + zoom_plus_tile.y) &&
+            tile = convertIndexToTile(index);
+            return !tilesCache.current.has(tile.zoom + "-" + tile.x + "-" + tile.y) &&
                 !pendingTiles.current.has(index);
         });
         // Add the indexes to the pending tiles

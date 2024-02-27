@@ -127,8 +127,6 @@ class SupportDatasetForImages(TorchDataset):
         for file in self.file_list:
             if not file.split(separator)[0].isdigit():
                 raise Exception("Filenames must start with a number.")
-            elif int(file.split(separator)[0]) >= len(self.file_list) or int(file.split(separator)[0]) < 0:
-                raise Exception("Indexes must go from 0 to len(file_list) - 1.")
 
         # Sort file list by index
         self.file_list.sort(key=lambda x: int(x.split(separator)[0]))

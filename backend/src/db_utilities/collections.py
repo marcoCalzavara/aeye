@@ -4,7 +4,7 @@ from pymilvus import CollectionSchema, FieldSchema, DataType, Collection
 from ..CONSTANTS import *
 
 EMBEDDING_VECTOR_FIELD_NAME = "embedding"
-ZOOM_LEVEL_VECTOR_FIELD_NAME = "zoom_plus_tile"
+ZOOM_LEVEL_VECTOR_FIELD_NAME = "tile"
 
 
 def embeddings_collection(collection_name: str):
@@ -14,13 +14,13 @@ def embeddings_collection(collection_name: str):
         dtype=DataType.INT64,
         is_primary=True
     )
-    low_dim_embeddings_x = FieldSchema(
-        name="low_dimensional_embedding_x",
+    x = FieldSchema(
+        name="x",
         dtype=DataType.FLOAT,
         default_value=np.nan
     )
-    low_dim_embeddings_y = FieldSchema(
-        name="low_dimensional_embedding_y",
+    y = FieldSchema(
+        name="y",
         dtype=DataType.FLOAT,
         default_value=np.nan
     )
@@ -32,8 +32,8 @@ def embeddings_collection(collection_name: str):
 
     # Create collection schema
     schema = CollectionSchema(
-        fields=[embedding, low_dim_embeddings_x, low_dim_embeddings_y, index],
-        description="data_embeddings",
+        fields=[embedding, x, y, index],
+        description="embeddings",
         enable_dynamic_field=True
     )
 
@@ -65,8 +65,7 @@ def clusters_collection(collection_name):
     - index: the index of the cluster
     - zoom_level: the zoom level of the cluster, with tile data information. Zoom level is a triplet
         (zoom_level, tile_x, tile_y).
-    - tile_data: dictionary with fields entities (cluster representatives) and range of coordinates in the global
-        reference system.
+    - data: the data of the cluster
     @param collection_name: the name of the collection    @return: the collection
     """
     # Create fields for collection
@@ -75,18 +74,18 @@ def clusters_collection(collection_name):
         dtype=DataType.INT64,
         is_primary=True
     )
-    zoom_level = FieldSchema(
+    tile = FieldSchema(
         name=ZOOM_LEVEL_VECTOR_FIELD_NAME,
         dtype=DataType.FLOAT_VECTOR,
         dim=3
     )
-    entities = FieldSchema(
-        name="entities",
+    data = FieldSchema(
+        name="data",
         dtype=DataType.JSON
     )
     # Create collection schema
     schema = CollectionSchema(
-        fields=[index, zoom_level, entities],
+        fields=[index, tile, data],
         description="zoom_levels_clusters",
         enable_dynamic_field=True
     )
@@ -119,7 +118,7 @@ def image_to_tile_collection(collection_name: str):
         dtype=DataType.INT64,
         is_primary=True
     )
-    zoom_level = FieldSchema(
+    tile = FieldSchema(
         name=ZOOM_LEVEL_VECTOR_FIELD_NAME,
         dtype=DataType.FLOAT_VECTOR,
         dim=3
@@ -127,7 +126,7 @@ def image_to_tile_collection(collection_name: str):
 
     # Create collection schema
     schema = CollectionSchema(
-        fields=[index, zoom_level],
+        fields=[index, tile],
         description="image_to_tile",
         enable_dynamic_field=True
     )

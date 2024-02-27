@@ -130,8 +130,8 @@ def insert_vectors(collection: Collection, data: dict):
                     {
                         "index": data["index"][j],
                         "embedding": data["embeddings"][j].tolist(),
-                        "low_dimensional_embedding_x": np.nan,
-                        "low_dimensional_embedding_y": np.nan,
+                        "x": np.nan,
+                        "y": np.nan,
                         **{key: data[key][j] for key in keys}
                     }
                     for j in range(i, i + INSERT_SIZE) if j < data["embeddings"].shape[0]]
@@ -188,7 +188,7 @@ def update_metadata(collection: Collection, dp: DatasetPreprocessor, upper_value
     # Update vectors
     for i in range(len(entities)):
         for j in range(min(data["low_dim_embeddings"].shape[1], 2)):
-            entities[i][f"low_dimensional_embedding_{COORDINATES[j]}"] = data["low_dim_embeddings"][i][j]
+            entities[i][COORDINATES[j]] = data["low_dim_embeddings"][i][j]
 
     try:
         # Insert entities in a new collection
