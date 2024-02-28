@@ -5,7 +5,7 @@ Module to visualize tiles.
 import matplotlib.pyplot as plt
 
 
-DIST_STEP = 0.1
+DIST_STEP = 0.
 DEPTH_STEP = 0.5
 
 
@@ -153,17 +153,19 @@ def plot_tiles(tiles):
 
     # Define the color and transparency of the rectangles
     color = (0, 0, 1, 0.1)
+    edge_color = (1, 1, 1, 1)
+    slightly_stronger_color = (0, 0, 1, 0.15)
     stronger_color = (0, 0, 1, 0.2)
 
     # Find the limits at depth DEPTH_STEP
-    min_x = min([tile[0] for tile in tiles if tile[2] == DEPTH_STEP])
-    max_x = max([tile[0] for tile in tiles if tile[2] == DEPTH_STEP])
-    min_y = min([tile[1] for tile in tiles if tile[2] == DEPTH_STEP])
-    max_y = max([tile[1] for tile in tiles if tile[2] == DEPTH_STEP])
+    min_x_1 = min([tile[0] for tile in tiles if tile[2] == DEPTH_STEP])
+    max_x_1 = max([tile[0] for tile in tiles if tile[2] == DEPTH_STEP])
+    min_y_1 = min([tile[1] for tile in tiles if tile[2] == DEPTH_STEP])
+    max_y_1 = max([tile[1] for tile in tiles if tile[2] == DEPTH_STEP])
 
     # Find the minimum and maximum values for x and y at depth 2 * DEPTH_STEP
-    min_x_1 = min([tile[0] for tile in tiles if tile[2] == 2 * DEPTH_STEP])
-    min_y_1 = min([tile[1] for tile in tiles if tile[2] == 2 * DEPTH_STEP])
+    min_x = min([tile[0] for tile in tiles if tile[2] == 2 * DEPTH_STEP])
+    min_y = min([tile[1] for tile in tiles if tile[2] == 2 * DEPTH_STEP])
 
     # Find the minimum and maximum values for x and y at depth 0
     min_x_2 = min([tile[0] for tile in tiles if tile[2] == 0])
@@ -174,16 +176,17 @@ def plot_tiles(tiles):
     # Draw each rectangle
     for tile in tiles:
         x, y, z, dx, dy, dz = tile
-        if (z == DEPTH_STEP and x == 2 and y == 2) or (z == DEPTH_STEP * 2 and x == min_x_1 and y == min_y_1):
+        if (z == DEPTH_STEP and x == 2 and y == 2) or (z == DEPTH_STEP * 2 and x == min_x and y == min_y):
             # Draw the rectangle at the highest zoom level
-            ax.bar3d(x, y, z, dx - DIST_STEP, dy - DIST_STEP, -DEPTH_STEP, color=color, edgecolor=(0, 0, 1, 1))
-        elif (z == DEPTH_STEP and (x == min_x or x == max_x or y == min_y or y == max_y)) or \
+            ax.bar3d(x, y, z, dx - DIST_STEP, dy - DIST_STEP, -DEPTH_STEP, color=slightly_stronger_color,
+                     edgecolor=edge_color)
+        elif (z == DEPTH_STEP and (x == min_x_1 or x == max_x_1 or y == min_y_1 or y == max_y_1)) or \
                 (z == 0 * 2 and (x == min_x_2 or x == max_x_2 or y == min_y_2 or y == max_y_2)) or \
                 (z == 0 and (x == min_x_2 + 1 or x == max_x_2 - 1 or y == min_y_2 + 1 or y == max_y_2 - 1)):
             # Draw the rectangles at the border of the highest zoom level
-            ax.bar3d(x, y, z, dx - DIST_STEP, dy - DIST_STEP, dz, color=stronger_color)
+            ax.bar3d(x, y, z, dx - DIST_STEP, dy - DIST_STEP, dz, color=stronger_color, edgecolor=edge_color)
         else:
-            ax.bar3d(x, y, z, dx - DIST_STEP, dy - DIST_STEP, dz, color=color)
+            ax.bar3d(x, y, z, dx - DIST_STEP, dy - DIST_STEP, dz, color=color, edgecolor=edge_color)
 
     ax.grid(False)
     ax.axis('off')
