@@ -6,7 +6,8 @@ import {LRUCache} from "lru-cache";
 const {
     convertIndexToTile,
     convertTileToIndex,
-    getTilesToFetch
+    getTilesToFetch,
+    getTilesFromZoomLevel
 } = require('../../Map/utilities');
 
 // Test fetchTileData
@@ -89,4 +90,15 @@ test('getTilesToFetch', async () => {
     // Check that the tiles are unique
     const uniqueTiles = new Set(tiles);
     expect(uniqueTiles.size).toBe(tiles.length);
+});
+
+
+// Test getTilesFromZoomLevel
+// ----------------------------------------------------------------------------
+test('getTilesFromZoomLevel', async () => {
+    let tiles = getTilesFromZoomLevel(5, 7, 5);
+    expect(tiles.length).toBe(20);
+    process.stdout.write(`tiles: ${JSON.stringify(tiles)}\n`);
+    tiles = getTilesFromZoomLevel(1, 1, 1);
+    expect(tiles.length).toBe(4);
 });

@@ -197,6 +197,7 @@ const ClustersMap = (props) => {
     const showCarouselRef = useRef(props.showCarousel);
     // Create a ref that will store the current value of the clicked search bar
     const searchBarIsClickedRef = useRef(props.searchBarIsClicked);
+    // const graphics = useRef(new PIXI.Graphics());
 
     const mapGlobalCoordinatesToStageCoordinates = (global_x, global_y) => {
         // Map global coordinates to stage coordinates
@@ -292,7 +293,7 @@ const ClustersMap = (props) => {
     const scaleSprite = (index) => {
         // Get scale
         let scale = 1;
-        if (!spritesGlobalInfo.current.get(index).is_in_previous_zoom_level) {
+        if (!spritesGlobalInfo.current.get(index).is_in_previous_zoom_level && !(zoomLevel.current === props.maxZoomLevel && depth.current === 0)) {
             if (depth.current >= 0) {
                 scale = 1 / (2 ** (1 - depth.current));
             } else {
@@ -362,6 +363,13 @@ const ClustersMap = (props) => {
         // Set z-index of sprite to 10
         sprite.zIndex = 10;
 
+        // Add text to sprite with the index of the artwork
+        // sprite.removeChildren();
+        // const text = new PIXI.Text(index, {fontFamily: 'Arial', fontSize: 30, fill: 0xff0000, align: 'center'});
+        // text.x = 10;
+        // text.y = 10;
+        // sprite.addChild(text);
+
         // Get position of artwork in stage coordinates.
         const artwork_position = mapGlobalCoordinatesToStageCoordinates(global_x, global_y);
         // Set position of sprite
@@ -375,7 +383,7 @@ const ClustersMap = (props) => {
         sprite.filters[1].enabled = blur;
 
         // Set blur strength proportional to the depth
-        blurSprite(sprite, !is_in_previous_zoom_level);
+        blurSprite(sprite, !is_in_previous_zoom_level && !(zoomLevel.current === props.maxZoomLevel && depth.current === 0));
 
         // Set sprite handlers
         setSpriteHandlers(sprite, index);
@@ -390,6 +398,10 @@ const ClustersMap = (props) => {
         depth.current = 0;
         // Remove all children from stage
         app.stage.removeChildren();
+        // Add graphics to stage
+        // graphics.current.clear();
+        // graphics.current.removeChildren();
+        // app.stage.addChild(graphics.current);
         // Set container to null
         container.current = null;
         // Reset sprites
@@ -626,7 +638,6 @@ const ClustersMap = (props) => {
     }
 
     const updateStage = () => {
-        console.log(zoomLevel.current, depth.current);
         // Get zoom level. Obs: We keep as tiles on stage the tiles at the next zoom level. This is because these tiles
         // also contain the artworks from the current zoom level.
         const next_zoom_level = Math.min(depth.current >= 0 ? zoomLevel.current + 1 : zoomLevel.current, props.maxZoomLevel);
@@ -703,7 +714,16 @@ const ClustersMap = (props) => {
         // Define count for check that everything is correct
         let count = 0;
 
-        // Fetch data for the visible tiles if it is not in the cache
+        // Manage the graphics
+        // graphics.current.clear();
+        // graphics.current.removeChildren();
+        // // Draw circle at the effective position of the stage
+        // const stage = mapGlobalCoordinatesToStageCoordinates(effectivePosition.current.x, effectivePosition.current.y);
+        // graphics.current.lineStyle(1, 0xFFFF00, 1);
+        // graphics.current.beginFill(0xFFFF00, 1);
+        // graphics.current.drawCircle(stage.x, stage.y, 5);
+        // graphics.current.endFill();
+
         visible_tiles.map(async tile => {
             // Stop execution if the tilesCache does not contain the tile
             if (!tilesCache.current.has(next_zoom_level + "-" + tile.x + "-" + tile.y)) {
@@ -711,6 +731,35 @@ const ClustersMap = (props) => {
             }
             // Get data from tilesCache
             const data = tilesCache.current.get(next_zoom_level + "-" + tile.x + "-" + tile.y);
+
+            // // Find max and  min x and y of the tile
+            // let x_min = 1000000000; let x_max = -1000000000; let y_min = 1000000000; let y_max = -1000000000;
+            // for (let entity of data) {
+            //     if (entity["x"] < x_min)
+            //         x_min = entity["x"];
+            //     if (entity["x"]> x_max)
+            //         x_max = entity["x"];
+            //     if (entity["y"] < y_min)
+            //         y_min = entity["y"];
+            //     if (entity["y"] > y_max)
+            //         y_max = entity["y"];
+            // }
+            //
+            // // Draw rectangle
+            // const stage = mapGlobalCoordinatesToStageCoordinates(x_min, y_min);
+            // const width_s = (x_max - x_min) * (width.current) / effectiveWidth.current;
+            // const height_s = (y_max - y_min) * (height.current) / effectiveHeight.current;
+            // graphics.current.lineStyle(1, 0xFF0000, 1);
+            // graphics.current.beginFill(0x000000, 0);
+            // graphics.current.drawRect(stage.x, stage.y, width_s, height_s);
+            // // Draw text on the left top corner of the rectangle with the index of the tile
+            // const text = new PIXI.Text(zoomLevel.current + "-" + tile.x + "-" + tile.y,
+            //     {fontFamily: 'Arial', fontSize: 24, fill: 0xFF0000, align: 'center'});
+            // // Position the text
+            // text.x = stage.x; text.y = stage.y;
+            // // Write it in the graphics
+            // graphics.current.addChild(text);
+            // graphics.current.endFill();
 
             // Loop over artworks in tile and add them to the stage.
             // noinspection JSUnresolvedVariable
@@ -746,7 +795,7 @@ const ClustersMap = (props) => {
                         artwork_position.y : sprites.current.get(index).y;
 
                     // Set strength of blur filter proportional to the depth
-                    blurSprite(sprites.current.get(index), !data[j]["in_previous"]);
+                    blurSprite(sprites.current.get(index), !data[j]["in_previous"] && !(zoomLevel.current === props.maxZoomLevel && depth.current === 0));
                     // Set size of sprite
                     scaleSprite(index);
                 }
@@ -790,8 +839,6 @@ const ClustersMap = (props) => {
         // Define steps
         let step_x = (final_effective_position_x - effectivePosition.current.x) / INITIAL_TRANSITION_STEPS;
         let step_y = (final_effective_position_y - effectivePosition.current.y) / INITIAL_TRANSITION_STEPS;
-
-        console.log("Step x: ", step_x, "Step y: ", step_y);
 
         // If both steps are 0, then we do not need to do anything
         if (Math.abs(step_x) <= 0.0001 && Math.abs(step_y) <= 0.0001) {
@@ -1074,10 +1121,16 @@ const ClustersMap = (props) => {
         if (zoomLevel.current === props.maxZoomLevel && depth.current + delta > 0) {
             // Keep depth at 0
             depth.current = 0;
+            effectiveWidth.current = (realMaxX.current - realMinX.current) / (2 ** zoomLevel.current);
+            effectiveHeight.current = (maxY.current - minY.current) / (2 ** zoomLevel.current);
+            updateStageThrottled();
             return;
         } else if (zoomLevel.current === 0 && depth.current + delta < 0) {
             // Keep depth at 0
             depth.current = 0;
+            effectiveWidth.current = (realMaxX.current - realMinX.current);
+            effectiveHeight.current = (maxY.current - minY.current);
+            updateStageThrottled();
             return;
         }
 

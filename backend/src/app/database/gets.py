@@ -49,8 +49,7 @@ def get_image_info_from_text_embedding(collection: Collection, text_embeddings: 
         anns_field=EMBEDDING_VECTOR_FIELD_NAME,
         param=search_params,
         limit=1,
-        output_fields=["index", "author", "path", "width", "height",
-                       "low_dimensional_embedding_x", "low_dimensional_embedding_y"]
+        output_fields=["index", "author", "path", "width", "height", "x", "y"]
     )
     # Return image path
     return results[0][0].to_dict()["entity"]

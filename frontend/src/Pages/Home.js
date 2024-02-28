@@ -19,6 +19,7 @@ import {
 
 
 const ASPECT_RATIO = 16 / 9;
+const STAGE_MAX_ASP_RATIO = 8 / 3;
 
 function fetchAvailableDatasets(host) {
     let url = host + '/api/collection-names';
@@ -99,11 +100,15 @@ function extractHost() {
 }
 
 const computeStageDimensions = () => {
+    const height = window.innerHeight /*- getResponsiveHeight().replace('px', '')*/
+        - getCarouselContainerMarginTop().replace('px', '') - getCarouselContainerMarginBottom().replace('px', '')
+        - getButtonSize().replace('px', '');
+
+    const width = Math.min(window.innerWidth - 2 * getResponsiveMargin().replace('px', ''), height * STAGE_MAX_ASP_RATIO);
+
     return {
-        width: window.innerWidth - 2 * getResponsiveMargin().replace('px', ''),
-        height: window.innerHeight /*- getResponsiveHeight().replace('px', '')*/
-            - getCarouselContainerMarginTop().replace('px', '') - getCarouselContainerMarginBottom().replace('px', '')
-            - getButtonSize().replace('px', '')
+        width: width,
+        height: height
     };
 }
 

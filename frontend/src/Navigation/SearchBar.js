@@ -45,12 +45,12 @@ export default function SearchBar(props) {
         // the global position of the image, and its width and height.
         let groupedResult = {};
         // noinspection JSUnresolvedVariable
-        groupedResult.tile = result.secondGet.zoom_plus_tile;
+        groupedResult.tile = result.secondGet.tile;
         groupedResult.image = {};
         // noinspection JSUnresolvedVariable
-        groupedResult.image.x = result.firstGet.low_dimensional_embedding_x;
+        groupedResult.image.x = result.firstGet.x;
         // noinspection JSUnresolvedVariable
-        groupedResult.image.y = result.firstGet.low_dimensional_embedding_y;
+        groupedResult.image.y = result.firstGet.y;
         groupedResult.image.width = result.firstGet.width;
         groupedResult.image.height = result.firstGet.height;
         groupedResult.image.index = result.firstGet.index;
