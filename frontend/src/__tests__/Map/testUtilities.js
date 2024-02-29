@@ -90,6 +90,7 @@ test('getTilesToFetch', async () => {
     // Check that the tiles are unique
     const uniqueTiles = new Set(tiles);
     expect(uniqueTiles.size).toBe(tiles.length);
+    expect(tiles.length).toBe(25 * 3 + (25 * 4 + 44) * 5);
 });
 
 
@@ -98,7 +99,6 @@ test('getTilesToFetch', async () => {
 test('getTilesFromZoomLevel', async () => {
     let tiles = getTilesFromZoomLevel(5, 7, 5);
     expect(tiles.length).toBe(20);
-    process.stdout.write(`tiles: ${JSON.stringify(tiles)}\n`);
     tiles = getTilesFromZoomLevel(1, 1, 1);
     expect(tiles.length).toBe(4);
 });

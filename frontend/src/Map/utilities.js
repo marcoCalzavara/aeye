@@ -6,8 +6,8 @@ function getTilesFromNextZoomLevelAtBorder(tile_x, tile_y, zoom_level, max_zoom_
     if (zoom_level + 1 <= max_zoom_level) {
         if (tile_x > 1) {
             const tile_x_next_zoom_level = (tile_x - 2) * 2 + 1;
-            for (let i = -1; i <= 2; i++) {
-                if (tile_y + i >= 0 && tile_y + i < 2 ** (zoom_level + 1)) {
+            for (let i = -1; i <= 3; i++) {
+                if (tile_y + i >= 0 && tile_y + i < 2 ** zoom_level) {
                     new_tiles.push({x: tile_x_next_zoom_level, y: (tile_y + i) * 2, zoom: zoom_level + 1});
                     new_tiles.push({x: tile_x_next_zoom_level, y: (tile_y + i) * 2 + 1, zoom: zoom_level + 1});
                 }
@@ -16,14 +16,14 @@ function getTilesFromNextZoomLevelAtBorder(tile_x, tile_y, zoom_level, max_zoom_
             if (tile_y > 1) {
                 new_tiles.push({x: tile_x_next_zoom_level, y: (tile_y - 2) * 2 + 1, zoom: zoom_level + 1});
             }
-            if (tile_y + 3 < 2 ** zoom_level) {
-                new_tiles.push({x: tile_x_next_zoom_level, y: (tile_y + 3) * 2, zoom: zoom_level + 1});
+            if (tile_y + 4 < 2 ** zoom_level) {
+                new_tiles.push({x: tile_x_next_zoom_level, y: (tile_y + 4) * 2, zoom: zoom_level + 1});
             }
         }
         if (tile_x + 4 < 2 ** zoom_level) {
             const tile_x_next_zoom_level = (tile_x + 4) * 2;
-            for (let i = -1; i <= 2; i++) {
-                if (tile_y + i >= 0 && tile_y + i < 2 ** (zoom_level + 1)) {
+            for (let i = -1; i <= 3; i++) {
+                if (tile_y + i >= 0 && tile_y + i < 2 ** zoom_level) {
                     new_tiles.push({x: tile_x_next_zoom_level, y: (tile_y + i) * 2, zoom: zoom_level + 1});
                     new_tiles.push({x: tile_x_next_zoom_level, y: (tile_y + i) * 2 + 1, zoom: zoom_level + 1});
                 }
@@ -32,23 +32,23 @@ function getTilesFromNextZoomLevelAtBorder(tile_x, tile_y, zoom_level, max_zoom_
             if (tile_y > 1) {
                 new_tiles.push({x: tile_x_next_zoom_level, y: (tile_y - 2) * 2 + 1, zoom: zoom_level + 1});
             }
-            if (tile_y + 3 < 2 ** zoom_level) {
-                new_tiles.push({x: tile_x_next_zoom_level, y: (tile_y + 3) * 2, zoom: zoom_level + 1});
+            if (tile_y + 4 < 2 ** zoom_level) {
+                new_tiles.push({x: tile_x_next_zoom_level, y: (tile_y + 4) * 2, zoom: zoom_level + 1});
             }
         }
         if (tile_y > 1) {
             const tile_y_next_zoom_level = (tile_y - 2) * 2 + 1;
             for (let i = -1; i <= 3; i++) {
-                if (tile_x + i >= 0 && tile_x + i < 2 ** (zoom_level + 1)) {
+                if (tile_x + i >= 0 && tile_x + i < 2 ** zoom_level) {
                     new_tiles.push({x: (tile_x + i) * 2, y: tile_y_next_zoom_level, zoom: zoom_level + 1});
                     new_tiles.push({x: (tile_x + i) * 2 + 1, y: tile_y_next_zoom_level, zoom: zoom_level + 1});
                 }
             }
         }
         if (tile_y + 3 < 2 ** zoom_level) {
-            const tile_y_next_zoom_level = (tile_y + 3) * 2;
+            const tile_y_next_zoom_level = (tile_y + 4) * 2;
             for (let i = -1; i <= 3; i++) {
-                if (tile_x + i >= 0 && tile_x + i < 2 ** (zoom_level + 1)) {
+                if (tile_x + i >= 0 && tile_x + i < 2 ** zoom_level) {
                     new_tiles.push({x: (tile_x + i) * 2, y: tile_y_next_zoom_level, zoom: zoom_level + 1});
                     new_tiles.push({x: (tile_x + i) * 2 + 1, y: tile_y_next_zoom_level, zoom: zoom_level + 1});
                 }
@@ -95,75 +95,61 @@ function getTilesFromNextZoomLevel(tiles, zoom_level, max_zoom_level) {
 export function getTilesFromZoomLevel(tile_x, tile_y, zoom_level) {
     // Get the number of tiles at the current zoom level
     const number_of_tiles = 2 ** zoom_level;
-
     const tiles = [];
 
-    // Add center tile
     tiles.push({x: tile_x, y: tile_y, zoom: zoom_level});
-    // Add tiles in same column
-    if (tile_y > 0) {
+    if (tile_y > 0)
         tiles.push({x: tile_x, y: tile_y - 1, zoom: zoom_level});
-    }
-    if (tile_y < number_of_tiles - 1) {
+    if (tile_y < number_of_tiles - 1)
         tiles.push({x: tile_x, y: tile_y + 1, zoom: zoom_level});
-    }
-    if (tile_y < number_of_tiles - 2) {
+    if (tile_y < number_of_tiles - 2)
         tiles.push({x: tile_x, y: tile_y + 2, zoom: zoom_level});
-    }
+    if (tile_y < number_of_tiles - 3)
+        tiles.push({x: tile_x, y: tile_y + 3, zoom: zoom_level});
 
-    // Get all neighboring tiles. This means all tiles at a distance of 1, plus tiles at a distance of 2 on the bottom
-    // and on the right.
     if (tile_x > 0) {
-        // Go one tile to the left
         tiles.push({x: tile_x - 1, y: tile_y, zoom: zoom_level});
-        if (tile_y > 0) {
+        if (tile_y > 0)
             tiles.push({x: tile_x - 1, y: tile_y - 1, zoom: zoom_level});
-        }
-        if (tile_y < number_of_tiles - 1) {
+        if (tile_y < number_of_tiles - 1)
             tiles.push({x: tile_x - 1, y: tile_y + 1, zoom: zoom_level});
-        }
-        if (tile_y < number_of_tiles - 2) {
+        if (tile_y < number_of_tiles - 2)
             tiles.push({x: tile_x - 1, y: tile_y + 2, zoom: zoom_level});
-        }
+        if (tile_y < number_of_tiles - 3)
+            tiles.push({x: tile_x - 1, y: tile_y + 3, zoom: zoom_level});
     }
     if (tile_x < number_of_tiles - 1) {
-        // Go one tile to the right
         tiles.push({x: tile_x + 1, y: tile_y, zoom: zoom_level});
-        if (tile_y > 0) {
+        if (tile_y > 0)
             tiles.push({x: tile_x + 1, y: tile_y - 1, zoom: zoom_level});
-        }
-        if (tile_y < number_of_tiles - 1) {
+        if (tile_y < number_of_tiles - 1)
             tiles.push({x: tile_x + 1, y: tile_y + 1, zoom: zoom_level});
-        }
-        if (tile_y < number_of_tiles - 2) {
+        if (tile_y < number_of_tiles - 2)
             tiles.push({x: tile_x + 1, y: tile_y + 2, zoom: zoom_level});
-        }
+        if (tile_y < number_of_tiles - 3)
+            tiles.push({x: tile_x + 1, y: tile_y + 3, zoom: zoom_level});
     }
     if (tile_x < number_of_tiles - 2) {
-        // Go two tiles to the right
         tiles.push({x: tile_x + 2, y: tile_y, zoom: zoom_level});
-        if (tile_y > 0) {
+        if (tile_y > 0)
             tiles.push({x: tile_x + 2, y: tile_y - 1, zoom: zoom_level});
-        }
-        if (tile_y < number_of_tiles - 1) {
+        if (tile_y < number_of_tiles - 1)
             tiles.push({x: tile_x + 2, y: tile_y + 1, zoom: zoom_level});
-        }
-        if (tile_y < number_of_tiles - 2) {
+        if (tile_y < number_of_tiles - 2)
             tiles.push({x: tile_x + 2, y: tile_y + 2, zoom: zoom_level});
-        }
+        if (tile_y < number_of_tiles - 3)
+            tiles.push({x: tile_x + 2, y: tile_y + 3, zoom: zoom_level});
     }
     if (tile_x < number_of_tiles - 3) {
-        // Go three tiles to the right
         tiles.push({x: tile_x + 3, y: tile_y, zoom: zoom_level});
-        if (tile_y > 0) {
+        if (tile_y > 0)
             tiles.push({x: tile_x + 3, y: tile_y - 1, zoom: zoom_level});
-        }
-        if (tile_y < number_of_tiles - 1) {
+        if (tile_y < number_of_tiles - 1)
             tiles.push({x: tile_x + 3, y: tile_y + 1, zoom: zoom_level});
-        }
-        if (tile_y < number_of_tiles - 2) {
+        if (tile_y < number_of_tiles - 2)
             tiles.push({x: tile_x + 3, y: tile_y + 2, zoom: zoom_level});
-        }
+        if (tile_y < number_of_tiles - 3)
+            tiles.push({x: tile_x + 3, y: tile_y + 3, zoom: zoom_level});
     }
 
     return tiles;

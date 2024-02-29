@@ -3,9 +3,14 @@ Module to visualize tiles.
 """
 
 import matplotlib.pyplot as plt
+import numpy as np
 
-
+TILE_X = 15
+TILE_Y = 18
+ZOOM_LEVEL = 5
+MAX_ZOOM_LEVEL = 7
 DIST_STEP = 0.
+DIST_STEP_2 = 0.3
 DEPTH_STEP = 0.5
 
 
@@ -15,36 +20,34 @@ def get_tiles_from_next_zoom_level_at_border(tile_x, tile_y, zoom_level, max_zoo
     if zoom_level + 1 <= max_zoom_level:
         if tile_x > 1:
             tile_x_next_zoom_level = (tile_x - 2) * 2 + 1
-            for i in range(-1, 3):
-                if 0 <= tile_y + i < 2 ** (zoom_level + 1):
+            for i in range(-1, 4):
+                if 0 <= tile_y + i < 2 ** zoom_level:
                     new_tiles.append({'x': tile_x_next_zoom_level, 'y': (tile_y + i) * 2, 'zoom': zoom_level + 1})
                     new_tiles.append({'x': tile_x_next_zoom_level, 'y': (tile_y + i) * 2 + 1, 'zoom': zoom_level + 1})
-            # Get corner tiles
             if tile_y > 1:
                 new_tiles.append({'x': tile_x_next_zoom_level, 'y': (tile_y - 2) * 2 + 1, 'zoom': zoom_level + 1})
-            if tile_y + 3 < 2 ** zoom_level:
-                new_tiles.append({'x': tile_x_next_zoom_level, 'y': (tile_y + 3) * 2, 'zoom': zoom_level + 1})
+            if tile_y + 4 < 2 ** zoom_level:
+                new_tiles.append({'x': tile_x_next_zoom_level, 'y': (tile_y + 4) * 2, 'zoom': zoom_level + 1})
         if tile_x + 4 < 2 ** zoom_level:
             tile_x_next_zoom_level = (tile_x + 4) * 2
-            for i in range(-1, 3):
-                if 0 <= tile_y + i < 2 ** (zoom_level + 1):
+            for i in range(-1, 4):
+                if 0 <= tile_y + i < 2 ** zoom_level:
                     new_tiles.append({'x': tile_x_next_zoom_level, 'y': (tile_y + i) * 2, 'zoom': zoom_level + 1})
                     new_tiles.append({'x': tile_x_next_zoom_level, 'y': (tile_y + i) * 2 + 1, 'zoom': zoom_level + 1})
-            # Get corner tiles
             if tile_y > 1:
                 new_tiles.append({'x': tile_x_next_zoom_level, 'y': (tile_y - 2) * 2 + 1, 'zoom': zoom_level + 1})
-            if tile_y + 3 < 2 ** zoom_level:
-                new_tiles.append({'x': tile_x_next_zoom_level, 'y': (tile_y + 3) * 2, 'zoom': zoom_level + 1})
+            if tile_y + 4 < 2 ** zoom_level:
+                new_tiles.append({'x': tile_x_next_zoom_level, 'y': (tile_y + 4) * 2, 'zoom': zoom_level + 1})
         if tile_y > 1:
             tile_y_next_zoom_level = (tile_y - 2) * 2 + 1
             for i in range(-1, 4):
-                if 0 <= tile_x + i < 2 ** (zoom_level + 1):
+                if 0 <= tile_x + i < 2 ** zoom_level:
                     new_tiles.append({'x': (tile_x + i) * 2, 'y': tile_y_next_zoom_level, 'zoom': zoom_level + 1})
                     new_tiles.append({'x': (tile_x + i) * 2 + 1, 'y': tile_y_next_zoom_level, 'zoom': zoom_level + 1})
         if tile_y + 3 < 2 ** zoom_level:
-            tile_y_next_zoom_level = (tile_y + 3) * 2
+            tile_y_next_zoom_level = (tile_y + 4) * 2
             for i in range(-1, 4):
-                if 0 <= tile_x + i < 2 ** (zoom_level + 1):
+                if 0 <= tile_x + i < 2 ** zoom_level:
                     new_tiles.append({'x': (tile_x + i) * 2, 'y': tile_y_next_zoom_level, 'zoom': zoom_level + 1})
                     new_tiles.append({'x': (tile_x + i) * 2 + 1, 'y': tile_y_next_zoom_level, 'zoom': zoom_level + 1})
     return new_tiles
@@ -78,6 +81,8 @@ def get_tiles_from_zoom_level(tile_x, tile_y, zoom_level):
         tiles.append({'x': tile_x, 'y': tile_y + 1, 'zoom': zoom_level})
     if tile_y < number_of_tiles - 2:
         tiles.append({'x': tile_x, 'y': tile_y + 2, 'zoom': zoom_level})
+    if tile_y < number_of_tiles - 3:
+        tiles.append({'x': tile_x, 'y': tile_y + 3, 'zoom': zoom_level})
 
     # Get all neighboring tiles. This means all tiles at a distance of 1, plus tiles at a distance of 2 on the bottom
     # and on the right.
@@ -90,6 +95,8 @@ def get_tiles_from_zoom_level(tile_x, tile_y, zoom_level):
             tiles.append({'x': tile_x - 1, 'y': tile_y + 1, 'zoom': zoom_level})
         if tile_y < number_of_tiles - 2:
             tiles.append({'x': tile_x - 1, 'y': tile_y + 2, 'zoom': zoom_level})
+        if tile_y < number_of_tiles - 3:
+            tiles.append({'x': tile_x - 1, 'y': tile_y + 3, 'zoom': zoom_level})
 
     if tile_x < number_of_tiles - 1:
         # Go one tile to the right
@@ -100,6 +107,8 @@ def get_tiles_from_zoom_level(tile_x, tile_y, zoom_level):
             tiles.append({'x': tile_x + 1, 'y': tile_y + 1, 'zoom': zoom_level})
         if tile_y < number_of_tiles - 2:
             tiles.append({'x': tile_x + 1, 'y': tile_y + 2, 'zoom': zoom_level})
+        if tile_y < number_of_tiles - 3:
+            tiles.append({'x': tile_x + 1, 'y': tile_y + 3, 'zoom': zoom_level})
 
     if tile_x < number_of_tiles - 2:
         # Go two tiles to the right
@@ -110,6 +119,8 @@ def get_tiles_from_zoom_level(tile_x, tile_y, zoom_level):
             tiles.append({'x': tile_x + 2, 'y': tile_y + 1, 'zoom': zoom_level})
         if tile_y < number_of_tiles - 2:
             tiles.append({'x': tile_x + 2, 'y': tile_y + 2, 'zoom': zoom_level})
+        if tile_y < number_of_tiles - 3:
+            tiles.append({'x': tile_x + 2, 'y': tile_y + 3, 'zoom': zoom_level})
 
     if tile_x < number_of_tiles - 3:
         # Go three tiles to the right
@@ -120,6 +131,20 @@ def get_tiles_from_zoom_level(tile_x, tile_y, zoom_level):
             tiles.append({'x': tile_x + 3, 'y': tile_y + 1, 'zoom': zoom_level})
         if tile_y < number_of_tiles - 2:
             tiles.append({'x': tile_x + 3, 'y': tile_y + 2, 'zoom': zoom_level})
+        if tile_y < number_of_tiles - 3:
+            tiles.append({'x': tile_x + 3, 'y': tile_y + 3, 'zoom': zoom_level})
+
+    return tiles
+
+
+def get_tiles_from_prev_zoom_level(tile_x, tile_y, zoom_level):
+    tiles = []
+    if zoom_level > 0:
+        tile_x_prev_zoom_level = tile_x // 2
+        tile_y_prev_zoom_level = tile_y // 2
+        tiles_prev_zoom_level = get_tiles_from_zoom_level(tile_x_prev_zoom_level,
+                                                          tile_y_prev_zoom_level, zoom_level - 1)
+        tiles.extend(tiles_prev_zoom_level)
 
     return tiles
 
@@ -147,58 +172,104 @@ def plot_tiles(tiles):
     tiles (list of tuples): Each tuple contains 3D coordinates in the form (x, y, z, dx, dy, dz).
     """
 
-    # Create a new figure and add a 3D subplot
-    fig = plt.figure(figsize=(15, 15))
-    ax = fig.add_subplot(111, projection='3d')
+    # Create two new figures and add a 3D subplot
+    fig1 = plt.figure(figsize=(15, 15))
+    fig2 = plt.figure(figsize=(25, 15))
+    ax1 = fig1.add_subplot(111, projection='3d')
+    ax2 = fig2.add_subplot(111, projection='3d')
+    ax1.view_init(18, -60)
+    ax2.view_init(15, 45)
 
     # Define the color and transparency of the rectangles
     color = (0, 0, 1, 0.1)
     edge_color = (1, 1, 1, 1)
     slightly_stronger_color = (0, 0, 1, 0.15)
-    stronger_color = (0, 0, 1, 0.2)
-
-    # Find the limits at depth DEPTH_STEP
-    min_x_1 = min([tile[0] for tile in tiles if tile[2] == DEPTH_STEP])
-    max_x_1 = max([tile[0] for tile in tiles if tile[2] == DEPTH_STEP])
-    min_y_1 = min([tile[1] for tile in tiles if tile[2] == DEPTH_STEP])
-    max_y_1 = max([tile[1] for tile in tiles if tile[2] == DEPTH_STEP])
-
-    # Find the minimum and maximum values for x and y at depth 2 * DEPTH_STEP
-    min_x = min([tile[0] for tile in tiles if tile[2] == 2 * DEPTH_STEP])
-    min_y = min([tile[1] for tile in tiles if tile[2] == 2 * DEPTH_STEP])
 
     # Find the minimum and maximum values for x and y at depth 0
-    min_x_2 = min([tile[0] for tile in tiles if tile[2] == 0])
-    max_x_2 = max([tile[0] for tile in tiles if tile[2] == 0])
-    min_y_2 = min([tile[1] for tile in tiles if tile[2] == 0])
-    max_y_2 = max([tile[1] for tile in tiles if tile[2] == 0])
+    min_x_1 = min([tile[0] for tile in tiles if tile[2] == 0])
+    max_x_1 = max([tile[0] for tile in tiles if tile[2] == 0])
+    min_y_1 = min([tile[1] for tile in tiles if tile[2] == 0])
+    max_y_1 = max([tile[1] for tile in tiles if tile[2] == 0])
 
-    # Draw each rectangle
+    # Find the limits at depth DEPTH_STEP
+    min_x_2 = min([tile[0] for tile in tiles if tile[2] == DEPTH_STEP])
+    max_x_2 = max([tile[0] for tile in tiles if tile[2] == DEPTH_STEP])
+    min_y_2 = min([tile[1] for tile in tiles if tile[2] == DEPTH_STEP])
+    max_y_2 = max([tile[1] for tile in tiles if tile[2] == DEPTH_STEP])
+
+    # Find the minimum and maximum values for x and y at depth 2 * DEPTH_STEP
+    min_x_3 = min([tile[0] for tile in tiles if tile[2] == 2 * DEPTH_STEP])
+    min_y_3 = min([tile[1] for tile in tiles if tile[2] == 2 * DEPTH_STEP])
+
+    # Generate first plot with just a representation of the tiling
     for tile in tiles:
         x, y, z, dx, dy, dz = tile
-        if (z == DEPTH_STEP and x == 2 and y == 2) or (z == DEPTH_STEP * 2 and x == min_x and y == min_y):
-            # Draw the rectangle at the highest zoom level
-            ax.bar3d(x, y, z, dx - DIST_STEP, dy - DIST_STEP, -DEPTH_STEP, color=slightly_stronger_color,
-                     edgecolor=edge_color)
-        elif (z == DEPTH_STEP and (x == min_x_1 or x == max_x_1 or y == min_y_1 or y == max_y_1)) or \
-                (z == 0 * 2 and (x == min_x_2 or x == max_x_2 or y == min_y_2 or y == max_y_2)) or \
-                (z == 0 and (x == min_x_2 + 1 or x == max_x_2 - 1 or y == min_y_2 + 1 or y == max_y_2 - 1)):
-            # Draw the rectangles at the border of the highest zoom level
-            ax.bar3d(x, y, z, dx - DIST_STEP, dy - DIST_STEP, dz, color=stronger_color, edgecolor=edge_color)
+        if z <= 2 * DEPTH_STEP:
+            if (z == DEPTH_STEP and x == 2 and y == 2) or (z == DEPTH_STEP * 2 and x == min_x_3 and y == min_y_3):
+                # Draw the rectangle at the highest zoom level
+                ax1.bar3d(x, y, z, dx - DIST_STEP, dy - DIST_STEP, -DEPTH_STEP, color=slightly_stronger_color,
+                          edgecolor=edge_color)
+            elif not ((z == DEPTH_STEP and (x == min_x_2 or x == max_x_2 or y == min_y_2 or y == max_y_2)) or
+                      (z == 0 * 2 and (x == min_x_1 or x == max_x_1 or y == min_y_1 or y == max_y_1)) or
+                      (z == 0 and (x == min_x_1 + 1 or x == max_x_1 - 1 or y == min_y_1 + 1 or y == max_y_1 - 1))):
+                ax1.bar3d(x, y, z, dx - DIST_STEP, dy - DIST_STEP, dz, color=color, edgecolor=edge_color)
+            else:
+                continue
+
+    # Generate second plot with a representation of what tiles are fetched by the application
+    for tile in tiles:
+        x, y, z, dx, dy, dz = tile
+        ax2.bar3d(x, y, z, dx - DIST_STEP_2, dy - DIST_STEP_2, dz, color=color)
+
+    # Find the limits of the plots at all depths
+    min_values_x = [1000, 1000, 1000, 1000, 1000]
+    min_values_y = [1000, 1000, 1000, 1000, 1000]
+    max_values_x = [-1000, -1000, -1000, -1000, -1000]
+    max_values_y = [-1000, -1000, -1000, -1000, -1000]
+
+    for tile in tiles:
+        x, y, z, dx, dy, dz = tile
+        i = int(z / DEPTH_STEP)
+        if i != 0 and i != 1:
+            min_values_x[i] = min(min_values_x[i], x)
+            min_values_y[i] = min(min_values_y[i], y)
+            max_values_x[i] = max(max_values_x[i], x + dx - DIST_STEP_2)
+            max_values_y[i] = max(max_values_y[i], y + dy - DIST_STEP_2)
+        elif i == 1:
+            min_values_x[i] = min(min_values_x[i], x + dx)
+            min_values_y[i] = min(min_values_y[i], y + dx)
+            max_values_x[i] = max(max_values_x[i], x - DIST_STEP_2)
+            max_values_y[i] = max(max_values_y[i], y - DIST_STEP_2)
         else:
-            ax.bar3d(x, y, z, dx - DIST_STEP, dy - DIST_STEP, dz, color=color, edgecolor=edge_color)
+            min_values_x[i] = min(min_values_x[i], x + 2 * dx)
+            min_values_y[i] = min(min_values_y[i], y + 2 * dy)
+            max_values_x[i] = max(max_values_x[i], x - dx - DIST_STEP_2)
+            max_values_y[i] = max(max_values_y[i], y - dy - DIST_STEP_2)
 
-    ax.grid(False)
-    ax.axis('off')
+    # Plot surfaces between one depth and the next
+    for i in range(4, 0, -1):
+        X = np.array([[min_values_x[i], max_values_x[i], max_values_x[i], min_values_x[i]],
+                      [min_values_x[i - 1], max_values_x[i - 1], max_values_x[i - 1], min_values_x[i - 1]]])
+        Y = np.array([[min_values_y[i], min_values_y[i], max_values_y[i], max_values_y[i]],
+                      [min_values_y[i - 1], min_values_y[i - 1], max_values_y[i - 1], max_values_y[i - 1]]])
+        Z = np.array([[i * DEPTH_STEP, i * DEPTH_STEP, i * DEPTH_STEP, i * DEPTH_STEP],
+                      [(i - 1) * DEPTH_STEP, (i - 1) * DEPTH_STEP, (i - 1) * DEPTH_STEP, (i - 1) * DEPTH_STEP]])
+        ax2.plot_surface(X, Y, Z, color=color)
 
-    # Save the plot
-    plt.savefig('tiles.png')
+    # Deactivate grid and axis
+    ax1.grid(False)
+    ax1.axis('off')
+    ax2.grid(False)
+    ax2.axis('off')
+
+    # Save the plots
+    fig1.savefig('tiling1.png', dpi=500)
+    fig2.savefig('tiling2.png', dpi=500)
 
 
 if __name__ == "__main__":
     # Get tiles
-    max_zoom_level = 7
-    tiles = get_tiles(15, 18, 5, max_zoom_level)
+    tiles = get_tiles(TILE_X, TILE_Y, ZOOM_LEVEL, MAX_ZOOM_LEVEL)
     # Check that there are no duplicates
     assert len(tiles) == len(set([(tile['x'], tile['y'], tile['zoom']) for tile in tiles]))
 
@@ -206,42 +277,49 @@ if __name__ == "__main__":
     tiles_for_plot = []
 
     # Find the minimum x and y values at the highest zoom level
-    min_tile_x_max_zoom_level = min([tile['x'] for tile in tiles if tile['zoom'] == max_zoom_level])
-    min_tile_y_max_zoom_level = min([tile['y'] for tile in tiles if tile['zoom'] == max_zoom_level])
+    min_tile_x_max_zoom_level = min([tile['x'] for tile in tiles if tile['zoom'] == MAX_ZOOM_LEVEL])
+    min_tile_y_max_zoom_level = min([tile['y'] for tile in tiles if tile['zoom'] == MAX_ZOOM_LEVEL])
     for tile in tiles:
-        if tile['zoom'] == max_zoom_level:
+        if tile['zoom'] == MAX_ZOOM_LEVEL:
             tiles_for_plot.append((tile['x'] - min_tile_x_max_zoom_level,
                                    tile['y'] - min_tile_y_max_zoom_level, 0, 1, 1, 0))
 
     for tile in tiles:
-        if tile['zoom'] == max_zoom_level - 1:
+        if tile['zoom'] == MAX_ZOOM_LEVEL - 1:
             # Find tile at next zoom level
             tile_x_next_zoom_level = tile['x'] * 2
             tile_y_next_zoom_level = tile['y'] * 2
-            for tile_next_zoom_level in tiles:
-                if (tile_next_zoom_level['zoom'] == max_zoom_level
-                        and tile_next_zoom_level['x'] == tile_x_next_zoom_level
-                        and tile_next_zoom_level['y'] == tile_y_next_zoom_level):
-                    # Place the tile over the 4 tiles it generates at the next zoom level
-                    tiles_for_plot.append((tile_x_next_zoom_level - min_tile_x_max_zoom_level,
-                                           tile_y_next_zoom_level - min_tile_y_max_zoom_level,
-                                           DEPTH_STEP, 2, 2, 0))
-                    break
+            # Place the tile over the 4 tiles it generates at the next zoom level
+            tiles_for_plot.append((tile_x_next_zoom_level - min_tile_x_max_zoom_level,
+                                   tile_y_next_zoom_level - min_tile_y_max_zoom_level,
+                                   DEPTH_STEP, 2, 2, 0))
 
     for tile in tiles:
-        if tile['zoom'] == max_zoom_level - 2:
+        if tile['zoom'] == MAX_ZOOM_LEVEL - 2:
             # Find tile at next zoom level
             tile_x_next_zoom_level = tile['x'] * 4
             tile_y_next_zoom_level = tile['y'] * 4
-            for tile_next_zoom_level in tiles:
-                if (tile_next_zoom_level['zoom'] == max_zoom_level
-                        and tile_next_zoom_level['x'] == tile_x_next_zoom_level
-                        and tile_next_zoom_level['y'] == tile_y_next_zoom_level):
-                    # Place the tile over the 4 tiles it generates at the next zoom level
-                    tiles_for_plot.append((tile_x_next_zoom_level - min_tile_x_max_zoom_level,
-                                           tile_y_next_zoom_level - min_tile_y_max_zoom_level,
-                                           1, 4, 4, 0))
-                    break
+            tiles_for_plot.append((tile_x_next_zoom_level - min_tile_x_max_zoom_level,
+                                   tile_y_next_zoom_level - min_tile_y_max_zoom_level,
+                                   2 * DEPTH_STEP, 4, 4, 0))
+
+    # Get tiles at previous zoom level
+    tiles_prev_zoom_level = get_tiles_from_prev_zoom_level(TILE_X, TILE_Y, ZOOM_LEVEL)
+
+    # Apply the displacement to all tiles
+    for tile_prev_zoom_level in tiles_prev_zoom_level:
+        tiles_for_plot.append((tile_prev_zoom_level['x'] * 8 - min_tile_x_max_zoom_level,
+                               tile_prev_zoom_level['y'] * 8 - min_tile_y_max_zoom_level,
+                               3 * DEPTH_STEP, 8, 8, 0))
+
+    # Get tiles at previous zoom level of the previous zoom level
+    tiles_prev_prev_zoom_level = get_tiles_from_prev_zoom_level(TILE_X // 2, TILE_Y // 2, ZOOM_LEVEL - 1)
+
+    # Apply the displacement to all tiles
+    for tile_prev_prev_zoom_level in tiles_prev_prev_zoom_level:
+        tiles_for_plot.append((tile_prev_prev_zoom_level['x'] * 16 - min_tile_x_max_zoom_level,
+                               tile_prev_prev_zoom_level['y'] * 16 - min_tile_y_max_zoom_level,
+                               4 * DEPTH_STEP, 16, 16, 0))
 
     # Plot tiles
     plot_tiles(tiles_for_plot)
