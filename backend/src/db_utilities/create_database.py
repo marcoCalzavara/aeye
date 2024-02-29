@@ -46,7 +46,7 @@ if __name__ == "__main__":
         # Load environment variables
         env_variables = dotenv_values(os.environ[ENV_FILE_LOCATION])
 
-    if ROOT in env_variables and env_variables[ROOT] == 1:
+    if ROOT in env_variables and env_variables[ROOT] == "1":
         create_connection(ROOT_USER, ROOT_PASSWD)
         create_database()
     else:
