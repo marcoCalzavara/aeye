@@ -8,36 +8,23 @@ from pymilvus import Collection
 from pymilvus import utility, db
 
 from .collections import embeddings_collection
+from .create_database import create_database
 from .utils import create_connection
 from ..CONSTANTS import *
 
 
-def create_embeddings_collection(collection_name=None, choose_database=True) \
-        -> typing.Tuple[Collection, str]:
+def create_embeddings_collection(collection_name=None, choose_database=True) -> typing.Tuple[Collection, str]:
     try:
         # Create a database and switch to the newly created database if it does not exist
         if not choose_database and DEFAULT_DATABASE_NAME not in db.list_database():
-            db.create_database(DEFAULT_DATABASE_NAME)
+            create_database()
             db.using_database(DEFAULT_DATABASE_NAME)
         elif not choose_database and DEFAULT_DATABASE_NAME in db.list_database():
-            # If the database already exists, switch to it.
             db.using_database(DEFAULT_DATABASE_NAME)
         else:
-            # Choose a database. If the database does not exist, create it.
-            db_name = input("Choose database: ")
-            if db_name not in db.list_database():
-                choice = input("The database does not exist. 'n' will revert to default database. Create one? ("
-                               "y/n) ")
-                if choice.lower() == "y":
-                    db.create_database(db_name)
-                    db.using_database(db_name)
-                elif choice.lower() == "n":
-                    if DEFAULT_DATABASE_NAME not in db.list_database():
-                        db.create_database(DEFAULT_DATABASE_NAME)
-                    db.using_database(DEFAULT_DATABASE_NAME)
-                else:
-                    print("Wrong choice.")
-                    sys.exit(1)
+            # Create a database and switch to the newly created database
+            db_name = create_database()
+            db.using_database(db_name)
 
         # Choose collection name and create a collection
         if collection_name is None:

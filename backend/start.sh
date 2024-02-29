@@ -8,6 +8,7 @@ echo "WIKIART_COLLECTION=$WIKIART_COLLECTION" >> /.env
 echo "WIKIART_DIR=/wikiart" >> /.env
 echo "BEST_ARTWORKS_COLLECTION=$BEST_ARTWORKS_COLLECTION" >> /.env
 echo "BEST_ARTWORKS_DIR=/best_artworks" >> /.env
+echo "ROOT=1" >> /.env
 
 # Export .env file location
 export ENV_FILE_LOCATION=/.env
@@ -37,6 +38,12 @@ fi
 
 # Sleep for 100 seconds to allow time for the container hosting the milvus service to become healthy
 sleep 100
+
+# Create default database
+echo "Creating default database..."
+python -m src.db_utilities.create_database
+# Remove ROOT from .env
+sed -i '/ROOT/d' /.env
 
 echo "Starting backend..."
 
