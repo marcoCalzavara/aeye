@@ -11,11 +11,11 @@ import {getUrlForImage} from "../utilities";
 const DURATION = 2; // seconds
 const SPRITEPOOLSIZE = 800;
 const BLURSTRENGTH = 1;
-const BLURSTRENGTHMAX = 2;
+const BLURSTRENGTHMAX = 1;
 // const NUMOFBLURSTRENGTHS = 10;
 // const BLURSTRENGTHS = Array.from({length: NUMOFBLURSTRENGTHS}, (_, i) => i * BLURSTRENGTHMAX / (NUMOFBLURSTRENGTHS - 1));
-const QUALITY = 3;
-const INITIALALPHA = 0.5;
+const QUALITY = 2;
+// const DEPTH_ALPHA_FLICKERING = 0.2
 // Define constant for transition steps and depth steps
 const INITIAL_TRANSITION_STEPS = 100;
 const DEPTH_STEP = 0.02;
@@ -81,7 +81,7 @@ export function fetchFirstTiles(url, signal, tilesCache) {
                 // Convert index to tile
                 const zoom_plus_tile = convertIndexToTile(tile["index"]);
                 tilesCache.set(zoom_plus_tile.zoom + "-" + zoom_plus_tile.x + "-" + zoom_plus_tile.y, tile["data"]);
-                if (tile["tile"][0] === 0) {
+                if (tile["index"] === 0) {
                     range = tile["range"];
                 }
             }
@@ -177,7 +177,7 @@ const ClustersMap = (props) => {
     const tilesOnStage = useRef(new Map());
     // Define least recently used cache for tiles. Use fetchTileData to fetch tiles.
     const tilesCache = useRef(new LRUCache({
-        max: 25000, // This is more or less 25MB
+        max: 15000,
         updateAgeOnHas: true,
         updateAgeOnGet: true
     }));
@@ -271,19 +271,35 @@ const ClustersMap = (props) => {
             // Set blur strength proportional to the depth. If showCarousel is true, then leave the blur strength as it is.
             if (depth.current >= 0) {
                 sprite.filters[0].blur = BLURSTRENGTHMAX * (1 - Math.sin(depth.current * Math.PI / 2)) ** 3;
-                // Set blur strength to the value in BLURSTRENGTHS
                 // sprite.filters[0].blur = BLURSTRENGTHS[BLURSTRENGTHS.length - 1 - Math.floor(depth.current * (NUMOFBLURSTRENGTHS - 1))];
-                sprite.alpha = ((1 - INITIALALPHA) / Math.log(101)) * Math.log(100 * depth.current + 1) + INITIALALPHA;
             } else {
                 sprite.filters[0].blur = BLURSTRENGTHMAX * (1 - Math.sin((1 + depth.current) * Math.PI / 2)) ** 3;
                 // sprite.filters[0].blur = BLURSTRENGTHS[Math.floor((1 + depth.current) * (NUMOFBLURSTRENGTHS - 1))];
-                sprite.alpha = ((1 - INITIALALPHA) / Math.log(101)) * Math.log(100 * (1 + depth.current) + 1) + INITIALALPHA;
             }
 
             if (!props.showCarousel) {
                 sprite.filters[0].enabled = true;
                 sprite.zIndex = 5;
             }
+            //
+            // // Modify the alpha of the sprite. Unless in zoom level 0, the alpha goes rapidly to 1 from 0 around a
+            // // depth of 0. This is done to avoid the flickering of the sprites when they all of a sudden become visible.
+            // if (zoomLevel.current === 0 || Math.floor(zoomLevel.current + depth.current) === 0) {
+            //     sprite.alpha = 1;
+            // }
+            // else {
+            //     if (depth.current >= 0) {
+            //         if (depth.current < DEPTH_ALPHA_FLICKERING / 2)
+            //             sprite.alpha = 0;
+            //         else if (DEPTH_ALPHA_FLICKERING / 2 <= depth.current < (5 / 2) * DEPTH_ALPHA_FLICKERING)
+            //             sprite.alpha = (1 / Math.log(11)) * Math.log((5 / DEPTH_ALPHA_FLICKERING) * (depth.current - DEPTH_ALPHA_FLICKERING / 2) + 1);
+            //         else
+            //             sprite.alpha = 1;
+            //     }
+            //     else {
+            //         sprite.alpha = 1;
+            //     }
+            // }
         }
         // Make sprite interactive if the blur is less than 2/5 of the maximum blur strength, else make it not interactive.
         sprite.interactive = sprite.filters[0].blur < (2 / 5) * BLURSTRENGTHMAX;
@@ -799,6 +815,12 @@ const ClustersMap = (props) => {
                     // Set size of sprite
                     scaleSprite(index);
                 }
+
+                // Make sprite not visible if outside the viewing area
+                sprites.current.get(index).visible = sprites.current.get(index).x > -maxWidth.current
+                    && sprites.current.get(index).x <= stageWidth.current
+                    && sprites.current.get(index).y >= -maxHeight.current
+                    && sprites.current.get(index).y <= stageHeight.current;
             }
             // Save artworks in tiles
             // noinspection JSUnresolvedVariable
@@ -853,11 +875,11 @@ const ClustersMap = (props) => {
             step_x = (final_effective_position_x - effectivePosition.current.x) / transition_steps;
             step_y = (final_effective_position_y - effectivePosition.current.y) / transition_steps;
         } else if (Math.max(Math.abs(step_x), Math.abs(step_y)) > 0.01) {
-            transition_steps = Math.ceil(INITIAL_TRANSITION_STEPS * 4);
+            transition_steps = Math.ceil(INITIAL_TRANSITION_STEPS * 2);
             step_x = (final_effective_position_x - effectivePosition.current.x) / transition_steps;
             step_y = (final_effective_position_y - effectivePosition.current.y) / transition_steps;
         } else if (Math.max(Math.abs(step_x), Math.abs(step_y)) > 0.05) {
-            transition_steps = Math.ceil(INITIAL_TRANSITION_STEPS * 8);
+            transition_steps = Math.ceil(INITIAL_TRANSITION_STEPS * 4);
             step_x = (final_effective_position_x - effectivePosition.current.x) / transition_steps;
             step_y = (final_effective_position_y - effectivePosition.current.y) / transition_steps;
         }
@@ -872,7 +894,6 @@ const ClustersMap = (props) => {
                 if ((effectivePosition.current.x === final_effective_position_x
                         && effectivePosition.current.y === final_effective_position_y)
                     || counter === transition_steps) {
-                    console.log("Translation ticker stopped");
                     // Stop ticker
                     translation_ticker.stop();
                     // Update stage
