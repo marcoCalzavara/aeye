@@ -30,6 +30,7 @@ Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 class DatasetForImages(TorchDataset):
     def __init__(self, root_dir, separator="-"):
         self.root_dir = root_dir
+        self.start = 0
         self.file_list = []
 
         for file in os.listdir(root_dir):
@@ -52,15 +53,17 @@ class DatasetForImages(TorchDataset):
         img_name = os.path.join(self.root_dir, self.file_list[idx])
         # Get image height and width
         image = Image.open(img_name).convert('RGB')
+        index = idx + self.start
         if self.transform:
             image = self.transform(image, return_tensors="pt")
 
         return {
             'images': image,
-            'index': idx,
+            'index': index,
         }
 
     def do_slicing(self, start, end):
+        self.start = start
         self.file_list = self.file_list[start:end]
 
 
@@ -141,12 +144,16 @@ def inference(args):
                 # noinspection all
                 with accelerator.split_between_processes(data["images"]) as images:
                     # Generate input
-                    inputs = processor([QUERY_LLAVA for _ in images], images=images,
-                                       return_tensors="pt").to(bfloat16).to(accelerator.device)
-                    # Generate outputs
-                    outputs = model.generate(**inputs, max_new_tokens=MAX_TOKENS_LLAVA, do_sample=False)
-                    # Get captions
-                    captions = processor.batch_decode(outputs, skip_special_tokens=True)
+                    if len(images) != 0:
+                        # noinspection all
+                        inputs = processor([QUERY_LLAVA for _ in images], images=images,
+                                           return_tensors="pt").to(bfloat16).to(accelerator.device)
+                        # Generate outputs
+                        outputs = model.generate(**inputs, max_new_tokens=MAX_TOKENS_LLAVA, do_sample=False)
+                        # Get captions
+                        captions = processor.batch_decode(outputs, skip_special_tokens=True)
+                    else:
+                        captions = []
 
                 gathered_captions = gather_object(captions)
                 # noinspection all
@@ -179,7 +186,7 @@ def main():
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=1,
+        default=36,
         help="Batch size."
     )
     parser.add_argument(

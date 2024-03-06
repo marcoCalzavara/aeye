@@ -1,4 +1,5 @@
 import threading
+from typing import List
 
 import torch
 from fastapi import Query
@@ -186,3 +187,7 @@ class Embedder:
 
     def __call__(self, text: str = Query(...)) -> torch.Tensor:
         return self.embeddings.getTextEmbeddings(text)
+
+
+def parse_comma_separated(indexes: str) -> List[int]:
+    return [int(value) for value in indexes.split(',')]

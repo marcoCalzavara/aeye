@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi_utils.timing import add_timing_middleware
@@ -78,7 +77,8 @@ def get_image_from_text(collection: Collection = Depends(dataset_collection_name
 
 
 @app.get("/api/tiles")
-def get_tiles(indexes: List[int] = Query(...), collection: Collection = Depends(clusters_collection_name_getter)):
+def get_tiles(indexes: List[int] = Depends(parse_comma_separated),
+              collection: Collection = Depends(clusters_collection_name_getter)):
     if collection is None:
         # Collection not found, return 404
         raise HTTPException(status_code=404, detail="Collection not found")

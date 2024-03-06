@@ -65,36 +65,34 @@ export default function SearchBar(props) {
     };
 
     const handleEnter = (event) => {
-        if (event.key === 'Enter') {
+        if (event.key === 'Enter')
             handleClickSearch(event);
-        }
     }
 
     const handleClickSearch = () => {
-        setOpen(false);
-        // noinspection JSIgnoredPromiseFromCall
-        sendText(inputValue);
-        setInputValue("");
+        if (inputValue !== "") {
+            if (!props.searchBarIsClicked)
+                props.setSearchBarIsClicked(true);
+            // noinspection JSIgnoredPromiseFromCall
+            sendText(inputValue);
+            setInputValue("");
+        }
     };
-
-    const handleClick = () => {
-        setOpen(!open);
-    }
 
     return (
         <div className={`w-searchbar h-searchbar flex justify-between items-center z-10 bg-white rounded-full 
         ${props.searchBarIsClicked ? 'searchBarPositionTransition' : 'searchBarCentered'}`}>
             <InputBase
+                id="search-bar-id"
                 className="w-98 h-full pl-3 font-bar"
                 label={"Search Images by Text"}
                 placeholder={"Search for an image"}
                 value={inputValue}
                 onChange={handleInputChange}
                 onKeyDown={handleEnter}
-                onClick={handleClick}
             />
-            <IconButton type="button" onClick={handleClickSearch}>
-                <SearchIcon/>
+            <IconButton type="button" onClick={handleClickSearch} id="search-button">
+                <SearchIcon id="search-button-icon"/>
             </IconButton>
         </div>
     );

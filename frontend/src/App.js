@@ -13,8 +13,12 @@ function App() {
 
     useEffect(() => {
         // Define event listener to handle click on the page. The event handler will be removed after the first click.
-        const handleClick = () => {
-            setSearchBarIsClicked(true);
+        const handleClick = (event) => {
+            if ((event.target.id === "search-bar-id" || event.target.id === "search-button"
+                    || event.target.id === "search-button-icon") && event.type !== "wheel")
+                return;
+            if (!searchBarIsClicked)
+                setSearchBarIsClicked(true);
             window.removeEventListener('click', handleClick);
             window.removeEventListener('wheel', handleClick);
         }
@@ -26,7 +30,7 @@ function App() {
 
     return (
         <>
-          <Home page={page} setPage={setPage} searchBarIsClicked={searchBarIsClicked}/>
+          <Home page={page} setPage={setPage} searchBarIsClicked={searchBarIsClicked} setSearchBarIsClicked={setSearchBarIsClicked}/>
           <About page={page} setPage={setPage}/>
         </>
     );

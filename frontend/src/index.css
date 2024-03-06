@@ -382,3 +382,7 @@ body, #root {
     transform: translateY(0) scale(1);
     transition: transform 1s;
 }
+
+::-webkit-scrollbar-track {
+    background: rgb(49 49 52 / 1); /* Color of the track */
+}

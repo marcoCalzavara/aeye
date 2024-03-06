@@ -61,19 +61,11 @@ const NeighborsCarousel = (props) => {
     // Define state for images to show. The state consists of pairs (path, text), where path is the path to the image
     // and text is the text associated to the image.
     const [images, setImages] = useState(TEMP_ARRAY);
-    // const [captions, setCaptions] = useState([]);
     const [image, setImage] = useState(TEMP_ARRAY[0]);
     const selectedDataset = useRef(props.selectedDataset);
 
 
     useEffect(() => {
-        // Initialize captions to "Generating captions..."
-        // let captions = [];
-        // for (let i = 0; i < 10; i++) {
-        //     captions.push("Generating captions...");
-        // }
-        // setCaptions(captions);
-
         // Empty the state images
         setImages(TEMP_ARRAY);
         setImage({path: "", index: -1, author: "", width: image.width, height: image.height, genre: "", title: "", date: -1});
@@ -94,25 +86,25 @@ const NeighborsCarousel = (props) => {
                         height: image.height
                     }
                     // noinspection JSUnresolvedVariable
-                    if (image.genre !== undefined) {
+                    if (image.genre !== undefined)
                         // noinspection JSUnresolvedVariable
                         new_image.genre = image.genre;
-                    }
                     // noinspection JSUnresolvedVariable
-                    if (image.title !== undefined) {
+                    if (image.title !== undefined)
                         // noinspection JSUnresolvedVariable
                         new_image.title = image.title;
-                    }
                     // noinspection JSUnresolvedVariable
-                    if (image.date !== undefined) {
+                    if (image.date !== undefined)
                         // noinspection JSUnresolvedVariable
                         new_image.date = image.date;
-                    }
                     // noinspection JSUnresolvedVariable
-                    images.push(
-                        new_image
-                    );
-                    if (first) {
+                    if (image.caption !== undefined)
+                        // noinspection JSUnresolvedVariable
+                        new_image.caption = image.caption;
+                    // noinspection JSUnresolvedVariable
+                    if (!first)
+                        images.push(new_image);
+                    else {
                         // noinspection JSUnresolvedVariable
                         setImage(new_image);
                         first = false;
@@ -121,21 +113,6 @@ const NeighborsCarousel = (props) => {
                 setImages(images);
                 return images
             })
-            // .then(images => {
-                // Fetch captions from server
-                /*
-                for (let i = 0; i < images.length; i++) {
-                    fetchCaption(images, i, props.host, props.selectedDataset)
-                        .then(data => {
-                            // Replace the corresponding caption with the fetched caption
-                            setCaptions(prevCaptions => {
-                                let newCaptions = [...prevCaptions];
-                                newCaptions[i] = data.caption + ".\n" + images[i].author;
-                                return newCaptions;
-                            });
-                        });
-                } */
-            // });
     }, [props.clickedImageIndex]);
 
     useEffect(() => {
@@ -155,6 +132,7 @@ const NeighborsCarousel = (props) => {
             }
             <div className="w-full h-carousel flex flex-row justify-center items-center pointer-events-auto">
                 <Carousel
+                    key={props.clickedImageIndex}
                     additionalTransfrom={0}
                     arrows
                     autoPlaySpeed={3000}
@@ -167,7 +145,8 @@ const NeighborsCarousel = (props) => {
                     infinite={false}
                     itemClass=""
                     keyBoardControl
-                    minimumTouchDrag={80}
+                    minimumTouchDrag={10}
+                    transitionDuration={300}
                     pauseOnHover
                     renderArrowsWhenDisabled={false}
                     renderButtonGroupOutside={false}

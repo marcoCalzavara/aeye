@@ -26,7 +26,7 @@ function getUrlForFirstTiles(dataset, host = "") {
 
 export function fetchTiles(indexes, tilesCache, pendingTiles, dataset, host) {
     // Create url
-    const url = `${host}/api/tiles?indexes=${indexes.join("&indexes=")}&collection=${dataset}_zoom_levels_clusters`;
+    const url = `${host}/api/tiles?indexes=${indexes.join(",")}&collection=${dataset}_zoom_levels_clusters`;
     return fetch(url,
         {
             method: 'GET',

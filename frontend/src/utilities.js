@@ -78,7 +78,7 @@ export function getUrlForImage(path, dataset, host = "") {
 }
 
 
-function getResponsiveCarouselHeight() {
+export function getResponsiveCarouselHeight() {
     switch (true) {
         case document.documentElement.clientWidth >= 320 && document.documentElement.clientWidth <= 480:
             return responsive_carousel_heights.h_carousel_320;

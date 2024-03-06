@@ -1,9 +1,9 @@
 import * as React from 'react';
 import {useEffect} from 'react';
-import Typography from '@mui/material/Typography';
 import ProgressiveImage from './ProgressiveImage';
 import './carousel.css';
-import {getMaxHeightMainImage} from "../utilities";
+import {getMaxHeightMainImage, getResponsiveCarouselHeight} from "../utilities";
+import TextArea from "./TextArea";
 
 const MARGIN = 10;
 
@@ -43,14 +43,39 @@ const generateText = (image) => {
         if (image.date !== -1) {
             text += "Date: " + image.date + ".   ";
         }
+    if (image.caption !== undefined)
+        text += "Caption: " + image.caption + ".   ";
 
     return text;
 }
 
+function getStyle(expanded, heightAndWidth) {
+    const style = {
+        backgroundColor: "transparent",
+        fontStyle: 'italic',
+        fontFamily: 'Roboto Slab, serif',
+        fontSize: (heightAndWidth.height * 0.1 - 3) / (2 * 1.3) > 13 ? (heightAndWidth.height * 0.1 - 3) / (2 * 1.3) + 'px'
+            : (heightAndWidth.height * 0.1 - 3) / 1.3 + 'px',
+        lineHeight: '1.3',
+        textAlign: 'justify',
+        color: 'white',
+        width: '100%',
+        cursor: 'pointer',
+        maxHeight: getResponsiveCarouselHeight()
+    }
+    if (!expanded) {
+        style.height = (heightAndWidth.height * 0.1) + 'px';
+    }
+    return style;
+}
+
+
 export default function MainImageCard({image, placeholderSrc, src}) {
     const [heightAndWidth, setHeightAndWidth] = React.useState({height: 0, width: 0});
+    const [expanded, setExpanded] = React.useState(false);
 
     useEffect(() => {
+        setExpanded(false);
         const {height, width} = getHeightAndWidthOfMainImage(image.height, image.width);
         setHeightAndWidth({height: height, width: width});
     }, [image]);
@@ -61,16 +86,21 @@ export default function MainImageCard({image, placeholderSrc, src}) {
             {
                 display: 'flex',
                 flexDirection: 'column',
+                justifyContent: 'start',
                 alignItems: 'center',
-                justifyContent: 'space-evenly',
                 borderRadius: '10px',
                 height: heightAndWidth.height,
                 width: heightAndWidth.width,
-                border: "2px solid",
-                borderColor: "rgb(59 59 62 / 1)",
-                backgroundColor: "rgb(49 49 52 / 1)"
+                backgroundColor: "rgb(49 49 52 / 1)",
+                zIndex: 100,
+                pointerEvents: "auto",
             }
-        } className="margin-between-images-bottom">
+        } className="margin-between-images-bottom" onPointerDown={
+            (event) => {
+                console.log("hey")
+                event.stopPropagation();
+            }
+        }>
             {image && image.index !== -1 &&
                 <>
                     <ProgressiveImage
@@ -78,18 +108,11 @@ export default function MainImageCard({image, placeholderSrc, src}) {
                         src={src}
                         width={(heightAndWidth.width - MARGIN * 2) + 'px'}
                         height={(heightAndWidth.height * 0.9 - MARGIN * 2) + 'px'}
+                        margin={MARGIN}
                     />
-                    <Typography variant="h1" sx={{
-                        backgroundColor: "transparent",
-                        fontStyle: 'italic',
-                        fontFamily: 'Roboto Slab, serif',
-                        fontSize: `calc(min(1.3vh, 1.3vw))`,
-                        color: 'white',
-                        width: (heightAndWidth.width - MARGIN * 2) + 'px',
-                        height: (heightAndWidth.height * 0.1 - MARGIN) + 'px'
-                    }}>
-                        {generateText(image)}
-                    </Typography>
+                    <div style={getStyle(expanded, heightAndWidth)}>
+                        <TextArea text={generateText(image)} margin={MARGIN} expanded={expanded} setExpanded={setExpanded}/>
+                    </div>
                 </>}
         </div>
     );

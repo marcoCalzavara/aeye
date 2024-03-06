@@ -34,6 +34,6 @@ if [ "$answer" = "y" ]; then
   docker system prune -a
 else
   cd milvus || exit
-  rm -r volumes
+  rm -rf volumes
   cd ..
 fi

@@ -222,6 +222,7 @@ const Home = (props) => {
                                page={props.page}
                                setPage={props.setPage}
                                searchBarIsClicked={props.searchBarIsClicked}
+                               setSearchBarIsClicked={props.setSearchBarIsClicked}
                     />
                     {/*<HamburgerMenu*/}
                     {/*    menuOpen={menuOpen}*/}

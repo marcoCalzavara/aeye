@@ -19,6 +19,7 @@ const StickyBar = (props) => {
                            setShowCarousel={props.setShowCarousel}
                            selectedDataset={props.selectedDataset}
                            searchBarIsClicked={props.searchBarIsClicked}
+                           setSearchBarIsClicked={props.setSearchBarIsClicked}
                 />
             }
             <div className="w-1/10 h-2/3 flex flex-row justify-end">

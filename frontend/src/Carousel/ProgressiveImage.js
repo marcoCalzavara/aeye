@@ -18,8 +18,9 @@ const ProgressiveImg = ({placeholderSrc, src, width, height, margin}) => {
     return (
         <div style={{
             marginTop: margin,
+            marginBottom: margin,
             width: width,
-            height: height,
+            height: height
         }}>
             <img
                 {...{src: imgSrc}}
@@ -28,7 +29,7 @@ const ProgressiveImg = ({placeholderSrc, src, width, height, margin}) => {
                     width: "100%",
                     height: "100%",
                     objectFit: "fill",
-                    borderRadius: "5px",
+                    borderRadius: "5px"
                 }}
             />
         </div>

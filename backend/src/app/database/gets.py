@@ -15,6 +15,7 @@ def timeit(func):
     @param func:
     @return:
     """
+
     def wrapper(*args, **kwargs):
         """
         Wrapper for timing functions.
@@ -27,6 +28,7 @@ def timeit(func):
         end = time.time()
         print(f"Function {func.__name__} took {(end - start) * 1000} milliseconds.")
         return result
+
     return wrapper
 
 
@@ -49,7 +51,7 @@ def get_image_info_from_text_embedding(collection: Collection, text_embeddings: 
         anns_field=EMBEDDING_VECTOR_FIELD_NAME,
         param=search_params,
         limit=1,
-        output_fields=["index", "author", "path", "width", "height", "x", "y"]
+        output_fields=["index", "author", "path", "width", "height", "genre", "date", "title", "caption", "x", "y"]
     )
     # Return image path
     return results[0][0].to_dict()["entity"]
@@ -141,8 +143,8 @@ def get_neighbors(index: int, collection: Collection, top_k: int) -> List[dict]:
         data=[results[0][EMBEDDING_VECTOR_FIELD_NAME]],
         anns_field=EMBEDDING_VECTOR_FIELD_NAME,
         param=search_params,
-        limit=top_k,
-        output_fields=["index", "author", "path", "width", "height", "genre", "date", "title"]
+        limit=top_k + 1,
+        output_fields=["index", "author", "path", "width", "height", "genre", "date", "title", "caption"]
     )
     # Return results
     return [hit.to_dict()["entity"] for hit in results[0]]
