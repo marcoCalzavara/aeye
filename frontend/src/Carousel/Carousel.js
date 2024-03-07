@@ -12,26 +12,41 @@ import MainImageCard from "./MainImageCard";
 const NUM_OF_NEIGHBORS = 10;
 const TEMP_ARRAY = Array(NUM_OF_NEIGHBORS).fill({path: "", index: -1, author: "", width: 0, height: 0, genre: "", title: "", date: -1});
 const responsive = {
-    desktop: {
+    d1: {
         breakpoint: {
-            max: 3000,
-            min: 1024
+            max: 5000,
+            min: 1201
+        },
+        items: 4
+    },
+    d2: {
+        breakpoint: {
+            max: 1200,
+            min: 1025
         },
         items: 3
     },
-    mobile: {
+    d3: {
         breakpoint: {
-            max: 464,
+            max: 1024,
+            min: 769
+        },
+        items: 3
+    },
+    d4: {
+        breakpoint: {
+            max: 768,
+            min: 481
+        },
+        items: 3
+
+    },
+    d5: {
+        breakpoint: {
+            max: 480,
             min: 0
         },
         items: 2
-    },
-    tablet: {
-        breakpoint: {
-            max: 1024,
-            min: 464
-        },
-        items: 3
     }
 };
 

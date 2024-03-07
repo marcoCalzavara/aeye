@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { TfiHarddrives } from "react-icons/tfi";
+import { GoDatabase } from "react-icons/go";
 import {iconStyle, itemsStyle} from "../styles";
 import {Unstable_Popup as BasePopup} from '@mui/base/Unstable_Popup';
 
@@ -33,7 +33,7 @@ const SelectDataset = (props) => {
                 setOpen(!open);
                 setAnchor(anchor ? null : event.currentTarget);
             }}>
-                <TfiHarddrives style={iconStyle}/>
+                <GoDatabase style={iconStyle}/>
             </button>
             <BasePopup open={open} anchor={anchor} placement={"bottom-start"} style={{
                 backgroundColor: "rgb(39, 39, 42)",

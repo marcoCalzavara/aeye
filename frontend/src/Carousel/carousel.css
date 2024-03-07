@@ -1,10 +1,10 @@
 /* Define variables for height of the carousel */
 :root {
-    --w-carousel-320: 50%;
-    --w-carousel-480: 50%;
-    --w-carousel-768: 60%;
-    --w-carousel-1024: 55%;
-    --w-carousel-1200: 50%;
+    --w-carousel-320: 80%;
+    --w-carousel-480: 80%;
+    --w-carousel-768: 70%;
+    --w-carousel-1024: 60%;
+    --w-carousel-1200: 60%;
 }
 
 .carousel-container {

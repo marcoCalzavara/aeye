@@ -28,8 +28,8 @@
     --searchbar-width-1024: 500px;
     --searchbar-width-1200: 500px;
 
-    --searchbar-height-320: 24px;
-    --searchbar-height-480: 26px;
+    --searchbar-height-320: 30px;
+    --searchbar-height-480: 30px;
     --searchbar-height-768: 30px;
     --searchbar-height-1024: 34px;
     --searchbar-height-1200: 38px;
@@ -37,8 +37,8 @@
     --h-item-320: 30px;
     --h-item-480: 30px;
     --h-item-768: 30px;
-    --h-item-1024: 40px;
-    --h-item-1200: 40px;
+    --h-item-1024: 34px;
+    --h-item-1200: 38px;
 
 
     --button-size: 20px;
@@ -47,12 +47,18 @@
 
 
     --margin-between-images: 20px;
-    --h-carousel-320: 180px;
+    --h-carousel-320: 160px;
     --h-carousel-480: 180px;
     --h-carousel-768: 180px;
     --h-carousel-1024: 200px;
     --h-carousel-1200: 220px;
     --height-transition: 87vh;
+}
+
+body {
+    height: 100dvh;
+    width: 100vw;
+    position: fixed;
 }
 
 /* Media queries for the height of the sticky bar */

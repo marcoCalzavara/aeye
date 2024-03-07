@@ -283,9 +283,9 @@ const Home = (props) => {
                                 </button>
                             )}
                             <div id="carousel-id"
-                                 className={`bg-transparent carousel-div max-h-carousel-plus-image flex flex-col items-center justify-center z-50
+                                 className={`bg-transparent carousel-div max-h-carousel-plus-image flex flex-col items-center justify-center
                                  ${!pageHasChanged ? (showCarousel && clickedImageIndex !== -1 ? 'height-transition open' : 'height-transition close') : ''}
-                                 ${pageHasChanged ? 'max-height-transition-close' : ''}`}>
+                                 ${pageHasChanged ? 'max-height-transition-close' : ''}`} style={{zIndex: 40}}>
                                 {clickedImageIndex !== -1 &&
                                     <NeighborsCarousel host={host.current} clickedImageIndex={clickedImageIndex}
                                                        setClickedImageIndex={setClickedImageIndex}

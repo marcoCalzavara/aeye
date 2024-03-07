@@ -12,18 +12,8 @@ const StickyBar = (props) => {
     return (
         <div
             id="sticky-bar"
-            className="fixed top-0 w-full h-sticky flex flex-row justify-between items-center flex-gaps-1 bg-transparent px-1/80">
-            <div className="w-1/10 h-2/3"/>
-            {props.hasSearchBar &&
-                <SearchBar host={props.host} setSearchData={setSearchData.current}
-                           setShowCarousel={props.setShowCarousel}
-                           selectedDataset={props.selectedDataset}
-                           searchBarIsClicked={props.searchBarIsClicked}
-                           setSearchBarIsClicked={props.setSearchBarIsClicked}
-                />
-            }
-            <div className="w-1/10 h-2/3 flex flex-row justify-end">
-                {/*<Hamburger color={"white"} toggle={props.setMenuOpen} toggled={props.menuOpen}/>*/}
+            className="fixed top-0 w-full h-sticky flex flex-row justify-between items-center flex-gaps-1 bg-transparent px-1/80 z-50">
+            <div className="h-searchbar">
                 {
                     props.page === "home" &&
                     <div style={
@@ -33,14 +23,24 @@ const StickyBar = (props) => {
                             flexDirection: "column",
                             alignItems: "center",
                             justifyContent: "center",
-                            paddingTop: "3%",
-                            paddingRight: "20%"
+                            paddingTop: "3.7%"
                         }
                     }>
                         <SelectDataset datasets={props.datasets} setSelectedDataset={props.setSelectedDataset}/>
                     </div>
 
                 }
+            </div>
+            {props.hasSearchBar &&
+                <SearchBar host={props.host} setSearchData={setSearchData.current}
+                           setShowCarousel={props.setShowCarousel}
+                           selectedDataset={props.selectedDataset}
+                           searchBarIsClicked={props.searchBarIsClicked}
+                           setSearchBarIsClicked={props.setSearchBarIsClicked}
+                />
+            }
+            <div className="h-searchbar">
+                {/*<Hamburger color={"white"} toggle={props.setMenuOpen} toggled={props.menuOpen}/>*/}
                 {
                     props.page === "home" &&
                     <div onClick={() => {
