@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { GoDatabase } from "react-icons/go";
+import {GoDatabase} from "react-icons/go";
 import {iconStyle, itemsStyle} from "../styles";
 import {Unstable_Popup as BasePopup} from '@mui/base/Unstable_Popup';
 
@@ -25,42 +25,44 @@ const SelectDataset = (props) => {
     const handleChange = (dataset) => {
         setDataset(dataset);
         props.setSelectedDataset(dataset);
+        setOpen(false);
     };
 
+    const handleButtonPress = (event) => {
+        console.log(event);
+        setOpen(true);
+        setAnchor(anchor ? null : event.currentTarget);
+    }
+
     return (
-        <div>
-            <button onClick={(event) => {
-                setOpen(!open);
-                setAnchor(anchor ? null : event.currentTarget);
-            }}>
-                <GoDatabase style={iconStyle}/>
-            </button>
+        <div style={{zIndex: 100}}>
+            <GoDatabase id="icon-dataset" style={iconStyle} onPointerDown={handleButtonPress} onTouchEnd={handleButtonPress}/>
             <BasePopup open={open} anchor={anchor} placement={"bottom-start"} style={{
                 backgroundColor: "rgb(39, 39, 42)",
                 border: "2px solid #303030",
                 borderRadius: "5px",
                 padding: "6px",
                 height: props.datasets !== undefined ? itemsStyle.height.replace("px", "") * props.datasets.length + "px" : "auto",
-                width: itemsStyle.fontSize.replace("px", "") * 5 + "px"
+                width: itemsStyle.fontSize.replace("px", "") * 5 + "px",
+                zIndex: 100
             }}>
-                <div className="flex flex-col justify-between items-start w-full h-full">
+                <div className="flex flex-col justify-start items-start w-full h-full">
                     {dataset && props.datasets.map((d, index) => {
                         return (
-                            <div className="flex flex-row items-center justify-items-start w-full" key={index}>
-                                <button onClick={() => handleChange(d)} style={
-                                    {
-                                        height: itemsStyle.height.replace("px", "") * 0.6 + "px",
-                                        fontSize: itemsStyle.fontSize.replace("px", "") * 0.6 + "px",
-                                        fontWeight: itemsStyle.fontWeight,
-                                        fontFamily: itemsStyle.fontFamily,
-                                        marginLeft: itemsStyle.marginLeft,
-                                        textAlign: itemsStyle.textAlign,
-                                        lineHeight: 1,
-                                        color: "white",
-                                        textDecoration: d === dataset ? 'underline' : 'none'
-                                    }
-                                }> {cleanText(d)} </button>
-                            </div>
+                            <button key={index} onTouchStart={() => handleChange(d)} onClick={() => handleChange(d)} style={
+                                {
+                                    height: itemsStyle.height.replace("px", "") + "px",
+                                    fontSize: itemsStyle.fontSize.replace("px", "") * 0.6 + "px",
+                                    fontWeight: itemsStyle.fontWeight,
+                                    fontFamily: itemsStyle.fontFamily,
+                                    marginLeft: itemsStyle.marginLeft,
+                                    textAlign: itemsStyle.textAlign,
+                                    lineHeight: 1,
+                                    color: "white",
+                                    textDecoration: d === dataset ? 'underline' : 'none'
+                                }
+                            }> {cleanText(d)}
+                            </button>
                         );
                     })}
                 </div>

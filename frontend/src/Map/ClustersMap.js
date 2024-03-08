@@ -19,6 +19,7 @@ const QUALITY = 2;
 // Define constant for transition steps and depth steps
 const INITIAL_TRANSITION_STEPS = 100;
 const DEPTH_STEP = 0.02;
+const NUM_OF_VELOCITIES = 5;
 
 function getUrlForFirstTiles(dataset, host = "") {
     return `${host}/api/first-tiles?collection=${dataset}_zoom_levels_clusters`;
@@ -94,7 +95,7 @@ export function fetchFirstTiles(url, signal, tilesCache) {
 
 }
 
-function throttle(func, limit) {
+/* function throttle(func, limit) {
     // Throttle function. The function func is called at most once every limit milliseconds.
     let inThrottle;
     return function () {
@@ -106,7 +107,7 @@ function throttle(func, limit) {
             setTimeout(() => inThrottle = false, limit);
         }
     }
-}
+} */
 
 
 /**
@@ -140,6 +141,8 @@ function throttle(func, limit) {
  * @constructor
  */
 const ClustersMap = (props) => {
+    // Define state for the selected dataset
+    const selectedDataset = useRef(props.selectedDataset);
     // Define state for the effective position of the stage. The change of the effective position of the stage does not
     // necessary trigger a re-rendering of the stage.
     const effectivePosition = useRef({x: 0, y: 0});
@@ -189,6 +192,8 @@ const ClustersMap = (props) => {
     const app = useApp()
     // Create container for the stage
     const container = useRef(null);
+    // Create container for when the other container is disabled
+    const containerForCarousel = useRef(new PIXI.Container());
     // Define hammer
     const hammer = useRef(null);
     // Define state for previous scale for pinching
@@ -198,6 +203,11 @@ const ClustersMap = (props) => {
     // Create a ref that will store the current value of the clicked search bar
     const searchBarIsClickedRef = useRef(props.searchBarIsClicked);
     // const graphics = useRef(new PIXI.Graphics());
+    const touchStartPositionSprite = useRef({x: 0, y: 0});
+    const touchPrevTime = useRef(0);
+    const touchPrevPos = useRef({x: 0, y: 0});
+    const touchVelocities = useRef([]);
+    const isPinching = useRef(false);
 
     const mapGlobalCoordinatesToStageCoordinates = (global_x, global_y) => {
         // Map global coordinates to stage coordinates
@@ -211,8 +221,8 @@ const ClustersMap = (props) => {
 
     const mapStageCoordinatesToGlobalCoordinates = (stage_x, stage_y) => {
         // Map stage coordinates to global coordinates
-        const global_x = (stage_x * effectiveWidth.current) / width.current;
-        const global_y = (stage_y * effectiveHeight.current) / height.current;
+        const global_x = (stage_x * effectiveWidth.current) / stageWidth.current;
+        const global_y = (stage_y * effectiveHeight.current) / stageHeight.current;
         return {
             x: global_x + effectivePosition.current.x,
             y: global_y + effectivePosition.current.y
@@ -328,13 +338,13 @@ const ClustersMap = (props) => {
         // Remove all listeners
         sprite.removeAllListeners();
 
-        sprite.on('pointerdown', () => {
+        sprite.on('mousedown', () => {
             props.prevClickedImageIndex.current = props.clickedImageIndex;
             props.setClickedImageIndex(index);
             props.setShowCarousel(true);
         });
 
-        sprite.on('pointerenter', () => {
+        sprite.on('mouseenter', () => {
             // Deactivate second blur filter, but activate first blur filter
             if (searchBarIsClickedRef.current) {
                 sprite.filters[0].enabled = sprite.filters[0].blur !== 0;
@@ -342,12 +352,32 @@ const ClustersMap = (props) => {
             }
         });
 
-        sprite.on('pointerleave', () => {
+        sprite.on('mouseleave', () => {
             // Activate second blur filter, but deactivate first blur filter
             if (showCarouselRef.current) {
                 sprite.filters[0].enabled = false;
                 sprite.filters[1].enabled = true;
             }
+        });
+
+        sprite.on('touchstart', (event) => {
+            // Get position on the screen where the touch event occurred
+            touchStartPositionSprite.current = event.data.getLocalPosition(container.current);
+        });
+
+        sprite.on('touchend', (event) => {
+            // Get position on the screen where the touch event occurred
+            const touchEndPosition = event.data.getLocalPosition(container.current);
+            // Calculate the distance between the start and end position of the touch event
+            const distance = Math.sqrt((touchEndPosition.x - touchStartPositionSprite.current.x) ** 2 +
+                (touchEndPosition.y - touchStartPositionSprite.current.y) ** 2);
+            // If the distance is less than 2, then open the carousel
+            if (distance < 2) {
+                props.prevClickedImageIndex.current = props.clickedImageIndex;
+                props.setClickedImageIndex(index);
+                props.setShowCarousel(true);
+            }
+            touchStartPositionSprite.current = {x: 0, y: 0};
         });
     }
 
@@ -375,7 +405,7 @@ const ClustersMap = (props) => {
         // noinspection all
         sprite.texture = app.renderer.generateTexture(graphics);
         // Set main texture
-        sprite.texture = PIXI.Texture.from(getUrlForImage(path, props.selectedDataset, props.host));
+        sprite.texture = PIXI.Texture.from(getUrlForImage(path, selectedDataset.current, props.host));
         // Set z-index of sprite to 10
         sprite.zIndex = 10;
 
@@ -436,6 +466,8 @@ const ClustersMap = (props) => {
 
     // useEffect for initialization of the component. This is called every time the selected dataset changes.
     useEffect(() => {
+        // Change selected dataset
+        selectedDataset.current = props.selectedDataset;
         // Reset everything at the initial state
         reset();
 
@@ -446,12 +478,24 @@ const ClustersMap = (props) => {
             app.stage.addChild(container.current);
         }
 
+        // Manage second container
+        containerForCarousel.current.interactive = true;
+        containerForCarousel.current.zIndex = 1;
+        // noinspection all
+        containerForCarousel.current.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
+        // Define event handlers for the second container
+        // noinspection all
+        containerForCarousel.current
+            .on('mousedown', () => props.setShowCarousel(false))
+            .on('touchstart', () => props.setShowCarousel(false));
+
         // Define container pointer
         container.current.cursor = 'grab';
 
         // Add handlers to stage
         // noinspection all
         container.current.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
+        container.current.zIndex = 2;
         container.current.sortableChildren = true;
         container.current.interactive = true;
         container.current.inteactiveChildren = true;
@@ -462,7 +506,7 @@ const ClustersMap = (props) => {
         }
 
         // Fetch first zoom levels
-        fetchFirstTiles(getUrlForFirstTiles(props.selectedDataset, props.host), null, tilesCache.current)
+        fetchFirstTiles(getUrlForFirstTiles(selectedDataset.current, props.host), null, tilesCache.current)
             .then((range) => {
                 // Get cluster data for the first zoom level
                 const data = tilesCache.current.get("0-0-0");
@@ -532,25 +576,30 @@ const ClustersMap = (props) => {
                 }
             }).then(() => {
             props.setInitialLoadingDone(true);
-            // Add all handlers to the stage
-            container.current
-                .on('pointerdown', handleMouseDown)
-                .on('pointerup', handleMouseUp)
-                .on('pointermove', handleMouseMove)
-                .on('wheel', handleMouseWheel);
-
             // Create hammer. Bind it to the gesture area.
             // noinspection all
-            hammer.current = new Hammer(app.view);
+            hammer.current = new Hammer(container.current);
             // Disable all gestures except pinch
-            hammer.current.get('pan').set({enable: false});
-            hammer.current.get('swipe').set({enable: false});
             hammer.current.get('tap').set({enable: false});
             hammer.current.get('press').set({enable: false});
             hammer.current.get('rotate').set({enable: false});
+            hammer.current.get('pan').set({enable: false});
+            hammer.current.get('swipe').set({enable: false});
             hammer.current.get('pinch').set({enable: true});
             hammer.current.on('pinchstart', handlePinchStart);
             hammer.current.on('pinch', handlePinch);
+            hammer.current.on('pinchend', handlePinchEnd);
+
+            // Add all handlers to the stage
+            container.current
+                .on('mousedown', handleMouseDown)
+                .on('mouseup', handleMouseUp)
+                .on('mousemove', handleMouseMove)
+                .on('wheel', handleMouseWheel)
+                .on('touchmove', handleTouchMove)
+                .on('touchend', handleTouchEnd)
+                .on('touchstart', handleTouchStart);
+
         });
     }, [props.selectedDataset]);
 
@@ -623,6 +672,19 @@ const ClustersMap = (props) => {
         showCarouselRef.current = props.showCarousel;
         // Block movement of the stage if the carousel is shown
         container.current.interactive = !props.showCarousel;
+        if (hammer.current) {
+            hammer.current.get('pinch').set({enable: !props.showCarousel});
+        }
+        if (props.showCarousel) {
+            // Add containerForCarousel to stage
+            app.stage.addChild(containerForCarousel.current);
+            app.stage.sortChildren();
+        }
+        else
+            // Remove containerForCarousel from stage
+            app.stage.removeChild(containerForCarousel.current);
+
+        // Deactivate blur filter from all sprites
         // Set mouse down to false
         mouseDown.current = false;
         container.current.cursor = 'grab';
@@ -686,7 +748,8 @@ const ClustersMap = (props) => {
 
         // Create promise with null
         if (indexes.length > 0) {
-            unresolvedPromises.current.push(fetchTiles(indexes, tilesCache.current, pendingTiles.current, props.selectedDataset, props.host));
+            console.log("There are tiles to fetch.");
+            unresolvedPromises.current.push(fetchTiles(indexes, tilesCache.current, pendingTiles.current, selectedDataset.current, props.host));
         }
         // Get visible tiles
         const visible_tiles = getTilesFromZoomLevel(tile_x, tile_y, next_zoom_level);
@@ -817,10 +880,10 @@ const ClustersMap = (props) => {
                 }
 
                 // Make sprite not visible if outside the viewing area
-                sprites.current.get(index).visible = sprites.current.get(index).x > -maxWidth.current
-                    && sprites.current.get(index).x <= stageWidth.current
-                    && sprites.current.get(index).y >= -maxHeight.current
-                    && sprites.current.get(index).y <= stageHeight.current;
+                // sprites.current.get(index).visible = sprites.current.get(index).x > -maxWidth.current
+                //     && sprites.current.get(index).x <= stageWidth.current
+                //     && sprites.current.get(index).y >= -maxHeight.current
+                //     && sprites.current.get(index).y <= stageHeight.current;
             }
             // Save artworks in tiles
             // noinspection JSUnresolvedVariable
@@ -833,7 +896,7 @@ const ClustersMap = (props) => {
         console.assert(sprites.current.size + spritePool.current.length === SPRITEPOOLSIZE);
     }
 
-    const updateStageThrottled = throttle(updateStage, 50);
+    // const updateStageThrottled = throttle(updateStage, 50);
 
     // Create function for making the sprite pulse once it becomes available
     function pulseIfAvailable(spriteIndex) {
@@ -1054,8 +1117,125 @@ const ClustersMap = (props) => {
 
             // Update the data that is displayed on the stage. This consists of finding out the tiles that are visible,
             // fetching the data from the server and putting on stage the sprites that are visible.
-            // updateStage();
-            updateStageThrottled();
+            updateStage();
+            // updateStageThrottled();
+        }
+    }
+
+    // Create handler for touch move
+    const handleTouchMove = (event) => {
+        // Compute velocity
+        const touchCurrPos = event.data.getLocalPosition(container.current);
+        const touchCurrTime = Date.now();
+        if (touchVelocities.current.length > NUM_OF_VELOCITIES) {
+            // Remove the least recent velocity
+            touchVelocities.current.shift();
+        }
+        // Add the new velocity
+        touchVelocities.current.push({
+            x: (touchCurrPos.x - touchPrevPos.current.x) / (touchCurrTime - touchPrevTime.current),
+            y: (touchCurrPos.y - touchPrevPos.current.y) / (touchCurrTime - touchPrevTime.current)
+        });
+        // Save touch position
+        touchPrevPos.current = touchCurrPos;
+        // Save touch start time
+        touchPrevTime.current = touchCurrTime;
+        // Get mouse position. Transform movement of the mouse to movement in the embedding space.
+        const mouse_x = ((-event.movementX) * effectiveWidth.current) / width.current;
+        const mouse_y = ((-event.movementY) * effectiveHeight.current) / height.current;
+        // Change the effective position of the stage. Make sure that it does not exceed the limits of the embedding space.
+        const new_x = Math.max(
+            Math.min(effectivePosition.current.x + mouse_x, maxX.current - effectiveWidth.current), minX.current);
+        const new_y = Math.max(
+            Math.min(effectivePosition.current.y + mouse_y, maxY.current - effectiveHeight.current), minY.current);
+
+        // Update the effective position of the stage
+        effectivePosition.current.x = new_x;
+        effectivePosition.current.y = new_y;
+
+        // Update the data that is displayed on the stage. This consists of finding out the tiles that are visible,
+        // fetching the data from the server and putting on stage the sprites that are visible.
+        updateStage();
+        // updateStageThrottled();
+    }
+
+    // Create handler for touch start and touch end
+    const handleTouchStart = (event) => {
+        console.log("Touch start.")
+        // Save touch position
+        touchPrevPos.current = event.data.getLocalPosition(container.current);
+        // Save touch start time
+        touchPrevTime.current = Date.now();
+    }
+
+    const momentumTranslation = (averageVelocityX, averageVelocityY) => {
+        // Reduce velocities by the same amount to make sure the max velocity is 3.5
+        /*const maxVelocity = 2.5 / (zoomLevel.current + 1);
+        if (averageVelocityX > averageVelocityY && averageVelocityX > maxVelocity) {
+            averageVelocityX = maxVelocity;
+            averageVelocityY -= (averageVelocityX - maxVelocity);
+        } else if (averageVelocityY > averageVelocityX && averageVelocityY > maxVelocity) {
+            averageVelocityY = maxVelocity;
+            averageVelocityX -= (averageVelocityY - maxVelocity);
+        }*/
+
+        const frames = 40;
+        return new Promise((resolve) => {
+            const momentum_translation_ticker = new PIXI.Ticker();
+            // Define counter for number of steps
+            let counter = 0;
+            momentum_translation_ticker.add(() => {
+                // Check if position is equal to the target position.
+                if (counter === frames) {
+                    // Stop ticker
+                    momentum_translation_ticker.stop();
+                    // Destroy ticker
+                    momentum_translation_ticker.destroy();
+                    // Update stage
+                    updateStage();
+                    resolve();
+                } else {
+                    // Move the effective position of the stage by a step equal to the average velocity times 1000 / 60
+                    effectivePosition.current.x = Math.max(
+                        Math.min(effectivePosition.current.x - averageVelocityX * 1 / 40, maxX.current - effectiveWidth.current), minX.current);
+                    effectivePosition.current.y = Math.max(
+                        Math.min(effectivePosition.current.y - averageVelocityY * 1 / 40, maxY.current - effectiveHeight.current), minY.current);
+                    // Increment counter
+                    counter++;
+                    // Decrease velocity
+                    averageVelocityX *= 0.99;
+                    averageVelocityY *= 0.99;
+                    // Update stage
+                    updateStage();
+                }
+            });
+            momentum_translation_ticker.start();
+        });
+    }
+
+    const handleTouchEnd = async () => {
+        // Compute average velocity in both x and y direction
+        let averageVelocityX = 0;
+        let averageVelocityY = 0;
+        for (let velocity of touchVelocities.current) {
+            averageVelocityX += velocity.x;
+            averageVelocityY += velocity.y;
+        }
+        let touchVelocitiesLength = touchVelocities.current.length;
+        // Translate the stage with momentum if the touch velocities are not empty
+        if (touchVelocitiesLength > 0) {
+            averageVelocityX /= touchVelocities.current.length;
+            averageVelocityY /= touchVelocities.current.length;
+            // Make container not interactive.
+            // container.current.interactive = false;
+            // container.current.interactiveChildren = false;
+            // Await momentum translation
+            await momentumTranslation(averageVelocityX, averageVelocityY);
+            // Make container interactive again
+            // container.current.interactive = true;
+            // container.current.interactiveChildren = true;
+            // Empty touch velocities
+            touchVelocities.current = [];
         }
     }
 
@@ -1092,13 +1272,23 @@ const ClustersMap = (props) => {
     };
 
     // Handle pinch start. Only reset previous scale.
-    const handlePinchStart = () => {
+    const handlePinchStart = (event) => {
+        console.log("Pinch start.")
+        event.srcEvent.stopPropagation();
+        isPinching.current = true;
         previousScale.current = 1;
     };
+
+    const handlePinchEnd = (event) => {
+        console.log("Pinch end.")
+        event.srcEvent.stopPropagation();
+        isPinching.current = false;
+    }
 
     // Create handler for pinch. The handler of pinch does the exact same thing as the handler for mouse wheel, but the
     // delta is computed differently.
     const handlePinch = (event) => {
+        event.srcEvent.stopPropagation();
         // Get scale
         let scale = event.scale;
         // Delta is the difference between the current scale and the previous scale
@@ -1144,14 +1334,16 @@ const ClustersMap = (props) => {
             depth.current = 0;
             effectiveWidth.current = (realMaxX.current - realMinX.current) / (2 ** zoomLevel.current);
             effectiveHeight.current = (maxY.current - minY.current) / (2 ** zoomLevel.current);
-            updateStageThrottled();
+            updateStage();
+            // updateStageThrottled();
             return;
         } else if (zoomLevel.current === 0 && depth.current + delta < 0) {
             // Keep depth at 0
             depth.current = 0;
             effectiveWidth.current = (realMaxX.current - realMinX.current);
             effectiveHeight.current = (maxY.current - minY.current);
-            updateStageThrottled();
+            updateStage();
+            // updateStageThrottled();
             return;
         }
 
@@ -1211,8 +1403,8 @@ const ClustersMap = (props) => {
         }
 
         // Update stage
-        // updateStage();
-        updateStageThrottled();
+        updateStage();
+        // updateStageThrottled();
     }
 
 

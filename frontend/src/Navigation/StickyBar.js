@@ -12,18 +12,24 @@ const StickyBar = (props) => {
     return (
         <div
             id="sticky-bar"
-            className="fixed top-0 w-full h-sticky flex flex-row justify-between items-center flex-gaps-1 bg-transparent px-1/80 z-50">
-            <div className="h-searchbar">
+            className="fixed top-0 w-full h-sticky flex flex-row justify-between items-center bg-transparent px-1/80 z-50"
+            onClick={() => {
+                if (props.page === "home")
+                    props.setShowCarousel(false)
+            }
+        }>
+            <div>
                 {
                     props.page === "home" &&
                     <div style={
                         {
+                            height: iconStyle.height,
+                            width: iconStyle.width,
                             cursor: "pointer",
                             display: "flex",
                             flexDirection: "column",
                             alignItems: "center",
-                            justifyContent: "center",
-                            paddingTop: "3.7%"
+                            justifyContent: "center"
                         }
                     }>
                         <SelectDataset datasets={props.datasets} setSelectedDataset={props.setSelectedDataset}/>
@@ -39,7 +45,7 @@ const StickyBar = (props) => {
                            setSearchBarIsClicked={props.setSearchBarIsClicked}
                 />
             }
-            <div className="h-searchbar">
+            <div>
                 {/*<Hamburger color={"white"} toggle={props.setMenuOpen} toggled={props.menuOpen}/>*/}
                 {
                     props.page === "home" &&
@@ -47,6 +53,8 @@ const StickyBar = (props) => {
                         props.setPage("about");
                     }} style={
                         {
+                            height: iconStyle.height,
+                            width: iconStyle.width,
                             cursor: "pointer",
                             display: "flex",
                             flexDirection: "column",

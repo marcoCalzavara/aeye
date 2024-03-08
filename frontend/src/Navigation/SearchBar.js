@@ -4,7 +4,6 @@ import {IconButton, InputBase} from "@mui/material";
 
 export default function SearchBar(props) {
     const [inputValue, setInputValue] = useState("");
-    const [open, setOpen] = useState(false);
     const host = useRef(props.host);
 
     const sendText = async (text) => {
