@@ -19,7 +19,7 @@ const QUALITY = 2;
 // Define constant for transition steps and depth steps
 const INITIAL_TRANSITION_STEPS = 100;
 const DEPTH_STEP = 0.02;
-const NUM_OF_VELOCITIES = 5;
+const NUM_OF_VELOCITIES = 10;
 
 function getUrlForFirstTiles(dataset, host = "") {
     return `${host}/api/first-tiles?collection=${dataset}_zoom_levels_clusters`;
@@ -588,7 +588,6 @@ const ClustersMap = (props) => {
             hammer.current.get('pinch').set({enable: true});
             hammer.current.on('pinchstart', handlePinchStart);
             hammer.current.on('pinch', handlePinch);
-            hammer.current.on('pinchend', handlePinchEnd);
 
             // Add all handlers to the stage
             container.current
@@ -1122,6 +1121,14 @@ const ClustersMap = (props) => {
         }
     }
 
+    // Create handler for touch start and touch end
+    const handleTouchStart = (event) => {
+        // Save touch position
+        touchPrevPos.current = event.data.getLocalPosition(container.current);
+        // Save touch start time
+        touchPrevTime.current = Date.now();
+    }
+
     // Create handler for touch move
     const handleTouchMove = (event) => {
         // Compute velocity
@@ -1133,8 +1140,8 @@ const ClustersMap = (props) => {
         }
         // Add the new velocity
         touchVelocities.current.push({
-            x: (touchCurrPos.x - touchPrevPos.current.x) / (touchCurrTime - touchPrevTime.current),
-            y: (touchCurrPos.y - touchPrevPos.current.y) / (touchCurrTime - touchPrevTime.current)
+            x: (touchCurrPos.x - touchPrevPos.current.x) / Math.max(touchCurrTime - touchPrevTime.current, 1),
+            y: (touchCurrPos.y - touchPrevPos.current.y) / Math.max(touchCurrTime - touchPrevTime.current, 1)
         });
         // Save touch position
         touchPrevPos.current = touchCurrPos;
@@ -1157,15 +1164,6 @@ const ClustersMap = (props) => {
         // fetching the data from the server and putting on stage the sprites that are visible.
         updateStage();
         // updateStageThrottled();
-    }
-
-    // Create handler for touch start and touch end
-    const handleTouchStart = (event) => {
-        console.log("Touch start.")
-        // Save touch position
-        touchPrevPos.current = event.data.getLocalPosition(container.current);
-        // Save touch start time
-        touchPrevTime.current = Date.now();
     }
 
     const momentumTranslation = (averageVelocityX, averageVelocityY) => {
@@ -1214,6 +1212,11 @@ const ClustersMap = (props) => {
     }
 
     const handleTouchEnd = async () => {
+        if (isPinching.current) {
+            touchVelocities.current = [];
+            isPinching.current = false;
+            return;
+        }
         // Compute average velocity in both x and y direction
         let averageVelocityX = 0;
         let averageVelocityY = 0;
@@ -1272,29 +1275,21 @@ const ClustersMap = (props) => {
     };
 
     // Handle pinch start. Only reset previous scale.
-    const handlePinchStart = (event) => {
-        console.log("Pinch start.")
-        event.srcEvent.stopPropagation();
+    const handlePinchStart = () => {
         isPinching.current = true;
         previousScale.current = 1;
     };
 
-    const handlePinchEnd = (event) => {
-        console.log("Pinch end.")
-        event.srcEvent.stopPropagation();
-        isPinching.current = false;
-    }
-
     // Create handler for pinch. The handler of pinch does the exact same thing as the handler for mouse wheel, but the
     // delta is computed differently.
     const handlePinch = (event) => {
-        event.srcEvent.stopPropagation();
-        // Get scale
-        let scale = event.scale;
+        // Reject pinch if the scale is 0
+        if (event.scale === 0)
+            return;
         // Delta is the difference between the current scale and the previous scale
-        const delta = scale - previousScale.current;
+        const delta = event.scale - previousScale.current;
         // Update previous scale
-        previousScale.current = scale;
+        previousScale.current = event.scale;
         // Handle zoom
         handleZoom(delta, event.center);
     }

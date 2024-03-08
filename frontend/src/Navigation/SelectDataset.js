@@ -29,7 +29,6 @@ const SelectDataset = (props) => {
     };
 
     const handleButtonPress = (event) => {
-        console.log(event);
         setOpen(true);
         setAnchor(anchor ? null : event.currentTarget);
     }
