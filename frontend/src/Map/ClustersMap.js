@@ -208,6 +208,7 @@ const ClustersMap = (props) => {
     const touchPrevPos = useRef({x: 0, y: 0});
     const touchVelocities = useRef([]);
     const isPinching = useRef(false);
+    console.log("Stage width: ", stageWidth.current, "Stage height: ", stageHeight.current);
 
     const mapGlobalCoordinatesToStageCoordinates = (global_x, global_y) => {
         // Map global coordinates to stage coordinates
@@ -715,6 +716,7 @@ const ClustersMap = (props) => {
     }
 
     const updateStage = () => {
+        const time = performance.now();
         // Get zoom level. Obs: We keep as tiles on stage the tiles at the next zoom level. This is because these tiles
         // also contain the artworks from the current zoom level.
         const next_zoom_level = Math.min(depth.current >= 0 ? zoomLevel.current + 1 : zoomLevel.current, props.maxZoomLevel);
@@ -879,10 +881,11 @@ const ClustersMap = (props) => {
                 }
 
                 // Make sprite not visible if outside the viewing area
-                // sprites.current.get(index).visible = sprites.current.get(index).x > -maxWidth.current
-                //     && sprites.current.get(index).x <= stageWidth.current
-                //     && sprites.current.get(index).y >= -maxHeight.current
-                //     && sprites.current.get(index).y <= stageHeight.current;
+                const aspect_ratio = spritesGlobalInfo.current.get(index).width / spritesGlobalInfo.current.get(index).height;
+                sprites.current.get(index).visible = sprites.current.get(index).x > -maxHeight.current * aspect_ratio
+                     && sprites.current.get(index).x <= stageWidth.current
+                     && sprites.current.get(index).y >= -maxHeight.current
+                     && sprites.current.get(index).y <= stageHeight.current;
             }
             // Save artworks in tiles
             // noinspection JSUnresolvedVariable
@@ -891,8 +894,10 @@ const ClustersMap = (props) => {
         });
         // Do asserts to check that everything is correct
         console.assert(count === sprites.current.size);
+        console.assert(container.current.children.length === sprites.current.size);
         console.assert(sprites.current.size === spritesGlobalInfo.current.size);
         console.assert(sprites.current.size + spritePool.current.length === SPRITEPOOLSIZE);
+        console.log("Time to update stage: ", performance.now() - time, "ms");
     }
 
     // const updateStageThrottled = throttle(updateStage, 50);

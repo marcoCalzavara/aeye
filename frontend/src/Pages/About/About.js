@@ -1,4 +1,3 @@
-/* Page for the About section of the website */
 import React, {useEffect, useState} from 'react';
 import {TfiClose} from "react-icons/tfi";
 import {iconStyle} from "../../styles";
@@ -8,8 +7,8 @@ import 'rc-slider/assets/index.css';
 
 
 const newIconStyle = {
-    height: iconStyle.height.replace("px", "") * 0.75 + "px",
-    width: iconStyle.width.replace("px", "") * 0.75 + "px",
+    height: iconStyle.height.replace("px", "") * 0.7 + "px",
+    width: iconStyle.width.replace("px", "") * 0.7 + "px",
     color: "black",
     position: "fixed",
     top: "5px",
@@ -24,7 +23,9 @@ const liStyle = {
     listStylePosition: "inside",
     display: "list-item",
     marginBottom: "1em",
-    textAlign: "justify"
+    textAlign: "justify",
+    hyphens: "auto",
+    hyphenateLimitChars: "2 1 1"
 }
 
 function fetchImage(host) {
@@ -49,9 +50,9 @@ function fetchImage(host) {
 function computeWidth() {
     switch (true) {
         case window.innerWidth < 640:
-            return window.innerWidth * 0.9;
-        case window.innerWidth < 768:
             return window.innerWidth * 0.8;
+        case window.innerWidth < 768:
+            return window.innerWidth * 0.7;
         case window.innerWidth < 1024:
             return window.innerWidth * 0.6;
         default:
@@ -81,25 +82,29 @@ function getTextStyle(width) {
         fontSize: "1.3em",
         width: width + "px",
         lineHeight: "1.6",
+        hyphens: "auto",
+        hyphenateLimitChars: "2 1 1"
     }
 }
 
 function getBibliographyStyle(width) {
     return {
         marginTop: "1em",
-        textAlign: "left",
+        textAlign: "justify",
         font: "Computer Modern",
         fontSize: "1.1em",
         width: width + "px",
-        lineHeight: "1.6"
+        lineHeight: "1.6",
+        hyphens: "auto",
+        hyphenateLimitChars: "2 1 1"
     }
 }
 
 const About = (props) => {
     const [width, setWidth] = useState(computeWidth());
     const [widthPlot, setWidthPlot] = useState(getPlotSize());
-    const [n_neighbors, setNNeighbors] = useState(3);
-    const [min_dist, setMinDist] = useState(0.0);
+    const [n_neighbors, setNNeighbors] = useState(100);
+    const [min_dist, setMinDist] = useState(0.1);
     const neigh_values = [3, 5, 10, 15, 20, 50, 100, 200];
     const min_dist_values = [0.0, 0.1, 0.25, 0.5, 0.8, 0.99];
     const [image, setImage] = useState("");
@@ -112,12 +117,17 @@ const About = (props) => {
                 setImage(props.host + "/best_artworks/" + data["path"]);
                 setCaption(data["caption"]);
             });
-    }, []);
 
-    useEffect(() => {
-        setWidthPlot(getPlotSize());
-        setWidthPlot(getPlotSize());
-    }, [window.innerWidth]);
+        const handleResize = () => {
+            setWidth(computeWidth());
+            setWidthPlot(getPlotSize());
+        }
+
+        // Add event listener to window
+        window.addEventListener("resize", handleResize);
+        // Remove event listener on cleanup
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
 
     const handleClick = () => {
         fetchImage(props.host)
@@ -141,7 +151,7 @@ const About = (props) => {
             <div id="about-page" style={
                 {
                     position: "absolute",
-                    top: -newIconStyle.height,
+                    top: -parseInt(newIconStyle.height.replace("px", "")) + "px",
                     backgroundColor: "#f5f5dc",
                     textDecorationColor: "black",
                     width: "100%",
@@ -149,7 +159,7 @@ const About = (props) => {
                     placeItems: "center"
                 }
             }>
-                <h1 style={{font: "Computer Modern", fontSize: "2.5em", fontWeight: "bold", marginTop: "1em", textAlign: "center"}}>
+                <h1 style={{font: "Computer Modern", fontSize: "2em", fontWeight: "bold", marginTop: "1em", textAlign: "center", width: "80vw"}}>
                     AEye: A Visualization Tool for Image Datasets
                 </h1>
                 <p style={getTextStyle(width)}>
@@ -188,8 +198,8 @@ const About = (props) => {
                     multi-modal model renowned for its ability to generalize well to unseen data. CLIP achieves this
                     through its extensive training on a diverse corpus of text-image pairs, enabling it to capture rich
                     semantic representations. Notably, CLIP has demonstrated remarkable transfer capabilities across
-                    various tasks, often competing with fully supervised models without requiring task-specific training
-                    . We leverage CLIP to embed images into 512-dimensional vectors using its vision encoder,
+                    various tasks, often competing with fully supervised models without requiring task-specific training.
+                    We leverage CLIP to embed images into 512-dimensional vectors using its vision encoder,
                     and utilize the text encoder for zero-shot matching of text and images.
                 </p>
                 <h1 style={{
@@ -221,7 +231,7 @@ const About = (props) => {
                             style={{width: widthPlot * 0.5 + "px"}}
                             min={0}
                             max={neigh_values.length - 1}
-                            defaultValue={0}
+                            defaultValue={6}
                             onChange={handleNeighborsChange}
                             trackStyle={{backgroundColor: "#0096c7"}}
                             handleStyle={{borderColor: "#0096c7", backgroundColor: "#0096c7"}}
@@ -233,7 +243,7 @@ const About = (props) => {
                             style={{width: widthPlot * 0.5 + "px"}}
                             min={0}
                             max={min_dist_values.length - 1}
-                            defaultValue={0}
+                            defaultValue={1}
                             onChange={handleMinDistChange}
                             trackStyle={{backgroundColor: "#0096c7"}}
                             handleStyle={{borderColor: "#0096c7", backgroundColor: "#0096c7"}}
@@ -269,26 +279,29 @@ const About = (props) => {
                 </p>
                 {
                     image !== "" && caption !== "" &&
-                    <div style={{width: widthPlot + "px", marginTop: "2em", display: "grid", placeItems: "center"}}>
-                        <img src={image} alt="Random image" style={{maxWidth: widthPlot + "px", maxHeight: widthPlot * 0.7 + "px"}}/>
+                    <div style={{width: widthPlot + "px", marginTop: "1em", display: "grid", placeItems: "center"}}>
+                        <button style={{
+                            border: "1px solid black",
+                            borderRadius: "7px",
+                            marginBottom: "1em",
+                        }} onClick={handleClick} onTouchStart={handleClick}>
+                            <h1 style={{margin: "3px"}}>New image</h1>
+                        </button>
+                        <img src={image} alt="Random image"
+                             style={{maxWidth: widthPlot + "px", maxHeight: widthPlot * 0.7 + "px"}}/>
                         <p style={
                             {
                                 font: "Computer Modern",
                                 fontSize: "1em",
                                 marginTop: "1em",
                                 textAlign: "justify",
-                                fontStyle: "italic"
+                                fontStyle: "italic",
+                                hyphens: "auto",
+                                hyphenateLimitChars: "2 1 1"
                             }
                         }>
                             {caption}
                         </p>
-                        <button style={{
-                            border: "1px solid black",
-                            borderRadius: "7px",
-                            marginTop: "1em",
-                        }} onClick={handleClick}>
-                            <h1 style={{margin: "3px"}}>New image</h1>
-                        </button>
                     </div>
                 }
                 <h1 style={{
@@ -332,8 +345,7 @@ const About = (props) => {
                         Research, vol. 9, no. 86, pp. 2579–2605, 2008.
                     </li>
                     <li style={liStyle}>
-                        “Best artworks of all time.” [Online]. Available:
-                        https://www.kaggle.com/datasets/ikarus777/best-artworks-of-all-time/data.
+                        “Best artworks of all time.” [Online]. Available on kaggle.com.
                     </li>
                     <li style={liStyle}>
                         J. MacQueen, Some methods for classification and analysis of multivariate observations,

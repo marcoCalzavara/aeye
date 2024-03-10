@@ -3,8 +3,6 @@ from typing import List
 
 import torch
 from pymilvus import Collection
-from umap import UMAP
-from matplotlib import pyplot as plt
 
 from ...CONSTANTS import *
 from ...db_utilities.collections import EMBEDDING_VECTOR_FIELD_NAME, ZOOM_LEVEL_VECTOR_FIELD_NAME
@@ -193,7 +191,6 @@ def get_umap_data(umap_c: Collection, n_neighbors: int, min_dist: float):
     min_dist_index = MIN_DISTS.index(min_dist)
     # Compute index
     index = n_neighbors_index * len(MIN_DISTS) + min_dist_index
-    print(f"Index: {index}")
 
     # Load data for best artworks from the database
     results = umap_c.query(
