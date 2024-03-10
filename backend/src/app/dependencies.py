@@ -7,6 +7,7 @@ from pymilvus import Collection
 from pymilvus.orm import utility
 
 from .CONSTANTS import *
+from ..CONSTANTS import UMAP_COLLECTION_NAME
 from ..db_utilities.datasets import DatasetOptions
 from ..embeddings_model.EmbeddingsModel import EmbeddingsModel
 
@@ -111,6 +112,16 @@ class ImageToTileCollectionNameGetter(CollectionNameGetter):
             return self.collections[collection].collection
         else:
             return None
+
+
+class UMAPCollectionGetter:
+    def __init__(self):
+        self.collection = Collection(UMAP_COLLECTION_NAME)
+        # Load collection in memory
+        self.collection.load()
+
+    def __call__(self) -> Collection:
+        return self.collection
 
 
 class DatasetCollectionInfoGetter:

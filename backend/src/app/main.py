@@ -25,6 +25,8 @@ updater = Updater(dataset_collection_name_getter,
                   clusters_collection_name_getter,
                   image_to_tile_collection_name_getter)
 embeddings = Embedder(ClipEmbeddings(DEVICE))
+umap_getter = UMAPCollectionGetter()
+
 
 # Create app1
 app = FastAPI()
@@ -158,3 +160,23 @@ def get_first_tiles(collection: Collection = Depends(clusters_collection_name_ge
         except MilvusException:
             # Milvus error, return code 505
             raise HTTPException(status_code=404, detail="Tile data not found")
+
+
+@app.get("/api/umap")
+def get_umap_data(n_neighbors: int, min_dist: float):
+    # Get UMAP data
+    try:
+        return gets.get_umap_data(umap_getter(), n_neighbors, min_dist)
+    except Exception:
+        # Error in fetching UMAP data
+        raise HTTPException(status_code=404, detail="UMAP data not found")
+
+
+@app.get("/api/random-image")
+def get_random_image(num: float, collection: Collection = Depends(dataset_collection_name_getter)):
+    # Get random image
+    try:
+        return gets.get_random_image(num, collection)
+    except MilvusException:
+        # Milvus error, return code 505
+        raise HTTPException(status_code=505, detail="Milvus error")

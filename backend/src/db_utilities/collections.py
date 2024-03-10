@@ -150,3 +150,52 @@ def image_to_tile_collection(collection_name: str):
     )
 
     return collection
+
+
+def umap_collection(collection_name: str, dim: int):
+    # Create fields for collection
+    index = FieldSchema(
+        name="index",
+        dtype=DataType.INT64,
+        is_primary=True
+    )
+    n_neighbors = FieldSchema(
+        name="n_neighbors",
+        dtype=DataType.INT64
+    )
+    min_dist = FieldSchema(
+        name="min_dist",
+        dtype=DataType.FLOAT
+    )
+    data = FieldSchema(
+        name="data",
+        dtype=DataType.FLOAT_VECTOR,
+        dim=dim*2
+    )
+
+    # Create collection schema
+    schema = CollectionSchema(
+        fields=[index, n_neighbors, min_dist, data],
+        description="umap",
+        enable_dynamic_field=False
+    )
+
+    # Create collection
+    collection = Collection(
+        name=collection_name,
+        schema=schema,
+        shards_num=1  # type: ignore
+    )
+
+    index_params = {
+        "metric_type": L2_METRIC,
+        "index_type": INDEX_TYPE,
+        "params": {}
+    }
+
+    collection.create_index(
+        field_name="data",
+        index_params=index_params
+    )
+
+    return collection

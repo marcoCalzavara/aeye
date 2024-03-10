@@ -3,6 +3,8 @@ from typing import List
 
 import torch
 from pymilvus import Collection
+from umap import UMAP
+from matplotlib import pyplot as plt
 
 from ...CONSTANTS import *
 from ...db_utilities.collections import EMBEDDING_VECTOR_FIELD_NAME, ZOOM_LEVEL_VECTOR_FIELD_NAME
@@ -174,3 +176,51 @@ def get_first_tiles(collection: Collection) -> List[dict]:
     print(f"Number of entities: {len(results)}")
     # Return results
     return results
+
+
+def get_umap_data(umap_c: Collection, n_neighbors: int, min_dist: float):
+    """
+    Get plot umap.
+    @return:
+    """
+    # Check that n_neighbors and min_dist are among the allowed values
+    if n_neighbors not in N_NEIGHBORS:
+        raise ValueError(f"n_neighbors must be in {N_NEIGHBORS}")
+    if min_dist not in MIN_DISTS:
+        raise ValueError(f"min_dist must be in {MIN_DISTS}")
+    # Get position of n_neighbors and min_dist in the allowed values
+    n_neighbors_index = N_NEIGHBORS.index(n_neighbors)
+    min_dist_index = MIN_DISTS.index(min_dist)
+    # Compute index
+    index = n_neighbors_index * len(MIN_DISTS) + min_dist_index
+    print(f"Index: {index}")
+
+    # Load data for best artworks from the database
+    results = umap_c.query(
+        expr=f"index in [{index}]",
+        output_fields=["data"]
+    )
+
+    x = [float(results[0]["data"][i]) for i in range(len(results[0]["data"])) if i % 2 == 0]
+    y = [float(results[0]["data"][i]) for i in range(len(results[0]["data"])) if i % 2 == 1]
+
+    # Return results
+    return {"x": x, "y": y}
+
+
+def get_random_image(num: float, collection: Collection) -> dict:
+    """
+    Get a random image from the collection.
+    @param num:
+    @param collection:
+    @return:
+    """
+    # Get random index
+    index = int(num * collection.num_entities)
+    # Search image
+    results = collection.query(
+        expr=f"index in [{index}]",
+        output_fields=["path", "caption"]
+    )
+    # Return results
+    return results[0]

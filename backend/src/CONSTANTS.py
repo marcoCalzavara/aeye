@@ -46,6 +46,11 @@ BEST_ARTWORKS_DIR = "BEST_ARTWORKS_DIR"
 WIKIART_DIR = "WIKIART_DIR"
 HOME = "HOME"
 
+# UMAP data variables
+UMAP_COLLECTION_NAME = "umap"
+N_NEIGHBORS = [3, 5, 10, 15, 20, 50, 100, 200]
+MIN_DISTS = [0.0, 0.1, 0.25, 0.5, 0.8, 0.99]
+
 # Variables for zoom levels collection
 WINDOW_SIZE_IN_CELLS_PER_DIM = 10
 IMAGE_WIDTH = 1280

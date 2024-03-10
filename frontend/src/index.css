@@ -386,3 +386,8 @@ body, #root {
 ::-webkit-scrollbar-track {
     background: rgb(49 49 52 / 1); /* Color of the track */
 }
+
+::-webkit-scrollbar {
+    background-color: rgb(49 49 52 / 1);
+    width: 1rem;
+}

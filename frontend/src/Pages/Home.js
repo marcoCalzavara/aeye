@@ -73,32 +73,6 @@ function fetchAvailableDatasets(host) {
         });
 }
 
-
-function extractHost() {
-    // Get host
-    let in_host = window.location.href;
-    // Remove trailing slash if present
-    if (in_host.endsWith('/')) {
-        in_host = in_host.substring(0, in_host.length - 1);
-    }
-    // Remove port from host. Keep http:// or https:// and the domain name, e.g. http://localhost
-    // Get index of second colon
-    let colon_count = 0;
-    let i = 0;
-    while (colon_count < 2 && i < in_host.length) {
-        if (in_host[i] === ':') {
-            colon_count++;
-        }
-        i++;
-    }
-    // If the last character is not a colon, add it to the host
-    if (i === in_host.length) {
-        in_host += ':';
-        i++;
-    }
-    return in_host.substring(0, i) + '80';
-}
-
 const computeStageDimensions = () => {
     const height = window.innerHeight /*- getResponsiveHeight().replace('px', '')*/
         - getCarouselContainerMarginTop().replace('px', '') - getCarouselContainerMarginBottom().replace('px', '')
@@ -133,7 +107,7 @@ const Home = (props) => {
     // Define state for the overflow along the x-axis
     const [overflowX, setOverflowX] = useState(dimensionsEmbeddingState.width - dimensionsStage.width);
     // Define host
-    let host = useRef(extractHost());
+    let host = useRef(props.host);
     // Define data from text search
     const [searchData, setSearchData] = useState({});
     // Define boolean for showing the carousel with the nearest neighbors of a clicked image
