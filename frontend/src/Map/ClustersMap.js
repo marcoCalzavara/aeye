@@ -1,20 +1,20 @@
 import {useEffect, useRef} from 'react';
 import * as PIXI from "pixi.js";
-import {KawaseBlurFilter} from "@pixi/filter-kawase-blur";
+// import {KawaseBlurFilter} from "@pixi/filter-kawase-blur";
 import Hammer from "hammerjs";
 import {useApp} from "@pixi/react";
 import {LRUCache} from "lru-cache";
 import 'tailwindcss/tailwind.css';
-import {convertIndexToTile, getTilesFromZoomLevel, getTilesToFetch} from "./utilities";
+import {convertIndexToTile, getTilesFromZoomLevel, getTilesToFetch, getTilesForTranslationTicker, getTilesForZoomTicker} from "./utilities";
 import {getUrlForImage} from "../utilities";
 
 const DURATION = 2; // seconds
 const SPRITEPOOLSIZE = 800;
-const BLURSTRENGTH = 1;
-const BLURSTRENGTHMAX = 1;
+// const BLURSTRENGTH = 1;
+// const BLURSTRENGTHMAX = 1;
 // const NUMOFBLURSTRENGTHS = 10;
 // const BLURSTRENGTHS = Array.from({length: NUMOFBLURSTRENGTHS}, (_, i) => i * BLURSTRENGTHMAX / (NUMOFBLURSTRENGTHS - 1));
-const QUALITY = 2;
+// const QUALITY = 2;
 // const DEPTH_ALPHA_FLICKERING = 0.2
 // Define constant for transition steps and depth steps
 const INITIAL_TRANSITION_STEPS = 100;
@@ -159,14 +159,15 @@ const ClustersMap = (props) => {
     // Define sprite pool of available sprites
     const spritePool = useRef(new Array(SPRITEPOOLSIZE));
     // Define max width and height of a sprite. These values depend on the size of the viewport.
-    const maxWidth = useRef(props.stageWidth / 10);
-    const maxHeight = useRef(props.stageHeight / 10);
+    const maxWidth = useRef(props.width / 10);
+    const maxHeight = useRef(props.height / 11);
     // Define refs for height and width of the stage and of the embedding space, and also for the overflowX.
     const stageWidth = useRef(props.stageWidth);
     const stageHeight = useRef(props.stageHeight);
     const width = useRef(props.width);
     const height = useRef(props.height);
     const overflowX = useRef(Math.round(props.overflowX / 2));
+    const overflowY = useRef(Math.round(props.overflowY / 2));
     // Define state for limits of embedding space. These values are initialized when the component is mounted and never change.
     const minX = useRef(0);
     const maxX = useRef(0);
@@ -174,6 +175,8 @@ const ClustersMap = (props) => {
     const maxY = useRef(0);
     const realMinX = useRef(0);
     const realMaxX = useRef(0);
+    const realMinY = useRef(0);
+    const realMaxY = useRef(0);
     // Define boolean for mouse down
     const mouseDown = useRef(false);
     // Define state for tiles which are currently on stage
@@ -202,18 +205,16 @@ const ClustersMap = (props) => {
     const showCarouselRef = useRef(props.showCarousel);
     // Create a ref that will store the current value of the clicked search bar
     const searchBarIsClickedRef = useRef(props.searchBarIsClicked);
-    // const graphics = useRef(new PIXI.Graphics());
     const touchStartPositionSprite = useRef({x: 0, y: 0});
     const touchPrevTime = useRef(0);
     const touchPrevPos = useRef({x: 0, y: 0});
     const touchVelocities = useRef([]);
     const isPinching = useRef(false);
-    console.log("Stage width: ", stageWidth.current, "Stage height: ", stageHeight.current);
 
     const mapGlobalCoordinatesToStageCoordinates = (global_x, global_y) => {
         // Map global coordinates to stage coordinates
         const stage_x = ((global_x - effectivePosition.current.x) * (width.current - maxWidth.current)) / effectiveWidth.current - overflowX.current;
-        const stage_y = ((global_y - effectivePosition.current.y) * (height.current - maxHeight.current)) / effectiveHeight.current;
+        const stage_y = ((global_y - effectivePosition.current.y) * (height.current - maxHeight.current)) / effectiveHeight.current - overflowY.current;
         return {
             x: stage_x,
             y: stage_y
@@ -245,7 +246,7 @@ const ClustersMap = (props) => {
 
             if (elapsed > DURATION) {
                 // Decrease z-index of sprite
-                sprite.zIndex = 0;
+                sprite.zIndex = 10;
                 // Stop the ticker after 5 seconds
                 ticker.stop();
             } else {
@@ -273,7 +274,7 @@ const ClustersMap = (props) => {
 
     const blurSprite = (sprite, blur) => {
         // Set blur strength proportional to the depth
-        if (!blur) {
+        /*if (!blur) {
             sprite.filters[0].blur = 0;
             sprite.filters[0].enabled = false;
             sprite.alpha = 1;
@@ -311,9 +312,19 @@ const ClustersMap = (props) => {
             //         sprite.alpha = 1;
             //     }
             // }
+        }*/
+        let strength = 0;
+        if (blur) {
+            if (depth.current >= 0)
+                strength = (1 - Math.sin(depth.current * Math.PI / 2)) ** 3;
+            else
+                strength = (1 - Math.sin((1 + depth.current) * Math.PI / 2)) ** 3;
+            if (!props.showCarousel)
+                sprite.zIndex = 5;
         }
+
         // Make sprite interactive if the blur is less than 2/5 of the maximum blur strength, else make it not interactive.
-        sprite.interactive = sprite.filters[0].blur < (2 / 5) * BLURSTRENGTHMAX;
+        sprite.interactive = strength < 2 / 5;
         sprite.cursor = sprite.interactive ? 'pointer' : 'default';
     }
 
@@ -347,18 +358,18 @@ const ClustersMap = (props) => {
 
         sprite.on('mouseenter', () => {
             // Deactivate second blur filter, but activate first blur filter
-            if (searchBarIsClickedRef.current) {
+            /*if (searchBarIsClickedRef.current) {
                 sprite.filters[0].enabled = sprite.filters[0].blur !== 0;
                 sprite.filters[1].enabled = false;
-            }
+            }*/
         });
 
         sprite.on('mouseleave', () => {
             // Activate second blur filter, but deactivate first blur filter
-            if (showCarouselRef.current) {
+            /*if (showCarouselRef.current) {
                 sprite.filters[0].enabled = false;
                 sprite.filters[1].enabled = true;
-            }
+            }*/
         });
 
         sprite.on('touchstart', (event) => {
@@ -384,7 +395,7 @@ const ClustersMap = (props) => {
 
     const addSpriteToStage = (index, path, width, height, global_x, global_y, is_in_previous_zoom_level, blur = false) => {
         // Get sprite from sprite pool
-        const sprite = spritePool.current.pop();
+        let sprite = spritePool.current.pop();
         // Add sprite to sprites
         sprites.current.set(index, sprite);
         // Save global coordinates of the artwork
@@ -395,16 +406,6 @@ const ClustersMap = (props) => {
 
         // Define size of sprite
         scaleSprite(index);
-
-        // Create a gray texture for the sprite
-        let graphics = new PIXI.Graphics();
-        graphics.beginFill(0x404040);
-        graphics.drawRect(0, 0, sprite.width, sprite.height);
-        graphics.endFill();
-
-        // First, set gray texture, then set actual texture.
-        // noinspection all
-        sprite.texture = app.renderer.generateTexture(graphics);
         // Set main texture
         sprite.texture = PIXI.Texture.from(getUrlForImage(path, selectedDataset.current, props.host));
         // Set z-index of sprite to 10
@@ -423,11 +424,16 @@ const ClustersMap = (props) => {
         sprite.x = artwork_position.x;
         sprite.y = artwork_position.y;
 
+        sprite.visible = artwork_position.x > -maxHeight.current * width / height
+            && artwork_position.x <= stageWidth.current
+            && artwork_position.y >= -maxHeight.current
+            && artwork_position.y <= stageHeight.current;
+
         // Create blur filters for sprite. The first one is for depth, the second one is for the carousel and for the
         // search bar.
-        sprite.filters = [new KawaseBlurFilter(0, QUALITY, true), new KawaseBlurFilter(BLURSTRENGTH, QUALITY, true)];
+        /*sprite.filters = [new KawaseBlurFilter(0, QUALITY, true), new KawaseBlurFilter(BLURSTRENGTH, QUALITY, true)];
         sprite.filters[0].enabled = false;
-        sprite.filters[1].enabled = blur;
+        sprite.filters[1].enabled = blur;*/
 
         // Set blur strength proportional to the depth
         blurSprite(sprite, !is_in_previous_zoom_level && !(zoomLevel.current === props.maxZoomLevel && depth.current === 0));
@@ -445,10 +451,6 @@ const ClustersMap = (props) => {
         depth.current = 0;
         // Remove all children from stage
         app.stage.removeChildren();
-        // Add graphics to stage
-        // graphics.current.clear();
-        // graphics.current.removeChildren();
-        // app.stage.addChild(graphics.current);
         // Set container to null
         container.current = null;
         // Reset sprites
@@ -493,7 +495,6 @@ const ClustersMap = (props) => {
         // Define container pointer
         container.current.cursor = 'grab';
 
-        // Add handlers to stage
         // noinspection all
         container.current.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
         container.current.zIndex = 2;
@@ -503,7 +504,7 @@ const ClustersMap = (props) => {
 
         // Populate the sprite pool
         for (let i = 0; i < spritePool.current.length; i++) {
-            spritePool.current[i] = new PIXI.Sprite();
+            spritePool.current[i] = new PIXI.Sprite(PIXI.Texture.WHITE);
         }
 
         // Fetch first zoom levels
@@ -515,22 +516,25 @@ const ClustersMap = (props) => {
                 // Update the limits of the embedding space
                 realMinX.current = range["x_min"];
                 realMaxX.current = range["x_max"];
-                minY.current = range["y_min"];
-                maxY.current = range["y_max"];
+                realMinY.current = range["y_min"];
+                realMaxY.current = range["y_max"];
 
                 // Update effective size of the stage
                 effectiveWidth.current = realMaxX.current - realMinX.current;
-                effectiveHeight.current = maxY.current - minY.current;
+                effectiveHeight.current = realMaxY.current - realMinY.current;
 
                 // Compute overflowX, minX, and maX. We want to allow additional movement in the x direction in order to
-                // make all the artworks visible.
+                // make all the artworks visible. Do it for the y direction as well.
                 const overflowX_embedding_space = Math.max(overflowX.current * effectiveWidth.current / width.current, 0);
                 minX.current = realMinX.current - overflowX_embedding_space;
                 maxX.current = realMaxX.current + overflowX_embedding_space;
+                const overflowY_embedding_space = Math.max(overflowY.current * effectiveHeight.current / height.current, 0);
+                minY.current = realMinY.current - overflowY_embedding_space;
+                maxY.current = realMaxY.current + overflowY_embedding_space;
 
                 // Update the effective position of the stage
                 effectivePosition.current.x = realMinX.current;
-                effectivePosition.current.y = minY.current;
+                effectivePosition.current.y = realMinY.current;
 
                 // Loop over artworks in tile and add them to the stage. Take the sprites from the sprite pool.
                 // noinspection JSUnresolvedVariable
@@ -575,31 +579,32 @@ const ClustersMap = (props) => {
                     tilesOnStage.current.set(tile_index,
                         data.map(entity => entity["index"]));
                 }
+                // Sort children
+                container.current.sortChildren();
             }).then(() => {
-            props.setInitialLoadingDone(true);
-            // Create hammer. Bind it to the gesture area.
-            // noinspection all
-            hammer.current = new Hammer(container.current);
-            // Disable all gestures except pinch
-            hammer.current.get('tap').set({enable: false});
-            hammer.current.get('press').set({enable: false});
-            hammer.current.get('rotate').set({enable: false});
-            hammer.current.get('pan').set({enable: false});
-            hammer.current.get('swipe').set({enable: false});
-            hammer.current.get('pinch').set({enable: true});
-            hammer.current.on('pinchstart', handlePinchStart);
-            hammer.current.on('pinch', handlePinch);
+                props.setInitialLoadingDone(true);
+                // Create hammer. Bind it to the gesture area.
+                // noinspection all
+                hammer.current = new Hammer(container.current);
+                // Disable all gestures except pinch
+                hammer.current.get('tap').set({enable: false});
+                hammer.current.get('press').set({enable: false});
+                hammer.current.get('rotate').set({enable: false});
+                hammer.current.get('pan').set({enable: false});
+                hammer.current.get('swipe').set({enable: false});
+                hammer.current.get('pinch').set({enable: true});
+                hammer.current.on('pinchstart', handlePinchStart);
+                hammer.current.on('pinch', handlePinch);
 
-            // Add all handlers to the stage
-            container.current
-                .on('mousedown', handleMouseDown)
-                .on('mouseup', handleMouseUp)
-                .on('mousemove', handleMouseMove)
-                .on('wheel', handleMouseWheel)
-                .on('touchmove', handleTouchMove)
-                .on('touchend', handleTouchEnd)
-                .on('touchstart', handleTouchStart);
-
+                // Add all handlers to the stage
+                container.current
+                    .on('mousedown', handleMouseDown)
+                    .on('mouseup', handleMouseUp)
+                    .on('mousemove', handleMouseMove)
+                    .on('wheel', handleMouseWheel)
+                    .on('touchmove', handleTouchMove)
+                    .on('touchend', handleTouchEnd)
+                    .on('touchstart', handleTouchStart);
         });
     }, [props.selectedDataset]);
 
@@ -607,42 +612,51 @@ const ClustersMap = (props) => {
         // Update ref for clicked search bar
         searchBarIsClickedRef.current = props.searchBarIsClicked;
         // Deactivate blur filter from all sprites
-        for (let child of container.current.children) {
+        /*for (let child of container.current.children) {
             if (!props.showCarousel) {
                 // Enable blur for depth and disable blur for search bar
                 child.filters[0].enabled = child.filters[0].blur !== 0;
                 child.filters[1].enabled = false;
             }
-        }
+        }*/
     }, [props.searchBarIsClicked]);
 
     useEffect(() => {
-        // Update ref for stage width and height and width and height of the embedding space, and also for the overflowX.
+        // Update ref for stage width and height and width and height of the embedding space, and also for the overflow.
         stageWidth.current = props.stageWidth;
         stageHeight.current = props.stageHeight;
         width.current = props.width;
         height.current = props.height;
         overflowX.current = Math.round(props.overflowX / 2);
+        overflowY.current = Math.round(props.overflowY / 2);
 
         // Resize container and set hit area
         // noinspection all
         container.current.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
 
-        // Save current minX and maxX
+        // Save current minX, maxX, minY, maxY
         const prevMinX = minX.current;
         const prevMaxX = maxX.current;
-        // Update minX and maxX
+        const prevMinY = minY.current;
+        const prevMaxY = maxY.current;
+
+        // Update minX, maxX, minY, maxY
         const overflowX_embedding_space = Math.max(overflowX.current * effectiveWidth.current / width.current, 0);
         minX.current = realMinX.current - overflowX_embedding_space;
         maxX.current = realMaxX.current + overflowX_embedding_space;
+        const overflowY_embedding_space = Math.max(overflowY.current * effectiveHeight.current / height.current, 0);
+        minY.current = realMinY.current - overflowY_embedding_space;
+        maxY.current = realMaxY.current + overflowY_embedding_space;
 
         // // Update effective position of the stage.
-        const factor = (maxX.current - minX.current) === (prevMaxX - prevMinX) ? 1 : (maxX.current - minX.current) / (prevMaxX - prevMinX);
+        let factor = (maxX.current - minX.current) === (prevMaxX - prevMinX) ? 1 : (maxX.current - minX.current) / (prevMaxX - prevMinX);
         effectivePosition.current.x = factor * (effectivePosition.current.x - prevMinX) + minX.current;
+        factor = (maxY.current - minY.current) === (prevMaxY - prevMinY) ? 1 : (maxY.current - minY.current) / (prevMaxY - prevMinY);
+        effectivePosition.current.y = factor * (effectivePosition.current.y - prevMinY) + minY.current;
 
         // Update max width and height of a sprite and update all sprites
-        maxWidth.current = stageWidth.current / 10;
-        maxHeight.current = stageHeight.current / 10;
+        maxWidth.current = width.current / 10;
+        maxHeight.current = height.current / 11;
 
         for (let index of sprites.current.keys()) {
             // Update size of sprite
@@ -656,7 +670,7 @@ const ClustersMap = (props) => {
             sprites.current.get(index).x = artwork_position.x;
             sprites.current.get(index).y = artwork_position.y;
         }
-    }, [props.width, props.height, props.overflowX, props.stageWidth, props.stageHeight]);
+    }, [props.width, props.height, props.overflowX, props.overflowY, props.stageWidth, props.stageHeight]);
 
     useEffect(() => {
         // This effect is called when the search data changes.
@@ -689,7 +703,7 @@ const ClustersMap = (props) => {
         mouseDown.current = false;
         container.current.cursor = 'grab';
         // Loop over all sprites and make them blurry if the carousel is shown, else make them not blurry.
-        for (let child of container.current.children) {
+        /*for (let child of container.current.children) {
             if (props.showCarousel) {
                 // Activate second blur filter, deactivate first blur filter
                 child.filters[0].enabled = false;
@@ -699,7 +713,7 @@ const ClustersMap = (props) => {
                 child.filters[0].enabled = child.filters[0].blur !== 0;
                 child.filters[1].enabled = false;
             }
-        }
+        }*/
     }, [props.showCarousel]);
 
     const removeSprite = (index) => {
@@ -715,8 +729,8 @@ const ClustersMap = (props) => {
         spritesGlobalInfo.current.delete(index);
     }
 
-    const updateStage = () => {
-        const time = performance.now();
+    const updateStage = (is_ticker=0) => {
+        // is_ticker is 0 for normal behavior, 1 for translation ticker, 2 for zoom ticker
         // Get zoom level. Obs: We keep as tiles on stage the tiles at the next zoom level. This is because these tiles
         // also contain the artworks from the current zoom level.
         const next_zoom_level = Math.min(depth.current >= 0 ? zoomLevel.current + 1 : zoomLevel.current, props.maxZoomLevel);
@@ -732,7 +746,19 @@ const ClustersMap = (props) => {
         const tile_y = Math.min(Math.floor((effectivePosition.current.y - minY.current) / tile_step_y), number_of_tiles - 1);
 
         // Get indexes of tiles to fetch
-        let indexes = getTilesToFetch(tile_x, tile_y, next_zoom_level, props.maxZoomLevel, tilesCache.current);
+        let indexes;
+        if (is_ticker === 0) {
+            indexes = getTilesToFetch(tile_x, tile_y, next_zoom_level, props.maxZoomLevel, tilesCache.current);
+        }
+        else if (is_ticker === 1) {
+            // Translation ticker behavior. Fetch only tiles at the current zoom level.
+            indexes = getTilesForTranslationTicker(tile_x, tile_y, next_zoom_level, tilesCache.current);
+        }
+        else if (is_ticker === 2) {
+            // Zoom ticker behavior. Fetch tiles at the next zoom level.
+            indexes = getTilesForZoomTicker(tile_x, tile_y, next_zoom_level, props.maxZoomLevel, tilesCache.current);
+        }
+
         // Filter out the indexes that are in the cache or in the pending tiles
         let tile;
         indexes = indexes.filter(index => {
@@ -749,7 +775,6 @@ const ClustersMap = (props) => {
 
         // Create promise with null
         if (indexes.length > 0) {
-            console.log("There are tiles to fetch.");
             unresolvedPromises.current.push(fetchTiles(indexes, tilesCache.current, pendingTiles.current, selectedDataset.current, props.host));
         }
         // Get visible tiles
@@ -793,53 +818,14 @@ const ClustersMap = (props) => {
 
         // Define count for check that everything is correct
         let count = 0;
-
-        // Manage the graphics
-        // graphics.current.clear();
-        // graphics.current.removeChildren();
-        // // Draw circle at the effective position of the stage
-        // const stage = mapGlobalCoordinatesToStageCoordinates(effectivePosition.current.x, effectivePosition.current.y);
-        // graphics.current.lineStyle(1, 0xFFFF00, 1);
-        // graphics.current.beginFill(0xFFFF00, 1);
-        // graphics.current.drawCircle(stage.x, stage.y, 5);
-        // graphics.current.endFill();
-
         visible_tiles.map(async tile => {
             // Stop execution if the tilesCache does not contain the tile
             if (!tilesCache.current.has(next_zoom_level + "-" + tile.x + "-" + tile.y)) {
+                console.log("Fetching missing tiles.")
                 await Promise.all(unresolvedPromises.current);
             }
             // Get data from tilesCache
             const data = tilesCache.current.get(next_zoom_level + "-" + tile.x + "-" + tile.y);
-
-            // // Find max and  min x and y of the tile
-            // let x_min = 1000000000; let x_max = -1000000000; let y_min = 1000000000; let y_max = -1000000000;
-            // for (let entity of data) {
-            //     if (entity["x"] < x_min)
-            //         x_min = entity["x"];
-            //     if (entity["x"]> x_max)
-            //         x_max = entity["x"];
-            //     if (entity["y"] < y_min)
-            //         y_min = entity["y"];
-            //     if (entity["y"] > y_max)
-            //         y_max = entity["y"];
-            // }
-            //
-            // // Draw rectangle
-            // const stage = mapGlobalCoordinatesToStageCoordinates(x_min, y_min);
-            // const width_s = (x_max - x_min) * (width.current) / effectiveWidth.current;
-            // const height_s = (y_max - y_min) * (height.current) / effectiveHeight.current;
-            // graphics.current.lineStyle(1, 0xFF0000, 1);
-            // graphics.current.beginFill(0x000000, 0);
-            // graphics.current.drawRect(stage.x, stage.y, width_s, height_s);
-            // // Draw text on the left top corner of the rectangle with the index of the tile
-            // const text = new PIXI.Text(zoomLevel.current + "-" + tile.x + "-" + tile.y,
-            //     {fontFamily: 'Arial', fontSize: 24, fill: 0xFF0000, align: 'center'});
-            // // Position the text
-            // text.x = stage.x; text.y = stage.y;
-            // // Write it in the graphics
-            // graphics.current.addChild(text);
-            // graphics.current.endFill();
 
             // Loop over artworks in tile and add them to the stage.
             // noinspection JSUnresolvedVariable
@@ -892,22 +878,34 @@ const ClustersMap = (props) => {
             tilesOnStage.current.set(next_zoom_level + "-" + tile.x + "-" + tile.y,
                 data.map(entity => entity["index"]));
         });
+        // Sort children
+        container.current.sortChildren();
         // Do asserts to check that everything is correct
         console.assert(count === sprites.current.size);
         console.assert(container.current.children.length === sprites.current.size);
         console.assert(sprites.current.size === spritesGlobalInfo.current.size);
         console.assert(sprites.current.size + spritePool.current.length === SPRITEPOOLSIZE);
-        console.log("Time to update stage: ", performance.now() - time, "ms");
     }
 
     // const updateStageThrottled = throttle(updateStage, 50);
+
+    const changeLimitsOfEmbeddingSpace = () => {
+        // Change the effective size of the stage.
+        effectiveWidth.current = (realMaxX.current - realMinX.current) / (2 ** (zoomLevel.current + depth.current));
+        effectiveHeight.current = (realMaxY.current - realMinY.current) / (2 ** (zoomLevel.current + depth.current));
+        // Change the limits of the embedding space
+        minX.current = realMinX.current - Math.max(overflowX.current * effectiveWidth.current / width.current, 0);
+        maxX.current = realMaxX.current + Math.max(overflowX.current * effectiveWidth.current / width.current, 0);
+        minY.current = realMinY.current - Math.max(overflowY.current * effectiveHeight.current / height.current, 0);
+        maxY.current = realMaxY.current + Math.max(overflowY.current * effectiveHeight.current / height.current, 0);
+    }
 
     // Create function for making the sprite pulse once it becomes available
     function pulseIfAvailable(spriteIndex) {
         const sprite = sprites.current.get(spriteIndex);
         if (sprite) {
             // Put sprite in front
-            sprite.zIndex = 30;
+            sprite.zIndex = 11;
             // Sort children
             container.current.sortChildren();
             makeSpritePulse(sprite);
@@ -980,7 +978,7 @@ const ClustersMap = (props) => {
                     // Increment counter
                     counter++;
                     // Update stage
-                    updateStage();
+                    updateStage(1);
                 }
             });
 
@@ -1024,9 +1022,8 @@ const ClustersMap = (props) => {
                     // Get translation of the mouse position from the upper left corner of the stage in global coordinates
                     const translation_x = position.x - effectivePosition.current.x
                     const translation_y = position.y - effectivePosition.current.y;
-                    // Change the effective size of the stage.
-                    effectiveWidth.current = (realMaxX.current - realMinX.current) / (2 ** (zoomLevel.current + depth.current));
-                    effectiveHeight.current = (maxY.current - minY.current) / (2 ** (zoomLevel.current + depth.current));
+
+                    changeLimitsOfEmbeddingSpace();
 
                     // Change the effective position of the stage. Make sure that it does not exceed the limits of the embedding space.
                     // The translation of the mouse is adjusted so that the mouse position in global coordinates remains the same.
@@ -1046,7 +1043,7 @@ const ClustersMap = (props) => {
                     }
 
                     // Update stage
-                    updateStage();
+                    updateStage(2);
                 }
             });
             zoom_ticker.start();
@@ -1106,6 +1103,7 @@ const ClustersMap = (props) => {
     const handleMouseMove = (event) => {
         // If mouse is down, then move the stage
         if (mouseDown.current) {
+            const time = performance.now();
             // Get mouse position. Transform movement of the mouse to movement in the embedding space.
             const mouse_x = ((-event.movementX) * effectiveWidth.current) / width.current;
             const mouse_y = ((-event.movementY) * effectiveHeight.current) / height.current;
@@ -1123,6 +1121,7 @@ const ClustersMap = (props) => {
             // fetching the data from the server and putting on stage the sprites that are visible.
             updateStage();
             // updateStageThrottled();
+            console.log("Time mouse move: ", performance.now() - time, "ms");
         }
     }
 
@@ -1238,7 +1237,7 @@ const ClustersMap = (props) => {
             // container.current.interactive = false;
             // container.current.interactiveChildren = false;
             // Await momentum translation
-            await momentumTranslation(averageVelocityX, averageVelocityY);
+            // await momentumTranslation(averageVelocityX, averageVelocityY);
             // Make container interactive again
             // container.current.interactive = true;
             // container.current.interactiveChildren = true;
@@ -1328,22 +1327,22 @@ const ClustersMap = (props) => {
     }
 
     const handleZoom = (delta, mousePosition) => {
+        const time = performance.now();
         // Deal with border cases
         if (zoomLevel.current === props.maxZoomLevel && depth.current + delta > 0) {
             // Keep depth at 0
             depth.current = 0;
-            effectiveWidth.current = (realMaxX.current - realMinX.current) / (2 ** zoomLevel.current);
-            effectiveHeight.current = (maxY.current - minY.current) / (2 ** zoomLevel.current);
+            changeLimitsOfEmbeddingSpace();
             updateStage();
             // updateStageThrottled();
             return;
         } else if (zoomLevel.current === 0 && depth.current + delta < 0) {
             // Keep depth at 0
             depth.current = 0;
-            effectiveWidth.current = (realMaxX.current - realMinX.current);
-            effectiveHeight.current = (maxY.current - minY.current);
+            changeLimitsOfEmbeddingSpace();
             updateStage();
             // updateStageThrottled();
+            console.log("Time zoom: ", performance.now() - time, "ms");
             return;
         }
 
@@ -1366,9 +1365,6 @@ const ClustersMap = (props) => {
                 y: global_coordinates_sprite_under_mouse.y
             }
         }
-
-        // Change measures after zooming in/out
-
         // When |depth| < 1, we are in an intermediate state between zoom levels, but the data shown always belongs to
         // the finer grained zoom level. Hence, as soon as delta becomes bigger than 0, get the data from the next
         // zoom level. If on the other hand delta becomes smaller than 0, keep current data and start transitioning to
@@ -1379,9 +1375,8 @@ const ClustersMap = (props) => {
         // Get translation of the mouse position from the upper left corner of the stage in global coordinates
         const translation_x = global_mouse_position.x - effectivePosition.current.x
         const translation_y = global_mouse_position.y - effectivePosition.current.y;
-        // Change the effective size of the stage.
-        effectiveWidth.current = (realMaxX.current - realMinX.current) / (2 ** (zoomLevel.current + depth.current));
-        effectiveHeight.current = (maxY.current - minY.current) / (2 ** (zoomLevel.current + depth.current));
+
+        changeLimitsOfEmbeddingSpace();
 
         // Change the effective position of the stage. Make sure that it does not exceed the limits of the embedding space.
         // The translation of the mouse is adjusted so that the mouse position in global coordinates remains the same.
@@ -1405,6 +1400,7 @@ const ClustersMap = (props) => {
         // Update stage
         updateStage();
         // updateStageThrottled();
+        console.log("Time zoom: ", performance.now() - time, "ms");
     }
 
 

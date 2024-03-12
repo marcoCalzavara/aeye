@@ -23,6 +23,7 @@ const liStyle = {
     listStylePosition: "inside",
     display: "list-item",
     marginBottom: "1em",
+    fontSize: "1em",
     textAlign: "justify",
     hyphens: "auto",
     hyphenateLimitChars: "2 1 1"
@@ -79,7 +80,7 @@ function getTextStyle(width) {
         marginTop: "1em",
         textAlign: "justify",
         font: "Computer Modern",
-        fontSize: "1.3em",
+        fontSize: "1.2em",
         width: width + "px",
         lineHeight: "1.6",
         hyphens: "auto",
@@ -92,7 +93,7 @@ function getBibliographyStyle(width) {
         marginTop: "1em",
         textAlign: "justify",
         font: "Computer Modern",
-        fontSize: "1.1em",
+        fontSize: "1em",
         width: width + "px",
         lineHeight: "1.6",
         hyphens: "auto",
@@ -159,7 +160,7 @@ const About = (props) => {
                     placeItems: "center"
                 }
             }>
-                <h1 style={{font: "Computer Modern", fontSize: "2em", fontWeight: "bold", marginTop: "1em", textAlign: "center", width: "80vw"}}>
+                <h1 style={{font: "Computer Modern", fontSize: "2em", fontWeight: "bold", marginTop: "2em", textAlign: "center", width: "80vw"}}>
                     AEye: A Visualization Tool for Image Datasets
                 </h1>
                 <p style={getTextStyle(width)}>
@@ -226,7 +227,7 @@ const About = (props) => {
                     <ScatterPlot host={props.host} n_neighbors={n_neighbors} min_dist={min_dist}
                                  height={widthPlot} width={widthPlot}/>
                     <div className="flex flex-row justify-left items-center" style={{marginTop: "1em"}}>
-                        <h1 style={{width: widthPlot * 0.5 + "px"}}>n_neighbors={n_neighbors}</h1>
+                        <h1 style={{width: widthPlot * 0.5 + "px"}}>Neighbors={n_neighbors}</h1>
                         <Slider
                             style={{width: widthPlot * 0.5 + "px"}}
                             min={0}
@@ -238,7 +239,7 @@ const About = (props) => {
                         />
                     </div>
                     <div className="flex flex-row justify-left items-center" style={{marginTop: "1em"}}>
-                        <h1 style={{width: widthPlot * 0.5 + "px"}}>min_dist={min_dist}</h1>
+                        <h1 style={{width: widthPlot * 0.5 + "px"}}>Distance={min_dist}</h1>
                         <Slider
                             style={{width: widthPlot * 0.5 + "px"}}
                             min={0}
@@ -275,24 +276,18 @@ const About = (props) => {
                     Leveraging this capability, we utilize the model to generate descriptive captions for images,
                     prompted by a simple query format: "USER: &lt;image&gt; Describe the image. ASSISTANT:". In our work,
                     we employ the model with 7 billion parameters. The following tool shows the results of the LLaVA model
-                    on the "Best Artworks of All Time" dataset.
+                    on the "Best Artworks of All Time" dataset. You can click on the image to get a new image and caption.
                 </p>
                 {
                     image !== "" && caption !== "" &&
                     <div style={{width: widthPlot + "px", marginTop: "1em", display: "grid", placeItems: "center"}}>
-                        <button style={{
-                            border: "1px solid black",
-                            borderRadius: "7px",
-                            marginBottom: "1em",
-                        }} onClick={handleClick} onTouchStart={handleClick}>
-                            <h1 style={{margin: "3px"}}>New image</h1>
-                        </button>
                         <img src={image} alt="Random image"
-                             style={{maxWidth: widthPlot + "px", maxHeight: widthPlot * 0.7 + "px"}}/>
+                             style={{maxWidth: widthPlot + "px", maxHeight: widthPlot * 0.8 + "px", cursor: "pointer"}}
+                             onClick={handleClick} onTouchStart={handleClick}/>
                         <p style={
                             {
                                 font: "Computer Modern",
-                                fontSize: "1em",
+                                fontSize: "0.8em",
                                 marginTop: "1em",
                                 textAlign: "justify",
                                 fontStyle: "italic",

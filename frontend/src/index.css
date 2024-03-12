@@ -55,6 +55,11 @@
     --height-transition: 87vh;
 }
 
+#root {
+    min-width: 320px;
+    min-height: 320px;
+}
+
 /* Media queries for the height of the sticky bar */
 
 @media (min-width: 320px) and (max-width: 480px) {

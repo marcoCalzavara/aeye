@@ -220,3 +220,34 @@ export function getTilesToFetch(tile_x, tile_y, zoom_level, max_zoom_level, tile
     }
     return indexes_of_tiles_to_fetch;
 }
+
+export function getTilesForTranslationTicker(tile_x, tile_y, zoom_level, tilesCache) {
+    const tiles = getTilesFromZoomLevel(tile_x, tile_y, zoom_level);
+    const indexes_of_tiles_to_fetch = [];
+    for (const tile of tiles) {
+        if (!tilesCache.has(tile.zoom + "-" + tile.x + "-" + tile.y)) {
+            indexes_of_tiles_to_fetch.push(convertTileToIndex(tile.x, tile.y, tile.zoom));
+        }
+    }
+    return indexes_of_tiles_to_fetch;
+}
+
+export function getTilesForZoomTicker(tile_x, tile_y, zoom_level, max_zoom_level, tilesCache) {
+    const tiles = getTilesFromZoomLevel(tile_x, tile_y, zoom_level);
+    const tiles_next_zoom_level = getTilesFromNextZoomLevel(tiles, zoom_level, max_zoom_level);
+    tiles.push(...tiles_next_zoom_level);
+    // Compute tile_x and tile_y at the previous zoom level
+    if (zoom_level > 0) {
+        const tile_x_prev_zoom_level = Math.floor(tile_x / 2);
+        const tile_y_prev_zoom_level = Math.floor(tile_y / 2);
+        const tiles_prev_zoom_level = getTilesFromZoomLevel(tile_x_prev_zoom_level, tile_y_prev_zoom_level, zoom_level - 1);
+        tiles.push(...tiles_prev_zoom_level);
+    }
+    const indexes_of_tiles_to_fetch = [];
+    for (const tile of tiles) {
+        if (!tilesCache.has(tile.zoom + "-" + tile.x + "-" + tile.y)) {
+            indexes_of_tiles_to_fetch.push(convertTileToIndex(tile.x, tile.y, tile.zoom));
+        }
+    }
+    return indexes_of_tiles_to_fetch;
+}

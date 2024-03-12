@@ -1,5 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
 import * as d3 from 'd3';
+import {LRUCache} from "lru-cache";
 
 function getCircleRadius() {
     switch (true) {
@@ -14,37 +15,50 @@ function getCircleRadius() {
     }
 }
 
-function getScatterPlotData(host, n_neighbors, min_dist) {
-    const url = `${host}/api/umap?n_neighbors=${n_neighbors}&min_dist=${min_dist}`;
-    return fetch(url,
-        {
-            method: 'GET',
-        })
-        .then(response => {
-            return response.json();
-        })
-        .then(data => {
-            // Get x and y coordinates from the data
-            const x = data["x"];
-            const y = data["y"];
-            let scatterPlotData = [];
-            for (let i = 0; i < x.length; i++)
-                scatterPlotData.push({x: x[i], y: y[i]});
-            return scatterPlotData;
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
+function getScatterPlotData(url, cache) {
+    if (cache.has(url)) {
+        console.log("In cache")
+        return Promise.resolve(cache.get(url));
+    }
+    else {
+        return fetch(url,
+            {
+                method: 'GET',
+            })
+            .then(response => {
+                return response.json();
+            })
+            .then(data => {
+                // Get x and y coordinates from the data
+                const x = data["x"];
+                const y = data["y"];
+                let scatterPlotData = [];
+                for (let i = 0; i < x.length; i++)
+                    scatterPlotData.push({x: x[i], y: y[i]});
+                // Add data to cache
+                cache.set(url, scatterPlotData);
+                return scatterPlotData;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }
 }
 
 const ScatterPlot = ({host, n_neighbors, min_dist, height, width}) => {
     const ref = useRef();
     const [prevScales, setPrevScales] = useState({xScale: null, yScale: null});
     const [radius, setRadius] = useState(getCircleRadius());
-
+    // Create LRU cache for scatter plot data
+    const scatterPlotData = useRef(new LRUCache({
+        max: 5,
+        updateAgeOnHas: true,
+        updateAgeOnGet: true
+    }));
 
     useEffect(() => {
         const handleResize = () => {
+            console.log("Resizing");
             setRadius(getCircleRadius());
         };
         window.addEventListener('resize', handleResize);
@@ -54,7 +68,8 @@ const ScatterPlot = ({host, n_neighbors, min_dist, height, width}) => {
     }, []);
 
     useEffect(() => {
-        getScatterPlotData(host, n_neighbors, min_dist)
+        const url = `${host}/api/umap?n_neighbors=${n_neighbors}&min_dist=${min_dist}`;
+        getScatterPlotData(url, scatterPlotData.current)
             .then((data) => {
                 // noinspection JSUnresolvedFunction
                 const xMax = d3.max(data, d => d.x);
@@ -91,7 +106,7 @@ const ScatterPlot = ({host, n_neighbors, min_dist, height, width}) => {
             .catch(error => {
                 console.error('Error:', error);
             });
-    }, [n_neighbors, min_dist, height, width]);
+    }, [n_neighbors, min_dist, height, width, radius]);
 
     return <svg ref={ref} height={height} width={width}></svg>
 }

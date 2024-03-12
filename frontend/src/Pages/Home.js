@@ -18,6 +18,7 @@ import {
 // import HamburgerMenu from "../Navigation/HamburgerMenu";
 
 
+const MIN_HEIGHT = 900;
 const ASPECT_RATIO = 16 / 9;
 const STAGE_MAX_ASP_RATIO = 8 / 3;
 
@@ -88,9 +89,9 @@ const computeStageDimensions = () => {
 
 const computeEmbeddingStateDimensions = () => {
     // First, get height, then adjust width based on aspect ratio
-    const height = window.innerHeight /*- getResponsiveHeight().replace('px', '')*/
+    const height = Math.max(window.innerHeight /*- getResponsiveHeight().replace('px', '')*/
         - getCarouselContainerMarginTop().replace('px', '') - getCarouselContainerMarginBottom().replace('px', '')
-        - getButtonSize().replace('px', '');
+        - getButtonSize().replace('px', ''), MIN_HEIGHT);
     const width = Math.ceil(height * ASPECT_RATIO);
 
     return {
@@ -106,6 +107,7 @@ const Home = (props) => {
     const [dimensionsEmbeddingState, setDimensionsEmbeddingState] = useState(computeEmbeddingStateDimensions());
     // Define state for the overflow along the x-axis
     const [overflowX, setOverflowX] = useState(dimensionsEmbeddingState.width - dimensionsStage.width);
+    const [overflowY, setOverflowY] = useState(dimensionsEmbeddingState.height - dimensionsStage.height);
     // Define host
     let host = useRef(props.host);
     // Define data from text search
@@ -136,6 +138,7 @@ const Home = (props) => {
             setDimensionsStage(newDimensionsStage);
             setDimensionsEmbeddingState(newDimensionsEmbeddingState);
             setOverflowX(newDimensionsEmbeddingState.width - newDimensionsStage.width);
+            setOverflowY(newDimensionsEmbeddingState.height - newDimensionsStage.height);
         };
         // Add event listener
         window.addEventListener('resize', updateDimensions);
@@ -215,6 +218,7 @@ const Home = (props) => {
                             <ClustersMap width={dimensionsEmbeddingState.width}
                                          height={dimensionsEmbeddingState.height}
                                          overflowX={overflowX}
+                                         overflowY={overflowY}
                                          stageWidth={dimensionsStage.width}
                                          stageHeight={dimensionsStage.height}
                                          host={host.current}
