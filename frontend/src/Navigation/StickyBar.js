@@ -12,7 +12,7 @@ const StickyBar = (props) => {
     return (
         <div
             id="sticky-bar"
-            className="fixed top-0 w-full h-sticky flex flex-row justify-between items-center bg-transparent px-1/80 z-50"
+            className="fixed top-0 w-full h-sticky flex flex-row justify-between items-center bg-transparent px-1/80 z-50 pointer-events-none"
             onClick={() => {
                 if (props.page === "home")
                     props.setShowCarousel(false)
@@ -53,7 +53,8 @@ const StickyBar = (props) => {
                         display: "flex",
                         flexDirection: "column",
                         alignItems: "center",
-                        justifyContent: "center"
+                        justifyContent: "center",
+                        pointerEvents: "auto"
                     }
                 }>
                     <TfiInfoAlt style={iconStyle}/>

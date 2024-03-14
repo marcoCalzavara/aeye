@@ -10,6 +10,8 @@ import {
     responsive_menu_item_heights
 } from "./CONSTANTS";
 
+/* FUNCTION TO GET CONSTANT VALUES */
+
 export function getResponsiveMargin() {
     switch (true) {
         case document.documentElement.clientWidth >= 320 && document.documentElement.clientWidth <= 480:
@@ -53,7 +55,16 @@ export function getCarouselContainerMarginTop() {
 }
 
 export function getCarouselContainerMarginBottom() {
-    return carousel_container_margin_bottom;
+    switch (true) {
+        case document.documentElement.clientHeight >= 320 && document.documentElement.clientHeight <= 640:
+            return carousel_container_margin_bottom.m_bottom_320;
+        case document.documentElement.clientHeight > 640 && document.documentElement.clientHeight <= 900:
+            return carousel_container_margin_bottom.m_bottom_640;
+        case document.documentElement.clientHeight > 900:
+            return carousel_container_margin_bottom.m_bottom_900;
+        default:
+            return carousel_container_margin_bottom.m_bottom_320;
+    }
 }
 
 export function getResponsiveMenuItemHeight() {
@@ -71,10 +82,6 @@ export function getResponsiveMenuItemHeight() {
         default:
             return responsive_menu_item_heights.h_item_320;
     }
-}
-
-export function getUrlForImage(path, dataset, host = "") {
-    return `${host}/${dataset}/resized_images/${path}`;
 }
 
 
@@ -101,6 +108,19 @@ function vhToPixels(vh) {
 }
 
 export function getMaxHeightMainImage() {
-    return vhToPixels(height_transition.replace('vh', '')) - getResponsiveCarouselHeight().replace("px", "")
-        - margin_between_images_bottom.replace("px", "");
+    if (window.innerHeight >= 500)
+        return vhToPixels(height_transition.replace('vh', '')) - getResponsiveCarouselHeight().replace("px", "")
+            - margin_between_images_bottom.replace("px", "");
+    else
+        return vhToPixels(height_transition.replace('vh', ''));
+}
+
+/* FUNCTION TO GET URLS */
+
+export function getUrlForImage(path, dataset, host = "") {
+    return `${host}/${dataset}/resized_images/${path}`;
+}
+
+export function getUrlForBlurredImage(path, dataset, radius, host = "") {
+    return `${host}/images/blurred-image?path=/${dataset}/resized_images/${path}&radius=${radius}`;
 }

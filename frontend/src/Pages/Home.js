@@ -188,7 +188,7 @@ const Home = (props) => {
     return (
         <>
             {(selectedDataset !== null && datasetInfo.get(selectedDataset) !== undefined) &&
-                <div className="home" hidden={props.page !== "home" || !initialLoadingDone}>
+                <div hidden={props.page !== "home" || !initialLoadingDone}>
                     <StickyBar host={host.current}
                                hasSearchBar={true}
                                setSearchData={setSearchData}
@@ -261,7 +261,7 @@ const Home = (props) => {
                                 </button>
                             )}
                             <div id="carousel-id"
-                                 className={`bg-transparent carousel-div max-h-carousel-plus-image flex flex-col items-center justify-center
+                                 className={`bg-transparent carousel-div max-h-carousel-plus-image flex flex-col items-center justify-center pointer-events-none
                                  ${!pageHasChanged ? (showCarousel && clickedImageIndex !== -1 ? 'height-transition open' : 'height-transition close') : ''}
                                  ${pageHasChanged ? 'max-height-transition-close' : ''}`} style={{zIndex: 40}}>
                                 {clickedImageIndex !== -1 &&

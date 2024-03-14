@@ -74,12 +74,11 @@ export default function SearchBar(props) {
                 props.setSearchBarIsClicked(true);
             // noinspection JSIgnoredPromiseFromCall
             sendText(inputValue);
-            setInputValue("");
         }
     };
 
     return (
-        <div className={`w-searchbar h-searchbar flex justify-between items-center z-10 bg-white rounded-full 
+        <div className={`w-searchbar h-searchbar flex justify-between items-center z-10 bg-white rounded-full pointer-events-auto
         ${props.searchBarIsClicked ? 'searchBarPositionTransition' : 'searchBarCentered'}`}>
             <InputBase
                 id="search-bar-id"

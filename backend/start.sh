@@ -39,6 +39,14 @@ fi
 # Sleep for 100 seconds to allow time for the container hosting the milvus service to become healthy
 sleep 100
 
+# Get permissions for the datasets
+chmod 755 /best_artworks
+find /best_artworks -type d -exec chmod 755 {} \;
+find /best_artworks -type f -exec chmod 755 {} \;
+chmod 755 /wikiart
+find /wikiart -type d -exec chmod 755 {} \;
+find /wikiart -type f -exec chmod 755 {} \;
+
 # Create default database
 echo "Creating default database..."
 python -m src.db_utilities.create_database

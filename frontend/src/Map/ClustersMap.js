@@ -1,20 +1,27 @@
 import {useEffect, useRef} from 'react';
 import * as PIXI from "pixi.js";
-// import {KawaseBlurFilter} from "@pixi/filter-kawase-blur";
 import Hammer from "hammerjs";
 import {useApp} from "@pixi/react";
 import {LRUCache} from "lru-cache";
 import 'tailwindcss/tailwind.css';
-import {convertIndexToTile, getTilesFromZoomLevel, getTilesToFetch, getTilesForTranslationTicker, getTilesForZoomTicker} from "./utilities";
+import {
+    convertIndexToTile,
+    getTilesForTranslationTicker,
+    getTilesForZoomTicker,
+    getTilesFromZoomLevel,
+    getTilesToFetch
+} from "./utilities";
 import {getUrlForImage} from "../utilities";
+import {KawaseBlurFilter} from "@pixi/filter-kawase-blur";
 
 const DURATION = 2; // seconds
 const SPRITEPOOLSIZE = 800;
-// const BLURSTRENGTH = 1;
-// const BLURSTRENGTHMAX = 1;
-// const NUMOFBLURSTRENGTHS = 10;
-// const BLURSTRENGTHS = Array.from({length: NUMOFBLURSTRENGTHS}, (_, i) => i * BLURSTRENGTHMAX / (NUMOFBLURSTRENGTHS - 1));
-// const QUALITY = 2;
+// const BLUR_RADIUS_MIN = 0.1;
+const BLUR_RADIUS_MAX = 5;
+const BLUR_RADIUS_CAROUSEL = 3;
+// const NUM_BLUR_RADII = 10;
+// const BLUR_RADII = Array.from({length: NUM_BLUR_RADII}, (_, i) => BLUR_RADIUS_MIN + i * (BLUR_RADIUS_MAX - BLUR_RADIUS_MIN) / (NUM_BLUR_RADII - 1));
+const QUALITY = 5;
 // const DEPTH_ALPHA_FLICKERING = 0.2
 // Define constant for transition steps and depth steps
 const INITIAL_TRANSITION_STEPS = 100;
@@ -156,6 +163,8 @@ const ClustersMap = (props) => {
     const sprites = useRef(new Map());
     // Define map for sprites global coordinates
     const spritesGlobalInfo = useRef(new Map());
+    // Define map for knowing if a sprite is in the foreground
+    const spriteIsInForeground = useRef(new Map());
     // Define sprite pool of available sprites
     const spritePool = useRef(new Array(SPRITEPOOLSIZE));
     // Define max width and height of a sprite. These values depend on the size of the viewport.
@@ -192,9 +201,11 @@ const ClustersMap = (props) => {
     // Define set for pending tiles
     const pendingTiles = useRef(new Set());
     // Define state for the app1
-    const app = useApp()
-    // Create container for the stage
-    const container = useRef(null);
+    const app = useApp();
+    // Create container for the foreground
+    const containerForeground = useRef(null);
+    // Create container for the background
+    const containerBackground = useRef(null);
     // Create container for when the other container is disabled
     const containerForCarousel = useRef(new PIXI.Container());
     // Define hammer
@@ -203,6 +214,7 @@ const ClustersMap = (props) => {
     const previousScale = useRef(1);
     // Create a ref that will store the current value of showCarousel
     const showCarouselRef = useRef(props.showCarousel);
+    const prevShowCarouselRef = useRef(props.showCarousel);
     // Create a ref that will store the current value of the clicked search bar
     const searchBarIsClickedRef = useRef(props.searchBarIsClicked);
     const touchStartPositionSprite = useRef({x: 0, y: 0});
@@ -272,60 +284,68 @@ const ClustersMap = (props) => {
         props.setShowCarousel(true);
     }
 
-    const blurSprite = (sprite, blur) => {
-        // Set blur strength proportional to the depth
-        /*if (!blur) {
-            sprite.filters[0].blur = 0;
-            sprite.filters[0].enabled = false;
-            sprite.alpha = 1;
-            sprite.zIndex = 10;
-        } else {
-            // Set blur strength proportional to the depth. If showCarousel is true, then leave the blur strength as it is.
-            if (depth.current >= 0) {
-                sprite.filters[0].blur = BLURSTRENGTHMAX * (1 - Math.sin(depth.current * Math.PI / 2)) ** 3;
-                // sprite.filters[0].blur = BLURSTRENGTHS[BLURSTRENGTHS.length - 1 - Math.floor(depth.current * (NUMOFBLURSTRENGTHS - 1))];
-            } else {
-                sprite.filters[0].blur = BLURSTRENGTHMAX * (1 - Math.sin((1 + depth.current) * Math.PI / 2)) ** 3;
-                // sprite.filters[0].blur = BLURSTRENGTHS[Math.floor((1 + depth.current) * (NUMOFBLURSTRENGTHS - 1))];
-            }
+    const moveSpriteToForeground = (index) => {
+        // Remove sprite from background container
+        containerBackground.current.removeChild(sprites.current.get(index));
+        // Add sprite to foreground container
+        containerForeground.current.addChild(sprites.current.get(index));
+        // Change entry in spriteIsInForeground
+        spriteIsInForeground.current.set(index, true);
+    }
 
-            if (!props.showCarousel) {
-                sprite.filters[0].enabled = true;
-                sprite.zIndex = 5;
-            }
-            //
-            // // Modify the alpha of the sprite. Unless in zoom level 0, the alpha goes rapidly to 1 from 0 around a
-            // // depth of 0. This is done to avoid the flickering of the sprites when they all of a sudden become visible.
-            // if (zoomLevel.current === 0 || Math.floor(zoomLevel.current + depth.current) === 0) {
-            //     sprite.alpha = 1;
-            // }
-            // else {
-            //     if (depth.current >= 0) {
-            //         if (depth.current < DEPTH_ALPHA_FLICKERING / 2)
-            //             sprite.alpha = 0;
-            //         else if (DEPTH_ALPHA_FLICKERING / 2 <= depth.current < (5 / 2) * DEPTH_ALPHA_FLICKERING)
-            //             sprite.alpha = (1 / Math.log(11)) * Math.log((5 / DEPTH_ALPHA_FLICKERING) * (depth.current - DEPTH_ALPHA_FLICKERING / 2) + 1);
-            //         else
-            //             sprite.alpha = 1;
-            //     }
-            //     else {
-            //         sprite.alpha = 1;
-            //     }
-            // }
-        }*/
-        let strength = 0;
-        if (blur) {
-            if (depth.current >= 0)
-                strength = (1 - Math.sin(depth.current * Math.PI / 2)) ** 3;
-            else
-                strength = (1 - Math.sin((1 + depth.current) * Math.PI / 2)) ** 3;
-            if (!props.showCarousel)
-                sprite.zIndex = 5;
+    const moveSpriteToBackground = (index) => {
+        // Remove sprite from foreground container
+        containerForeground.current.removeChild(sprites.current.get(index));
+        // Add sprite to background container
+        containerBackground.current.addChild(sprites.current.get(index));
+        // Change entry in spriteIsInForeground
+        spriteIsInForeground.current.set(index, false);
+    }
+
+    const applyBlur = () => {
+        if (!searchBarIsClickedRef.current) {
+            // The searchbar has not been clicked yet, activate blur filter on the foreground container,
+            // keep the background container with blur filter active.
+            containerForeground.current.filters[0].enabled = true;
+            prevShowCarouselRef.current = showCarouselRef.current;
+            return;
         }
-
-        // Make sprite interactive if the blur is less than 2/5 of the maximum blur strength, else make it not interactive.
-        sprite.interactive = strength < 2 / 5;
-        sprite.cursor = sprite.interactive ? 'pointer' : 'default';
+        if (props.showCarousel) {
+            // Activate blur filters for the sprites in the foreground
+            for (let child of containerForeground.current.children)
+                child.filters[0].enabled = true;
+            // Compute the blur that the background container should have
+            if (depth.current >= 0) {
+                containerBackground.current.filters[0].blur = BLUR_RADIUS_MAX * (1 - Math.sin(depth.current * Math.PI / 2)) ** 3;
+                // containerBackground.current.filters[0].blur = BLUR_RADII[BLUR_RADII.length - 1 - Math.floor(depth.current * (NUM_BLUR_RADII - 1))];
+            } else {
+                containerBackground.current.filters[0].blur = BLUR_RADIUS_MAX * (1 - Math.sin((1 + depth.current) * Math.PI / 2)) ** 3;
+                // containerBackground.current.filters[0].blur = BLUR_RADII[Math.floor((1 + depth.current) * (NUM_BLUR_RADII - 1))];
+            }
+            // Activate the second blur filter if the blur of the first filter is lower than the blur of the second filter
+            containerBackground.current.filters[0].enabled = containerBackground.current.filters[0].blur >= BLUR_RADIUS_CAROUSEL;
+            containerBackground.current.filters[1].enabled = containerBackground.current.filters[0].blur < BLUR_RADIUS_CAROUSEL;
+            // Make background container not interactive
+            containerBackground.current.interactiveChildren = false;
+        } else {
+            // Deactivate blur filters for the sprites in the foreground
+            if (prevShowCarouselRef.current) {
+                for (let child of containerForeground.current.children)
+                    child.filters[0].enabled = false;
+            }
+            // Change blur level of the background container
+            if (depth.current >= 0) {
+                if (BLUR_RADIUS_MAX * (1 - Math.sin(depth.current * Math.PI / 2)) ** 3 !== containerBackground.current.filters[0].blur)
+                    containerBackground.current.filters[0].blur = BLUR_RADIUS_MAX * (1 - Math.sin(depth.current * Math.PI / 2)) ** 3;
+                // containerBackground.current.filters[0].blur = BLUR_RADII[BLUR_RADII.length - 1 - Math.floor(depth.current * (NUM_BLUR_RADII - 1))];
+            } else {
+                if (BLUR_RADIUS_MAX * (1 - Math.sin((1 + depth.current) * Math.PI / 2)) ** 3 !== containerBackground.current.filters[0].blur)
+                    containerBackground.current.filters[0].blur = BLUR_RADIUS_MAX * (1 - Math.sin((1 + depth.current) * Math.PI / 2)) ** 3;
+                // containerBackground.current.filters[0].blur = BLUR_RADII[Math.floor((1 + depth.current) * (NUM_BLUR_RADII - 1))];
+            }
+            containerBackground.current.interactiveChildren = containerBackground.current.filters[0].blur >= (2 / 5) * BLUR_RADIUS_MAX;
+        }
+        prevShowCarouselRef.current = showCarouselRef.current;
     }
 
     const scaleSprite = (index) => {
@@ -357,29 +377,31 @@ const ClustersMap = (props) => {
         });
 
         sprite.on('mouseenter', () => {
-            // Deactivate second blur filter, but activate first blur filter
-            /*if (searchBarIsClickedRef.current) {
-                sprite.filters[0].enabled = sprite.filters[0].blur !== 0;
-                sprite.filters[1].enabled = false;
-            }*/
+            // Deactivate blur filter
+            if (searchBarIsClickedRef.current && spriteIsInForeground.current.get(index) && showCarouselRef.current) {
+                sprite.filters[0].enabled = false;
+                sprite.zIndex = 11;
+                containerForeground.current.sortChildren();
+            }
         });
 
         sprite.on('mouseleave', () => {
-            // Activate second blur filter, but deactivate first blur filter
-            /*if (showCarouselRef.current) {
-                sprite.filters[0].enabled = false;
-                sprite.filters[1].enabled = true;
-            }*/
+            // Activate blur filter
+            if (showCarouselRef.current && spriteIsInForeground.current.get(index)) {
+                sprite.filters[0].enabled = true;
+                sprite.zIndex = 10;
+                containerForeground.current.sortChildren();
+            }
         });
 
         sprite.on('touchstart', (event) => {
             // Get position on the screen where the touch event occurred
-            touchStartPositionSprite.current = event.data.getLocalPosition(container.current);
+            touchStartPositionSprite.current = event.data.getLocalPosition(containerForeground.current);
         });
 
         sprite.on('touchend', (event) => {
             // Get position on the screen where the touch event occurred
-            const touchEndPosition = event.data.getLocalPosition(container.current);
+            const touchEndPosition = event.data.getLocalPosition(containerForeground.current);
             // Calculate the distance between the start and end position of the touch event
             const distance = Math.sqrt((touchEndPosition.x - touchStartPositionSprite.current.x) ** 2 +
                 (touchEndPosition.y - touchStartPositionSprite.current.y) ** 2);
@@ -393,7 +415,7 @@ const ClustersMap = (props) => {
         });
     }
 
-    const addSpriteToStage = (index, path, width, height, global_x, global_y, is_in_previous_zoom_level, blur = false) => {
+    const addSpriteToStage = (index, path, width, height, global_x, global_y, is_in_previous_zoom_level) => {
         // Get sprite from sprite pool
         let sprite = spritePool.current.pop();
         // Add sprite to sprites
@@ -406,17 +428,14 @@ const ClustersMap = (props) => {
 
         // Define size of sprite
         scaleSprite(index);
-        // Set main texture
-        sprite.texture = PIXI.Texture.from(getUrlForImage(path, selectedDataset.current, props.host));
-        // Set z-index of sprite to 10
-        sprite.zIndex = 10;
 
-        // Add text to sprite with the index of the artwork
-        // sprite.removeChildren();
-        // const text = new PIXI.Text(index, {fontFamily: 'Arial', fontSize: 30, fill: 0xff0000, align: 'center'});
-        // text.x = 10;
-        // text.y = 10;
-        // sprite.addChild(text);
+        // Set texture of sprite
+        sprite.texture = PIXI.Texture.from(getUrlForImage(path, selectedDataset.current, props.host));
+
+        // Define blur filter for the sprite, but deactivate it. The filter is only used for the sprites in the foreground
+        // when the carousel is open.
+        sprite.filters = [new KawaseBlurFilter(BLUR_RADIUS_CAROUSEL, QUALITY)];
+        sprite.filters[0].enabled = false;
 
         // Get position of artwork in stage coordinates.
         const artwork_position = mapGlobalCoordinatesToStageCoordinates(global_x, global_y);
@@ -424,25 +443,27 @@ const ClustersMap = (props) => {
         sprite.x = artwork_position.x;
         sprite.y = artwork_position.y;
 
+        // Probably not needed, but leave it here just in case
         sprite.visible = artwork_position.x > -maxHeight.current * width / height
             && artwork_position.x <= stageWidth.current
             && artwork_position.y >= -maxHeight.current
             && artwork_position.y <= stageHeight.current;
 
-        // Create blur filters for sprite. The first one is for depth, the second one is for the carousel and for the
-        // search bar.
-        /*sprite.filters = [new KawaseBlurFilter(0, QUALITY, true), new KawaseBlurFilter(BLURSTRENGTH, QUALITY, true)];
-        sprite.filters[0].enabled = false;
-        sprite.filters[1].enabled = blur;*/
-
-        // Set blur strength proportional to the depth
-        blurSprite(sprite, !is_in_previous_zoom_level && !(zoomLevel.current === props.maxZoomLevel && depth.current === 0));
+        if (!is_in_previous_zoom_level && !(zoomLevel.current === props.maxZoomLevel && depth.current === 0)) {
+            // Add sprite to background container
+            containerBackground.current.addChild(sprite);
+            spriteIsInForeground.current.set(index, false);
+        } else {
+            // Add sprite to foreground container
+            containerForeground.current.addChild(sprite);
+            spriteIsInForeground.current.set(index, true);
+        }
 
         // Set sprite handlers
         setSpriteHandlers(sprite, index);
-
-        // Add sprite to stage
-        container.current.addChild(sprite);
+        // Make sprite interactive
+        sprite.interactive = true;
+        sprite.cursor = 'pointer';
     }
 
     const reset = () => {
@@ -451,8 +472,9 @@ const ClustersMap = (props) => {
         depth.current = 0;
         // Remove all children from stage
         app.stage.removeChildren();
-        // Set container to null
-        container.current = null;
+        // Set containers to null
+        containerForeground.current = null;
+        containerBackground.current = null;
         // Reset sprites
         sprites.current.clear();
         // Recreate sprite pool
@@ -467,6 +489,28 @@ const ClustersMap = (props) => {
         console.assert(spritePool.current.length === SPRITEPOOLSIZE);
     }
 
+    const setPropertiesOfCarouselContainer = (container) => {
+        container.interactive = true;
+        container.zIndex = 1;
+        // noinspection all
+        container.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
+        // noinspection all
+        container
+            .on('mousedown', () => props.setShowCarousel(false))
+            .on('touchstart', () => props.setShowCarousel(false));
+    }
+
+    const setPropertiesOfContainer = (container, zIndex, isForeground) => {
+        // Define container pointer
+        container.cursor = 'grab';
+        // noinspection all
+        container.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
+        container.zIndex = zIndex;
+        container.sortableChildren = true;
+        container.interactive = isForeground;
+        container.inteactiveChildren = isForeground;
+    }
+
     // useEffect for initialization of the component. This is called every time the selected dataset changes.
     useEffect(() => {
         // Change selected dataset
@@ -474,38 +518,36 @@ const ClustersMap = (props) => {
         // Reset everything at the initial state
         reset();
 
-        // Create container for the stage
-        if (!container.current) {
+        // Create container for the foreground
+        if (!containerForeground.current) {
             // Create container
-            container.current = new PIXI.Container();
-            app.stage.addChild(container.current);
+            containerForeground.current = new PIXI.Container();
+            containerForeground.current.filters = [new KawaseBlurFilter(BLUR_RADIUS_CAROUSEL, QUALITY)];
+            containerForeground.current.filters[0].enabled = false;
+            app.stage.addChild(containerForeground.current);
+        }
+        if (!containerBackground.current) {
+            // Create container
+            containerBackground.current = new PIXI.Container();
+            // Define first filter for when the carousel is not shown
+            containerBackground.current.filters = [new KawaseBlurFilter(BLUR_RADIUS_MAX, QUALITY)];
+            // Define second filter for when the carousel is shown
+            containerBackground.current.filters.push(new KawaseBlurFilter(BLUR_RADIUS_CAROUSEL, QUALITY));
+            app.stage.addChild(containerBackground.current);
         }
 
-        // Manage second container
-        containerForCarousel.current.interactive = true;
-        containerForCarousel.current.zIndex = 1;
-        // noinspection all
-        containerForCarousel.current.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
-        // Define event handlers for the second container
-        // noinspection all
-        containerForCarousel.current
-            .on('mousedown', () => props.setShowCarousel(false))
-            .on('touchstart', () => props.setShowCarousel(false));
+        // Set properties of carousel container
+        setPropertiesOfCarouselContainer(containerForCarousel.current);
 
-        // Define container pointer
-        container.current.cursor = 'grab';
-
-        // noinspection all
-        container.current.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
-        container.current.zIndex = 2;
-        container.current.sortableChildren = true;
-        container.current.interactive = true;
-        container.current.inteactiveChildren = true;
+        // Set properties of containers
+        setPropertiesOfContainer(containerForeground.current, 3, true);
+        setPropertiesOfContainer(containerBackground.current, 2, false);
+        // Sort app stage
+        app.stage.sortChildren();
 
         // Populate the sprite pool
-        for (let i = 0; i < spritePool.current.length; i++) {
+        for (let i = 0; i < spritePool.current.length; i++)
             spritePool.current[i] = new PIXI.Sprite(PIXI.Texture.WHITE);
-        }
 
         // Fetch first zoom levels
         fetchFirstTiles(getUrlForFirstTiles(selectedDataset.current, props.host), null, tilesCache.current)
@@ -547,8 +589,7 @@ const ClustersMap = (props) => {
                         data[i]["height"],
                         data[i]["x"],
                         data[i]["y"],
-                        true,
-                        !props.searchBarIsClicked
+                        true
                     );
                 }
                 // noinspection JSUnresolvedVariable
@@ -570,8 +611,7 @@ const ClustersMap = (props) => {
                                 data[i]["height"],
                                 data[i]["x"],
                                 data[i]["y"],
-                                data[i]["in_previous"],
-                                !props.searchBarIsClicked
+                                data[i]["in_previous"]
                             );
                         }
                     }
@@ -579,46 +619,40 @@ const ClustersMap = (props) => {
                     tilesOnStage.current.set(tile_index,
                         data.map(entity => entity["index"]));
                 }
-                // Sort children
-                container.current.sortChildren();
             }).then(() => {
-                props.setInitialLoadingDone(true);
-                // Create hammer. Bind it to the gesture area.
-                // noinspection all
-                hammer.current = new Hammer(container.current);
-                // Disable all gestures except pinch
-                hammer.current.get('tap').set({enable: false});
-                hammer.current.get('press').set({enable: false});
-                hammer.current.get('rotate').set({enable: false});
-                hammer.current.get('pan').set({enable: false});
-                hammer.current.get('swipe').set({enable: false});
-                hammer.current.get('pinch').set({enable: true});
-                hammer.current.on('pinchstart', handlePinchStart);
-                hammer.current.on('pinch', handlePinch);
+            props.setInitialLoadingDone(true);
+            // Create hammer. Bind it to the gesture area.
+            // noinspection all
+            hammer.current = new Hammer(containerForeground.current);
+            // Disable all gestures except pinch
+            hammer.current.get('tap').set({enable: false});
+            hammer.current.get('press').set({enable: false});
+            hammer.current.get('rotate').set({enable: false});
+            hammer.current.get('pan').set({enable: false});
+            hammer.current.get('swipe').set({enable: false});
+            hammer.current.get('pinch').set({enable: true});
+            hammer.current.on('pinchstart', handlePinchStart);
+            hammer.current.on('pinch', handlePinch);
 
-                // Add all handlers to the stage
-                container.current
-                    .on('mousedown', handleMouseDown)
-                    .on('mouseup', handleMouseUp)
-                    .on('mousemove', handleMouseMove)
-                    .on('wheel', handleMouseWheel)
-                    .on('touchmove', handleTouchMove)
-                    .on('touchend', handleTouchEnd)
-                    .on('touchstart', handleTouchStart);
+            // Add all handlers to the stage
+            containerForeground.current
+                .on('mousedown', handleMouseDown)
+                .on('mouseup', handleMouseUp)
+                .on('mousemove', handleMouseMove)
+                .on('wheel', handleMouseWheel)
+                .on('touchmove', handleTouchMove)
+                .on('touchend', handleTouchEnd)
+                .on('touchstart', handleTouchStart);
         });
     }, [props.selectedDataset]);
 
     useEffect(() => {
         // Update ref for clicked search bar
         searchBarIsClickedRef.current = props.searchBarIsClicked;
-        // Deactivate blur filter from all sprites
-        /*for (let child of container.current.children) {
-            if (!props.showCarousel) {
-                // Enable blur for depth and disable blur for search bar
-                child.filters[0].enabled = child.filters[0].blur !== 0;
-                child.filters[1].enabled = false;
-            }
-        }*/
+        // Enable or disable blur filter on the foreground container
+        containerForeground.current.filters[0].enabled = !props.searchBarIsClicked;
+        // Blur containers
+        applyBlur();
     }, [props.searchBarIsClicked]);
 
     useEffect(() => {
@@ -632,7 +666,9 @@ const ClustersMap = (props) => {
 
         // Resize container and set hit area
         // noinspection all
-        container.current.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
+        containerForeground.current.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
+        // noinspection all
+        containerBackground.current.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
 
         // Save current minX, maxX, minY, maxY
         const prevMinX = minX.current;
@@ -685,7 +721,8 @@ const ClustersMap = (props) => {
         // Update ref for showCarousel
         showCarouselRef.current = props.showCarousel;
         // Block movement of the stage if the carousel is shown
-        container.current.interactive = !props.showCarousel;
+        containerForeground.current.interactive = !props.showCarousel;
+        containerBackground.current.interactive = !props.showCarousel;
         if (hammer.current) {
             hammer.current.get('pinch').set({enable: !props.showCarousel});
         }
@@ -693,34 +730,33 @@ const ClustersMap = (props) => {
             // Add containerForCarousel to stage
             app.stage.addChild(containerForCarousel.current);
             app.stage.sortChildren();
-        }
-        else
+        } else {
             // Remove containerForCarousel from stage
             app.stage.removeChild(containerForCarousel.current);
+            app.stage.sortChildren();
+        }
 
-        // Deactivate blur filter from all sprites
         // Set mouse down to false
         mouseDown.current = false;
-        container.current.cursor = 'grab';
-        // Loop over all sprites and make them blurry if the carousel is shown, else make them not blurry.
-        /*for (let child of container.current.children) {
-            if (props.showCarousel) {
-                // Activate second blur filter, deactivate first blur filter
-                child.filters[0].enabled = false;
-                child.filters[1].enabled = true;
-            } else {
-                // Deactivate second blur filter, activate first blur filter
-                child.filters[0].enabled = child.filters[0].blur !== 0;
-                child.filters[1].enabled = false;
-            }
-        }*/
+        containerForeground.current.cursor = 'grab';
+
+        // Blur the containers
+        applyBlur();
     }, [props.showCarousel]);
 
     const removeSprite = (index) => {
         // Remove every event handler from sprite
         sprites.current.get(index).removeAllListeners();
+        // Reset texture of sprite
+        sprites.current.get(index).texture = PIXI.Texture.WHITE;
         // Remove sprite from stage
-        container.current.removeChild(sprites.current.get(index));
+        if (spriteIsInForeground.current.get(index)) {
+            containerForeground.current.removeChild(sprites.current.get(index));
+        } else {
+            containerBackground.current.removeChild(sprites.current.get(index));
+        }
+        // Remove entrance from spriteIsInForeground
+        spriteIsInForeground.current.delete(index);
         // Add sprite back to sprite pool
         spritePool.current.push(sprites.current.get(index));
         // Remove sprite from sprites
@@ -729,7 +765,7 @@ const ClustersMap = (props) => {
         spritesGlobalInfo.current.delete(index);
     }
 
-    const updateStage = (is_ticker=0) => {
+    const updateStage = (is_ticker = 0) => {
         // is_ticker is 0 for normal behavior, 1 for translation ticker, 2 for zoom ticker
         // Get zoom level. Obs: We keep as tiles on stage the tiles at the next zoom level. This is because these tiles
         // also contain the artworks from the current zoom level.
@@ -749,12 +785,10 @@ const ClustersMap = (props) => {
         let indexes;
         if (is_ticker === 0) {
             indexes = getTilesToFetch(tile_x, tile_y, next_zoom_level, props.maxZoomLevel, tilesCache.current);
-        }
-        else if (is_ticker === 1) {
+        } else if (is_ticker === 1) {
             // Translation ticker behavior. Fetch only tiles at the current zoom level.
             indexes = getTilesForTranslationTicker(tile_x, tile_y, next_zoom_level, tilesCache.current);
-        }
-        else if (is_ticker === 2) {
+        } else if (is_ticker === 2) {
             // Zoom ticker behavior. Fetch tiles at the next zoom level.
             indexes = getTilesForZoomTicker(tile_x, tile_y, next_zoom_level, props.maxZoomLevel, tilesCache.current);
         }
@@ -848,6 +882,18 @@ const ClustersMap = (props) => {
                     );
                 } else {
                     spritesGlobalInfo.current.get(index).is_in_previous_zoom_level = data[j]["in_previous"];
+
+                    // Check if sprite should be moved to the foreground or background
+                    if (!spritesGlobalInfo.current.get(index).is_in_previous_zoom_level && !(zoomLevel.current === props.maxZoomLevel && depth.current === 0)) {
+                        // Move sprite to background
+                        if (spriteIsInForeground.current.get(index))
+                            moveSpriteToBackground(index);
+                    }
+                    else {
+                        if (!spriteIsInForeground.current.get(index))
+                            moveSpriteToForeground(index);
+                    }
+
                     // Get position of artwork in stage coordinates.
                     const artwork_position = mapGlobalCoordinatesToStageCoordinates(
                         spritesGlobalInfo.current.get(index).x,
@@ -860,29 +906,29 @@ const ClustersMap = (props) => {
                     sprites.current.get(index).y = Math.abs(sprites.current.get(index).y - artwork_position.y) > 1 ?
                         artwork_position.y : sprites.current.get(index).y;
 
-                    // Set strength of blur filter proportional to the depth
-                    blurSprite(sprites.current.get(index), !data[j]["in_previous"] && !(zoomLevel.current === props.maxZoomLevel && depth.current === 0));
                     // Set size of sprite
                     scaleSprite(index);
                 }
-
                 // Make sprite not visible if outside the viewing area
                 const aspect_ratio = spritesGlobalInfo.current.get(index).width / spritesGlobalInfo.current.get(index).height;
                 sprites.current.get(index).visible = sprites.current.get(index).x > -maxHeight.current * aspect_ratio
-                     && sprites.current.get(index).x <= stageWidth.current
-                     && sprites.current.get(index).y >= -maxHeight.current
-                     && sprites.current.get(index).y <= stageHeight.current;
+                    && sprites.current.get(index).x <= stageWidth.current
+                    && sprites.current.get(index).y >= -maxHeight.current
+                    && sprites.current.get(index).y <= stageHeight.current;
             }
             // Save artworks in tiles
             // noinspection JSUnresolvedVariable
             tilesOnStage.current.set(next_zoom_level + "-" + tile.x + "-" + tile.y,
                 data.map(entity => entity["index"]));
         });
-        // Sort children
-        container.current.sortChildren();
+
+        // Apply blur
+        applyBlur();
+
         // Do asserts to check that everything is correct
         console.assert(count === sprites.current.size);
-        console.assert(container.current.children.length === sprites.current.size);
+        console.assert(containerForeground.current.children.length
+            + containerBackground.current.children.length === sprites.current.size);
         console.assert(sprites.current.size === spritesGlobalInfo.current.size);
         console.assert(sprites.current.size + spritePool.current.length === SPRITEPOOLSIZE);
     }
@@ -906,8 +952,6 @@ const ClustersMap = (props) => {
         if (sprite) {
             // Put sprite in front
             sprite.zIndex = 11;
-            // Sort children
-            container.current.sortChildren();
             makeSpritePulse(sprite);
         }
     }
@@ -1058,8 +1102,10 @@ const ClustersMap = (props) => {
         }
 
         // Make container not interactive.
-        container.current.interactive = false;
-        container.current.interactiveChildren = false;
+        containerForeground.current.interactive = false;
+        containerForeground.current.interactiveChildren = false;
+        containerBackground.current.interactive = false;
+        containerBackground.current.interactiveChildren = false;
 
         // 1. Transition to the new location in the embedding space without changing the zoom level.
         // Wait for first translation ticker to finish
@@ -1080,22 +1126,24 @@ const ClustersMap = (props) => {
         setTimeout(() => {
             openCarousel(image.index);
             // Make container interactive again
-            container.current.interactive = true;
-            container.current.interactiveChildren = true;
+            containerForeground.current.interactive = true;
+            containerForeground.current.interactiveChildren = true;
+            containerBackground.current.interactive = true;
+            containerBackground.current.interactiveChildren = true;
         }, DURATION * 1000 + 10);
     }
 
     // Create handler for mouse down
     const handleMouseDown = () => {
         // Set mouse down to true
-        container.current.cursor = 'grabbing';
+        containerForeground.current.cursor = 'grabbing';
         mouseDown.current = true;
     }
 
     // Create handler for mouse up
     const handleMouseUp = () => {
         // Set mouse down to false
-        container.current.cursor = 'grab';
+        containerForeground.current.cursor = 'grab';
         mouseDown.current = false;
     }
 
@@ -1128,7 +1176,7 @@ const ClustersMap = (props) => {
     // Create handler for touch start and touch end
     const handleTouchStart = (event) => {
         // Save touch position
-        touchPrevPos.current = event.data.getLocalPosition(container.current);
+        touchPrevPos.current = event.data.getLocalPosition(containerForeground.current);
         // Save touch start time
         touchPrevTime.current = Date.now();
     }
@@ -1136,7 +1184,7 @@ const ClustersMap = (props) => {
     // Create handler for touch move
     const handleTouchMove = (event) => {
         // Compute velocity
-        const touchCurrPos = event.data.getLocalPosition(container.current);
+        const touchCurrPos = event.data.getLocalPosition(containerForeground.current);
         const touchCurrTime = Date.now();
         if (touchVelocities.current.length > NUM_OF_VELOCITIES) {
             // Remove the least recent velocity
@@ -1306,7 +1354,7 @@ const ClustersMap = (props) => {
         // Define delta
         let delta = -event.deltaY / 1000;
         // Get mouse position with respect to container
-        const position = event.data.getLocalPosition(container.current);
+        const position = event.data.getLocalPosition(containerForeground.current);
         if (Math.abs(delta) > 0.01) {
             // Create zoom ticker to complete the transition by delta in steps of 0.002
             const zoom_ticker = new PIXI.Ticker();

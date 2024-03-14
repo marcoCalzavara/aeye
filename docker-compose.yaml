@@ -81,6 +81,7 @@ services:
     volumes:
       - ./backend/src:/code/src
       - ../best_artworks:/best_artworks
+      - ../wikiart:/wikiart
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:

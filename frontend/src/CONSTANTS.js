@@ -26,7 +26,11 @@ export const button_size = getComputedStyle(document.documentElement).getPropert
 
 export const carousel_container_margin_top = getComputedStyle(document.documentElement).getPropertyValue("--carousel-container-margin-top");
 
-export const carousel_container_margin_bottom = getComputedStyle(document.documentElement).getPropertyValue("--carousel-container-margin-bottom");
+export const carousel_container_margin_bottom = {
+    m_bottom_320: getComputedStyle(document.documentElement).getPropertyValue("--carousel-container-margin-bottom-320"),
+    m_bottom_640: getComputedStyle(document.documentElement).getPropertyValue("--carousel-container-margin-bottom-640"),
+    m_bottom_900: getComputedStyle(document.documentElement).getPropertyValue("--carousel-container-margin-bottom-900")
+};
 
 export const height_transition = getComputedStyle(document.documentElement).getPropertyValue("--height-transition");
 

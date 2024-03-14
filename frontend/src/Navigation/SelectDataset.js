@@ -34,7 +34,7 @@ const SelectDataset = (props) => {
     }
 
     return (
-        <div style={{zIndex: 100}}>
+        <div style={{zIndex: 100, pointerEvents: "auto"}}>
             <GoDatabase id="icon-dataset" style={iconStyle} onPointerDown={handleButtonPress} onTouchEnd={handleButtonPress}/>
             <BasePopup open={open} anchor={anchor} placement={"bottom-start"} style={{
                 backgroundColor: "rgb(39, 39, 42)",

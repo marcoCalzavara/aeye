@@ -4,7 +4,6 @@ import ProgressiveImage from './ProgressiveImage';
 import './carousel.css';
 import {getMaxHeightMainImage, getResponsiveCarouselHeight} from "../utilities";
 import TextArea from "./TextArea";
-import {responsive_menu_item_heights} from "../CONSTANTS";
 
 const MARGIN = 10;
 const LINE_HEIGHT = 1.3;
@@ -17,6 +16,8 @@ const getHeightAndWidthOfMainImage = (height, width) => {
     // Get the maximum width of the main image
     const maxWidth = document.getElementById("carousel-id").offsetWidth * 0.9 - MARGIN * 2;
 
+    console.log("maxHeight: ", maxHeight, " maxWidth: ", maxWidth);
+
     // Get aspect ratio of maximum height and width
     const aspectRatioMax = maxHeight / maxWidth;
     let newHeight, newWidth;
@@ -27,6 +28,7 @@ const getHeightAndWidthOfMainImage = (height, width) => {
         newWidth = maxWidth;
         newHeight = newWidth * aspectRatio;
     }
+    console.log("newHeight: ", newHeight, " newWidth: ", newWidth);
     return {height: newHeight, width: newWidth};
 }
 
@@ -127,12 +129,21 @@ function getStyle(expanded, heightAndWidth) {
 export default function MainImageCard({image, placeholderSrc, src}) {
     const [heightAndWidth, setHeightAndWidth] = React.useState({height: 0, width: 0});
     const [expanded, setExpanded] = React.useState(false);
+    const [height, setHeight] = React.useState(window.innerHeight);
 
     useEffect(() => {
         setExpanded(false);
         const {height, width} = getHeightAndWidthOfMainImage(image.height, image.width);
         setHeightAndWidth({height: height, width: width});
     }, [image]);
+
+    useEffect(() => {
+        function handleResize() {
+            setHeight(window.innerHeight);
+        }
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
 
     return (
@@ -149,7 +160,8 @@ export default function MainImageCard({image, placeholderSrc, src}) {
                 zIndex: 100,
                 pointerEvents: "auto",
             }
-        } className="margin-between-images-bottom" onPointerDown={
+        } className={height >= 500 ? "margin-between-images-bottom" : ""}
+             onPointerDown={
             (event) => {
                 event.stopPropagation();
             }

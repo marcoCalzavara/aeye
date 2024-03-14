@@ -10,11 +10,21 @@ import MainImageCard from "./MainImageCard";
 
 
 const NUM_OF_NEIGHBORS = 10;
-const TEMP_ARRAY = Array(NUM_OF_NEIGHBORS).fill({path: "", index: -1, author: "", width: 0, height: 0, genre: "", title: "", date: -1});
+const TEMP_ARRAY = Array(NUM_OF_NEIGHBORS).fill({
+    path: "",
+    index: -1,
+    author: "",
+    width: 1,
+    height: 1,
+    genre: "",
+    title: "",
+    date: -1
+});
+
 const responsive = {
     d1: {
         breakpoint: {
-            max: 5000,
+            max: 20000,
             min: 1201
         },
         items: 4
@@ -77,13 +87,32 @@ const NeighborsCarousel = (props) => {
     // and text is the text associated to the image.
     const [images, setImages] = useState(TEMP_ARRAY);
     const [image, setImage] = useState(TEMP_ARRAY[0]);
+    const [height, setHeight] = useState(window.innerHeight);
     const selectedDataset = useRef(props.selectedDataset);
 
+    useEffect(() => {
+        const handleResize = () => {
+            setHeight(window.innerHeight);
+        }
+        window.addEventListener('resize', handleResize);
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        }
+    }, []);
 
     useEffect(() => {
         // Empty the state images
         setImages(TEMP_ARRAY);
-        setImage({path: "", index: -1, author: "", width: image.width, height: image.height, genre: "", title: "", date: -1});
+        setImage({
+            path: "",
+            index: -1,
+            author: "",
+            width: image.width,
+            height: image.height,
+            genre: "",
+            title: "",
+            date: -1
+        });
 
         // Fetch neighbors from server
         fetchNeighbors(props.clickedImageIndex, NUM_OF_NEIGHBORS, props.host, selectedDataset.current)
@@ -139,51 +168,105 @@ const NeighborsCarousel = (props) => {
     return (
         <>
             {/* Place space for the main image of the carousel */}
-            {image &&
+            {height > 500 && image &&
                 <MainImageCard image={image}
                                placeholderSrc={getUrlForImage(image.path, selectedDataset.current, props.host)}
                                src={`${props.host}/${selectedDataset.current}/${image.path}`}/>
 
             }
-            <div className="w-full h-carousel flex flex-row justify-center items-center pointer-events-auto">
-                <Carousel
-                    key={props.clickedImageIndex}
-                    additionalTransfrom={0}
-                    arrows
-                    autoPlaySpeed={3000}
-                    centerMode={false}
-                    className="carousel"
-                    containerClass="container"
-                    dotListClass=""
-                    draggable={false}
-                    focusOnSelect={false}
-                    infinite={false}
-                    itemClass=""
-                    keyBoardControl
-                    minimumTouchDrag={10}
-                    transitionDuration={300}
-                    pauseOnHover
-                    renderArrowsWhenDisabled={false}
-                    renderButtonGroupOutside={false}
-                    renderDotsOutside={false}
-                    responsive={responsive}
-                    rewind={false}
-                    rewindWithAnimation={false}
-                    rtl={false}
-                    shouldResetAutoplay
-                    showDots={false}
-                    sliderClass=""
-                    slidesToSlide={1}
-                >
-                    {images.map((image, index) => {
-                        return <CarouselImageCard
-                            key={index}
-                            url={getUrlForImage(image.path, selectedDataset.current, props.host)}
-                            setClickedImageIndex={props.setClickedImageIndex}
-                            index={image.index}/>
-                    })}
-                </Carousel>
-            </div>
+            {height > 500 &&
+                <div className="w-full h-carousel flex flex-row justify-center items-center pointer-events-none">
+                    <Carousel
+                        key={props.clickedImageIndex}
+                        additionalTransfrom={0}
+                        arrows
+                        autoPlaySpeed={3000}
+                        centerMode={false}
+                        className="carousel"
+                        containerClass="container"
+                        dotListClass=""
+                        draggable={false}
+                        focusOnSelect={false}
+                        infinite={false}
+                        itemClass=""
+                        keyBoardControl
+                        minimumTouchDrag={10}
+                        transitionDuration={300}
+                        pauseOnHover
+                        renderArrowsWhenDisabled={false}
+                        renderButtonGroupOutside={false}
+                        renderDotsOutside={false}
+                        responsive={responsive}
+                        rewind={false}
+                        rewindWithAnimation={false}
+                        rtl={false}
+                        shouldResetAutoplay
+                        showDots={false}
+                        sliderClass=""
+                        slidesToSlide={1}
+                    >
+                        {images.map((image, index) => {
+                            return <CarouselImageCard
+                                key={index}
+                                url={getUrlForImage(image.path, selectedDataset.current, props.host)}
+                                setClickedImageIndex={props.setClickedImageIndex}
+                                index={image.index}/>
+                        })}
+                    </Carousel>
+                </div>
+            }
+            {height <= 500 &&
+                <div className="w-full pointer-events-none">
+                    <Carousel
+                        key={props.clickedImageIndex}
+                        additionalTransfrom={0}
+                        arrows
+                        autoPlaySpeed={3000}
+                        centerMode={false}
+                        className="carousel"
+                        containerClass="container"
+                        dotListClass=""
+                        draggable={false}
+                        focusOnSelect={false}
+                        infinite={false}
+                        itemClass=""
+                        keyBoardControl
+                        minimumTouchDrag={10}
+                        transitionDuration={300}
+                        pauseOnHover
+                        renderArrowsWhenDisabled={false}
+                        renderButtonGroupOutside={false}
+                        renderDotsOutside={false}
+                        responsive={
+                            {
+                                d_all: {
+                                    breakpoint: {
+                                        max: 20000,
+                                        min: 0
+                                    },
+                                    items: 1
+                                }
+                            }
+                        }
+                        rewind={false}
+                        rewindWithAnimation={false}
+                        rtl={false}
+                        shouldResetAutoplay
+                        showDots={false}
+                        sliderClass=""
+                        slidesToSlide={1}
+                    >
+                        {images.map((image, index) => {
+                            return <div className="w-full h-full flex flex-row justify-center items-center"
+                                        key={index} onClick={() => {}} onTouchStart={() => {}}>
+                                <MainImageCard image={image}
+                                               placeholderSrc={getUrlForImage(image.path, selectedDataset.current, props.host)}
+                                               src={`${props.host}/${selectedDataset.current}/${image.path}`}/>
+                            </div>
+                        })}
+                    </Carousel>
+                </div>
+            }
         </>
 
     );
