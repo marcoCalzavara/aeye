@@ -17,7 +17,6 @@ function getCircleRadius() {
 
 function getScatterPlotData(url, cache) {
     if (cache.has(url)) {
-        console.log("In cache")
         return Promise.resolve(cache.get(url));
     }
     else {
@@ -58,7 +57,6 @@ const ScatterPlot = ({host, n_neighbors, min_dist, height, width}) => {
 
     useEffect(() => {
         const handleResize = () => {
-            console.log("Resizing");
             setRadius(getCircleRadius());
         };
         window.addEventListener('resize', handleResize);

@@ -16,8 +16,6 @@ const getHeightAndWidthOfMainImage = (height, width) => {
     // Get the maximum width of the main image
     const maxWidth = document.getElementById("carousel-id").offsetWidth * 0.9 - MARGIN * 2;
 
-    console.log("maxHeight: ", maxHeight, " maxWidth: ", maxWidth);
-
     // Get aspect ratio of maximum height and width
     const aspectRatioMax = maxHeight / maxWidth;
     let newHeight, newWidth;
@@ -28,7 +26,6 @@ const getHeightAndWidthOfMainImage = (height, width) => {
         newWidth = maxWidth;
         newHeight = newWidth * aspectRatio;
     }
-    console.log("newHeight: ", newHeight, " newWidth: ", newWidth);
     return {height: newHeight, width: newWidth};
 }
 

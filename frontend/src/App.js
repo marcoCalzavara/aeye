@@ -46,11 +46,13 @@ function App() {
                 setSearchBarIsClicked(true);
             window.removeEventListener('click', handleClick);
             window.removeEventListener('wheel', handleClick);
+            window.removeEventListener('touchstart', handleClick);
         }
 
         // Add event listener to handle click or touch on the page or mouse wheel.
         window.addEventListener('click', handleClick);
         window.addEventListener('wheel', handleClick);
+        window.addEventListener('touchstart', handleClick);
     }, []);
 
     return (

@@ -222,14 +222,18 @@ const ClustersMap = (props) => {
     const touchPrevPos = useRef({x: 0, y: 0});
     const touchVelocities = useRef([]);
     const isPinching = useRef(false);
+    // Define ref for momentum translation ticker
+    const momentum_translation_ticker = useRef(null);
+    // Define ref for total movement for activation of the momentum translation ticker
+    const totalMovement = useRef(0);
 
     const mapGlobalCoordinatesToStageCoordinates = (global_x, global_y) => {
         // Map global coordinates to stage coordinates
         const stage_x = ((global_x - effectivePosition.current.x) * (width.current - maxWidth.current)) / effectiveWidth.current - overflowX.current;
         const stage_y = ((global_y - effectivePosition.current.y) * (height.current - maxHeight.current)) / effectiveHeight.current - overflowY.current;
         return {
-            x: stage_x,
-            y: stage_y
+            x: Math.round(stage_x),
+            y: Math.round(stage_y)
         }
     }
 
@@ -362,8 +366,8 @@ const ClustersMap = (props) => {
         const width = spritesGlobalInfo.current.get(index).width;
         const height = spritesGlobalInfo.current.get(index).height;
         const aspect_ratio = width / height;
-        sprites.current.get(index).height = maxHeight.current * scale;
-        sprites.current.get(index).width = maxHeight.current * scale * aspect_ratio;
+        sprites.current.get(index).height = Math.round(maxHeight.current * scale);
+        sprites.current.get(index).width = Math.round(maxHeight.current * scale * aspect_ratio);
     }
 
     const setSpriteHandlers = (sprite, index) => {
@@ -623,7 +627,7 @@ const ClustersMap = (props) => {
             props.setInitialLoadingDone(true);
             // Create hammer. Bind it to the gesture area.
             // noinspection all
-            hammer.current = new Hammer(containerForeground.current);
+            hammer.current = new Hammer(app.view);
             // Disable all gestures except pinch
             hammer.current.get('tap').set({enable: false});
             hammer.current.get('press').set({enable: false});
@@ -632,12 +636,13 @@ const ClustersMap = (props) => {
             hammer.current.get('swipe').set({enable: false});
             hammer.current.get('pinch').set({enable: true});
             hammer.current.on('pinchstart', handlePinchStart);
-            hammer.current.on('pinch', handlePinch);
+            hammer.current.on('pinchmove', handlePinch);
 
             // Add all handlers to the stage
             containerForeground.current
+                .on("mouseleave", handleMouseUpOrLeave)
                 .on('mousedown', handleMouseDown)
-                .on('mouseup', handleMouseUp)
+                .on('mouseup', handleMouseUpOrLeave)
                 .on('mousemove', handleMouseMove)
                 .on('wheel', handleMouseWheel)
                 .on('touchmove', handleTouchMove)
@@ -776,10 +781,11 @@ const ClustersMap = (props) => {
         const tile_step_x = (maxX.current - minX.current) / number_of_tiles;
         const tile_step_y = (maxY.current - minY.current) / number_of_tiles;
         const tile_step_x_for_sprites = (realMaxX.current - realMinX.current) / number_of_tiles;
+        const tile_step_y_for_sprites = (realMaxY.current - realMinY.current) / number_of_tiles;
 
         // Get tile coordinates of the tile that contains the upper left corner of the stage.
-        const tile_x = Math.min(Math.floor((effectivePosition.current.x - minX.current) / tile_step_x), number_of_tiles - 1);
-        const tile_y = Math.min(Math.floor((effectivePosition.current.y - minY.current) / tile_step_y), number_of_tiles - 1);
+        const tile_x = Math.min(Math.max(Math.floor((effectivePosition.current.x - minX.current) / tile_step_x), 0), number_of_tiles - 1);
+        const tile_y = Math.min(Math.max(Math.floor((effectivePosition.current.y - minY.current) / tile_step_y), 0), number_of_tiles - 1);
 
         // Get indexes of tiles to fetch
         let indexes;
@@ -826,8 +832,8 @@ const ClustersMap = (props) => {
                         continue;
                     }
                     const spriteGlobalPosition = spritesGlobalInfo.current.get(index);
-                    const tile_x = Math.min(Math.floor((spriteGlobalPosition.x - realMinX.current) / tile_step_x_for_sprites), number_of_tiles - 1);
-                    const tile_y = Math.min(Math.floor((spriteGlobalPosition.y - minY.current) / tile_step_y), number_of_tiles - 1);
+                    const tile_x = Math.min(Math.max(Math.floor((spriteGlobalPosition.x - realMinX.current) / tile_step_x_for_sprites), 0), number_of_tiles - 1);
+                    const tile_y = Math.min(Math.max(Math.floor((spriteGlobalPosition.y - realMinY.current) / tile_step_y_for_sprites), 0), number_of_tiles - 1);
                     if (!visible_tiles.some(visible_tile =>
                         visible_tile.x === tile_x && visible_tile.y === tile_y)) {
                         // Remove sprite from stage
@@ -888,8 +894,7 @@ const ClustersMap = (props) => {
                         // Move sprite to background
                         if (spriteIsInForeground.current.get(index))
                             moveSpriteToBackground(index);
-                    }
-                    else {
+                    } else {
                         if (!spriteIsInForeground.current.get(index))
                             moveSpriteToForeground(index);
                     }
@@ -1134,24 +1139,62 @@ const ClustersMap = (props) => {
     }
 
     // Create handler for mouse down
-    const handleMouseDown = () => {
+    const handleMouseDown = (event) => {
+        if (!searchBarIsClickedRef.current)
+            return;
+
+        // Stop ticker
+        if (momentum_translation_ticker.current !== null) {
+            momentum_translation_ticker.current.stop();
+            momentum_translation_ticker.current.destroy();
+            momentum_translation_ticker.current = null;
+        }
         // Set mouse down to true
         containerForeground.current.cursor = 'grabbing';
         mouseDown.current = true;
+        // Reset velocities
+        touchVelocities.current = [];
+        // Reset total movement
+        totalMovement.current = 0;
+        // Reset start time
+        touchPrevTime.current = Date.now();
+        // Set mouse position
+        touchPrevPos.current = event.data.getLocalPosition(containerForeground.current);
     }
 
     // Create handler for mouse up
-    const handleMouseUp = () => {
+    const handleMouseUpOrLeave = () => {
+        if (!mouseDown.current || totalMovement.current < 2) {
+            mouseDown.current = false;
+            return;
+        }
         // Set mouse down to false
-        containerForeground.current.cursor = 'grab';
         mouseDown.current = false;
+        containerForeground.current.cursor = 'grab';
+
+        // Compute average velocity in both x and y direction
+        let averageVelocityX = 0;
+        let averageVelocityY = 0;
+        for (let velocity of touchVelocities.current) {
+            averageVelocityX += velocity.x;
+            averageVelocityY += velocity.y;
+        }
+        let touchVelocitiesLength = touchVelocities.current.length;
+        // Translate the stage with momentum if the touch velocities are not empty
+        if (touchVelocitiesLength > 0) {
+            averageVelocityX /= touchVelocities.current.length;
+            averageVelocityY /= touchVelocities.current.length;
+            // Await momentum translation
+            momentumTranslation(averageVelocityX, averageVelocityY, 10);
+        }
     }
 
     // Create handler for mouse move
     const handleMouseMove = (event) => {
         // If mouse is down, then move the stage
         if (mouseDown.current) {
-            const time = performance.now();
+            // Update velocities
+            updateVelocities(event);
             // Get mouse position. Transform movement of the mouse to movement in the embedding space.
             const mouse_x = ((-event.movementX) * effectiveWidth.current) / width.current;
             const mouse_y = ((-event.movementY) * effectiveHeight.current) / height.current;
@@ -1169,20 +1212,28 @@ const ClustersMap = (props) => {
             // fetching the data from the server and putting on stage the sprites that are visible.
             updateStage();
             // updateStageThrottled();
-            console.log("Time mouse move: ", performance.now() - time, "ms");
         }
     }
 
     // Create handler for touch start and touch end
     const handleTouchStart = (event) => {
+        // Stop ticker
+        if (momentum_translation_ticker.current !== null) {
+            momentum_translation_ticker.current.stop();
+            momentum_translation_ticker.current.destroy();
+            momentum_translation_ticker.current = null;
+        }
         // Save touch position
         touchPrevPos.current = event.data.getLocalPosition(containerForeground.current);
         // Save touch start time
         touchPrevTime.current = Date.now();
+        // Set total movement to 0
+        totalMovement.current = 0;
+        // Reset touch velocities
+        touchVelocities.current = [];
     }
 
-    // Create handler for touch move
-    const handleTouchMove = (event) => {
+    const updateVelocities = (event) => {
         // Compute velocity
         const touchCurrPos = event.data.getLocalPosition(containerForeground.current);
         const touchCurrTime = Date.now();
@@ -1195,10 +1246,19 @@ const ClustersMap = (props) => {
             x: (touchCurrPos.x - touchPrevPos.current.x) / Math.max(touchCurrTime - touchPrevTime.current, 1),
             y: (touchCurrPos.y - touchPrevPos.current.y) / Math.max(touchCurrTime - touchPrevTime.current, 1)
         });
+        // Increase total movement
+        totalMovement.current += Math.sqrt((touchCurrPos.x - touchPrevPos.current.x) ** 2 +
+            (touchCurrPos.y - touchPrevPos.current.y) ** 2);
         // Save touch position
         touchPrevPos.current = touchCurrPos;
         // Save touch start time
         touchPrevTime.current = touchCurrTime;
+    }
+
+    // Create handler for touch move
+    const handleTouchMove = (event) => {
+        // Update velocities
+        updateVelocities(event);
         // Get mouse position. Transform movement of the mouse to movement in the embedding space.
         const mouse_x = ((-event.movementX) * effectiveWidth.current) / width.current;
         const mouse_y = ((-event.movementY) * effectiveHeight.current) / height.current;
@@ -1218,49 +1278,39 @@ const ClustersMap = (props) => {
         // updateStageThrottled();
     }
 
-    const momentumTranslation = (averageVelocityX, averageVelocityY) => {
-        // Reduce velocities by the same amount to make sure the max velocity is 3.5
-        /*const maxVelocity = 2.5 / (zoomLevel.current + 1);
-        if (averageVelocityX > averageVelocityY && averageVelocityX > maxVelocity) {
-            averageVelocityX = maxVelocity;
-            averageVelocityY -= (averageVelocityX - maxVelocity);
-        } else if (averageVelocityY > averageVelocityX && averageVelocityY > maxVelocity) {
-            averageVelocityY = maxVelocity;
-            averageVelocityX -= (averageVelocityY - maxVelocity);
-        }*/
-
+    const momentumTranslation = (averageVelocityX, averageVelocityY, multiplicativeFactor) => {
         const frames = 40;
-        return new Promise((resolve) => {
-            const momentum_translation_ticker = new PIXI.Ticker();
-            // Define counter for number of steps
-            let counter = 0;
-            momentum_translation_ticker.add(() => {
-                // Check if position is equal to the target position.
-                if (counter === frames) {
-                    // Stop ticker
-                    momentum_translation_ticker.stop();
-                    // Destroy ticker
-                    momentum_translation_ticker.destroy();
-                    // Update stage
-                    updateStage();
-                    resolve();
-                } else {
-                    // Move the effective position of the stage by a step equal to the average velocity times 1000 / 60
-                    effectivePosition.current.x = Math.max(
-                        Math.min(effectivePosition.current.x - averageVelocityX * 1 / 40, maxX.current - effectiveWidth.current), minX.current);
-                    effectivePosition.current.y = Math.max(
-                        Math.min(effectivePosition.current.y - averageVelocityY * 1 / 40, maxY.current - effectiveHeight.current), minY.current);
-                    // Increment counter
-                    counter++;
-                    // Decrease velocity
-                    averageVelocityX *= 0.99;
-                    averageVelocityY *= 0.99;
+        // Transform velocities, which are in pixels per millisecond, to velocities in the embedding space.
+        averageVelocityX *= (effectiveWidth.current * multiplicativeFactor) / width.current;
+        averageVelocityY *= (effectiveHeight.current * multiplicativeFactor) / height.current;
+
+        momentum_translation_ticker.current = new PIXI.Ticker();
+        // Define counter for number of steps
+        let counter = 0;
+        momentum_translation_ticker.current.add(() => {
+            // Check if position is equal to the target position.
+            if (counter === frames) {
+                // Stop ticker
+                if (momentum_translation_ticker.current !== null) {
+                    momentum_translation_ticker.current.stop();
                     // Update stage
                     updateStage();
                 }
-            });
-            momentum_translation_ticker.start();
+            } else {
+                effectivePosition.current.x = Math.max(
+                    Math.min(effectivePosition.current.x - averageVelocityX, maxX.current - effectiveWidth.current), minX.current);
+                effectivePosition.current.y = Math.max(
+                    Math.min(effectivePosition.current.y - averageVelocityY, maxY.current - effectiveHeight.current), minY.current);
+                // Increment counter
+                counter++;
+                // Decrease velocity
+                averageVelocityX *= 0.97;
+                averageVelocityY *= 0.97;
+                // Update stage
+                updateStage();
+            }
         });
+        momentum_translation_ticker.current.start();
     }
 
     const handleTouchEnd = async () => {
@@ -1269,6 +1319,9 @@ const ClustersMap = (props) => {
             isPinching.current = false;
             return;
         }
+        if (totalMovement.current < 20)
+            return;
+
         // Compute average velocity in both x and y direction
         let averageVelocityX = 0;
         let averageVelocityY = 0;
@@ -1281,16 +1334,8 @@ const ClustersMap = (props) => {
         if (touchVelocitiesLength > 0) {
             averageVelocityX /= touchVelocities.current.length;
             averageVelocityY /= touchVelocities.current.length;
-            // Make container not interactive.
-            // container.current.interactive = false;
-            // container.current.interactiveChildren = false;
-            // Await momentum translation
-            // await momentumTranslation(averageVelocityX, averageVelocityY);
-            // Make container interactive again
-            // container.current.interactive = true;
-            // container.current.interactiveChildren = true;
-            // Empty touch velocities
-            touchVelocities.current = [];
+            // Start momentum translation
+           momentumTranslation(averageVelocityX, averageVelocityY, 6);
         }
     }
 
@@ -1363,8 +1408,8 @@ const ClustersMap = (props) => {
                 if (Math.abs(current_delta) >= Math.abs(delta)) {
                     zoom_ticker.stop();
                 } else {
-                    handleZoom(Math.sign(delta) * 0.0035, position);
-                    current_delta += Math.sign(delta) * 0.0035;
+                    handleZoom(Math.sign(delta) * 0.004, position);
+                    current_delta += Math.sign(delta) * 0.004;
                 }
             });
             zoom_ticker.start();
@@ -1375,7 +1420,6 @@ const ClustersMap = (props) => {
     }
 
     const handleZoom = (delta, mousePosition) => {
-        const time = performance.now();
         // Deal with border cases
         if (zoomLevel.current === props.maxZoomLevel && depth.current + delta > 0) {
             // Keep depth at 0
@@ -1390,7 +1434,6 @@ const ClustersMap = (props) => {
             changeLimitsOfEmbeddingSpace();
             updateStage();
             // updateStageThrottled();
-            console.log("Time zoom: ", performance.now() - time, "ms");
             return;
         }
 
@@ -1448,7 +1491,6 @@ const ClustersMap = (props) => {
         // Update stage
         updateStage();
         // updateStageThrottled();
-        console.log("Time zoom: ", performance.now() - time, "ms");
     }
 
 

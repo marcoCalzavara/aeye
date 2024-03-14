@@ -2,6 +2,7 @@ import * as React from 'react';
 import {GoDatabase} from "react-icons/go";
 import {iconStyle, itemsStyle} from "../styles";
 import {Unstable_Popup as BasePopup} from '@mui/base/Unstable_Popup';
+import {useEffect} from "react";
 
 function cleanText(text) {
     // Split text on underscore
@@ -22,21 +23,36 @@ const SelectDataset = (props) => {
     const [anchor, setAnchor] = React.useState(null);
     const [open, setOpen] = React.useState(false);
 
+    useEffect(() => {
+        const closePopup = (event) => {
+            if (!event.target.id.endsWith("dataset") || event.target.id === undefined) {
+                setOpen(false);
+            }
+            else if (event.target.id === "icon-dataset") {
+                setOpen(true);
+                setAnchor(anchor ? null : event.target);
+            }
+        }
+        window.addEventListener('click', closePopup);
+        window.addEventListener('touchstart', closePopup);
+        return () => {
+            window.removeEventListener('click', closePopup);
+            window.removeEventListener('touchstart', closePopup);
+        }
+    }, []);
+
     const handleChange = (dataset) => {
         setDataset(dataset);
         props.setSelectedDataset(dataset);
         setOpen(false);
     };
 
-    const handleButtonPress = (event) => {
-        setOpen(true);
-        setAnchor(anchor ? null : event.currentTarget);
-    }
-
     return (
         <div style={{zIndex: 100, pointerEvents: "auto"}}>
-            <GoDatabase id="icon-dataset" style={iconStyle} onPointerDown={handleButtonPress} onTouchEnd={handleButtonPress}/>
-            <BasePopup open={open} anchor={anchor} placement={"bottom-start"} style={{
+            <div id="icon-dataset" className="pointer-events-auto">
+                <GoDatabase style={iconStyle} className="pointer-events-none"/>
+            </div>
+            <BasePopup id="popup-dataset" open={open} anchor={anchor} placement={"bottom-start"} style={{
                 backgroundColor: "rgb(39, 39, 42)",
                 border: "2px solid #303030",
                 borderRadius: "5px",
@@ -45,10 +61,10 @@ const SelectDataset = (props) => {
                 width: itemsStyle.fontSize.replace("px", "") * 5 + "px",
                 zIndex: 100
             }}>
-                <div className="flex flex-col justify-start items-start w-full h-full">
+                <div id="div-dataset" className="flex flex-col justify-start items-start w-full h-full">
                     {dataset && props.datasets.map((d, index) => {
                         return (
-                            <button key={index} onTouchStart={() => handleChange(d)} onClick={() => handleChange(d)} style={
+                            <button id={`button-${index}-dataset`} key={index} onTouchStart={() => handleChange(d)} onClick={() => handleChange(d)} style={
                                 {
                                     height: itemsStyle.height.replace("px", "") + "px",
                                     fontSize: itemsStyle.fontSize.replace("px", "") * 0.6 + "px",
