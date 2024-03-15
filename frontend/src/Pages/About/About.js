@@ -93,7 +93,7 @@ function getBibliographyStyle(width) {
         marginTop: "1em",
         textAlign: "justify",
         font: "Computer Modern",
-        fontSize: "1em",
+        fontSize: "0.8em",
         width: width + "px",
         lineHeight: "1.6",
         hyphens: "auto",
@@ -113,11 +113,6 @@ const About = (props) => {
 
     useEffect(() => {
         setWidth(computeWidth());
-        fetchImage(props.host)
-            .then((data) => {
-                setImage(props.host + "/best_artworks/" + data["path"]);
-                setCaption(data["caption"]);
-            });
 
         const handleResize = () => {
             setWidth(computeWidth());
@@ -129,6 +124,15 @@ const About = (props) => {
         // Remove event listener on cleanup
         return () => window.removeEventListener("resize", handleResize);
     }, []);
+
+    useEffect(() => {
+        if (props.page === "about")
+            fetchImage(props.host)
+                .then((data) => {
+                    setImage(props.host + "/best_artworks/" + data["path"]);
+                    setCaption(data["caption"]);
+                });
+    }, [props.page]);
 
     const handleClick = () => {
         fetchImage(props.host)
@@ -223,6 +227,7 @@ const About = (props) => {
                     dimensional plane. You can change the parameters n_neighbors and min_dist to see how the UMAP
                     projection changes.
                 </p>
+                { props.page === "about" &&
                 <div style={{width: widthPlot + "px", marginTop: "2em"}}>
                     <ScatterPlot host={props.host} n_neighbors={n_neighbors} min_dist={min_dist}
                                  height={widthPlot} width={widthPlot}/>
@@ -234,8 +239,7 @@ const About = (props) => {
                             max={neigh_values.length - 1}
                             defaultValue={6}
                             onChange={handleNeighborsChange}
-                            trackStyle={{backgroundColor: "#0096c7"}}
-                            handleStyle={{borderColor: "#0096c7", backgroundColor: "#0096c7"}}
+                            styles={{track: {backgroundColor: "#0096c7"}, handle: {borderColor: "#0096c7", backgroundColor: "#0096c7"}}}
                         />
                     </div>
                     <div className="flex flex-row justify-left items-center" style={{marginTop: "1em"}}>
@@ -246,11 +250,10 @@ const About = (props) => {
                             max={min_dist_values.length - 1}
                             defaultValue={1}
                             onChange={handleMinDistChange}
-                            trackStyle={{backgroundColor: "#0096c7"}}
-                            handleStyle={{borderColor: "#0096c7", backgroundColor: "#0096c7"}}
+                            styles={{track: {backgroundColor: "#0096c7"}, handle: {borderColor: "#0096c7", backgroundColor: "#0096c7"}}}
                         />
                     </div>
-                </div>
+                </div> }
                 <h1 style={{
                     font: "Computer Modern",
                     fontSize: "1.5em",
@@ -279,7 +282,7 @@ const About = (props) => {
                     on the "Best Artworks of All Time" dataset. You can click on the image to get a new image and caption.
                 </p>
                 {
-                    image !== "" && caption !== "" &&
+                    image !== "" && caption !== "" && props.page === "about" &&
                     <div style={{width: widthPlot + "px", marginTop: "1em", display: "grid", placeItems: "center"}}>
                         <img src={image} alt="Random image"
                              style={{maxWidth: widthPlot + "px", maxHeight: widthPlot * 0.8 + "px", cursor: "pointer"}}
@@ -287,7 +290,7 @@ const About = (props) => {
                         <p style={
                             {
                                 font: "Computer Modern",
-                                fontSize: "0.8em",
+                                fontSize: "0.9em",
                                 marginTop: "1em",
                                 textAlign: "justify",
                                 fontStyle: "italic",

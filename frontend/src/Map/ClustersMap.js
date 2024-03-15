@@ -221,7 +221,7 @@ const ClustersMap = (props) => {
     const touchPrevTime = useRef(0);
     const touchPrevPos = useRef({x: 0, y: 0});
     const touchVelocities = useRef([]);
-    const isPinching = useRef(false);
+    const countOfPinching = useRef(0);
     // Define ref for momentum translation ticker
     const momentum_translation_ticker = useRef(null);
     // Define ref for total movement for activation of the momentum translation ticker
@@ -433,9 +433,6 @@ const ClustersMap = (props) => {
         // Define size of sprite
         scaleSprite(index);
 
-        // Set texture of sprite
-        sprite.texture = PIXI.Texture.from(getUrlForImage(path, selectedDataset.current, props.host));
-
         // Define blur filter for the sprite, but deactivate it. The filter is only used for the sprites in the foreground
         // when the carousel is open.
         sprite.filters = [new KawaseBlurFilter(BLUR_RADIUS_CAROUSEL, QUALITY)];
@@ -453,6 +450,11 @@ const ClustersMap = (props) => {
             && artwork_position.y >= -maxHeight.current
             && artwork_position.y <= stageHeight.current;
 
+        // Add texture to the sprite if the sprite is either in the visible area or in its immediate vicinity
+        if (artwork_position.x > - 3 * maxHeight.current * width / height && artwork_position.x <= stageWidth.current + 3 * maxHeight.current * width / height
+            && artwork_position.y >= - 3 * maxHeight.current && artwork_position.y <= stageHeight.current + 3 * maxHeight.current)
+            sprite.texture = PIXI.Texture.from(getUrlForImage(path, selectedDataset.current, props.host));
+
         if (!is_in_previous_zoom_level && !(zoomLevel.current === props.maxZoomLevel && depth.current === 0)) {
             // Add sprite to background container
             containerBackground.current.addChild(sprite);
@@ -467,6 +469,7 @@ const ClustersMap = (props) => {
         setSpriteHandlers(sprite, index);
         // Make sprite interactive
         sprite.interactive = true;
+        sprite.interactiveChildren = false;
         sprite.cursor = 'pointer';
     }
 
@@ -509,6 +512,8 @@ const ClustersMap = (props) => {
         container.cursor = 'grab';
         // noinspection all
         container.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
+        // noinspection all
+        container.filterArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
         container.zIndex = zIndex;
         container.sortableChildren = true;
         container.interactive = isForeground;
@@ -754,6 +759,8 @@ const ClustersMap = (props) => {
         sprites.current.get(index).removeAllListeners();
         // Reset texture of sprite
         sprites.current.get(index).texture = PIXI.Texture.WHITE;
+        // Remove filters from sprite
+        sprites.current.get(index).filters = null;
         // Remove sprite from stage
         if (spriteIsInForeground.current.get(index)) {
             containerForeground.current.removeChild(sprites.current.get(index));
@@ -858,6 +865,7 @@ const ClustersMap = (props) => {
 
         // Define count for check that everything is correct
         let count = 0;
+        let count_visible = 0;
         visible_tiles.map(async tile => {
             // Stop execution if the tilesCache does not contain the tile
             if (!tilesCache.current.has(next_zoom_level + "-" + tile.x + "-" + tile.y)) {
@@ -886,6 +894,7 @@ const ClustersMap = (props) => {
                         data[j]["y"],
                         data[j]["in_previous"],
                     );
+                    count_visible += sprites.current.get(index).visible ? 1 : 0;
                 } else {
                     spritesGlobalInfo.current.get(index).is_in_previous_zoom_level = data[j]["in_previous"];
 
@@ -913,19 +922,34 @@ const ClustersMap = (props) => {
 
                     // Set size of sprite
                     scaleSprite(index);
+
+                    // Make sprite not visible if outside the viewing area
+                    const aspect_ratio = spritesGlobalInfo.current.get(index).width / spritesGlobalInfo.current.get(index).height;
+                    sprites.current.get(index).visible = sprites.current.get(index).x > -maxHeight.current * aspect_ratio
+                        && sprites.current.get(index).x <= stageWidth.current
+                        && sprites.current.get(index).y >= -maxHeight.current
+                        && sprites.current.get(index).y <= stageHeight.current;
+
+                    count_visible += sprites.current.get(index).visible ? 1 : 0;
+
+                    // Add texture to the sprite if the sprite is either in the visible area or in its immediate vicinity
+                    if (artwork_position.x > - 3 * maxHeight.current * aspect_ratio && artwork_position.x <= stageWidth.current + 3 * maxHeight.current * aspect_ratio
+                        && artwork_position.y >= - 3 * maxHeight.current && artwork_position.y <= stageHeight.current + 3 * maxHeight.current)
+                        if (sprites.current.get(index).texture === PIXI.Texture.WHITE)
+                            // Change texture of sprite
+                            sprites.current.get(index).texture = PIXI.Texture.from(getUrlForImage(spritesGlobalInfo.current.get(index).path,
+                                selectedDataset.current, props.host)
+                            );
                 }
-                // Make sprite not visible if outside the viewing area
-                const aspect_ratio = spritesGlobalInfo.current.get(index).width / spritesGlobalInfo.current.get(index).height;
-                sprites.current.get(index).visible = sprites.current.get(index).x > -maxHeight.current * aspect_ratio
-                    && sprites.current.get(index).x <= stageWidth.current
-                    && sprites.current.get(index).y >= -maxHeight.current
-                    && sprites.current.get(index).y <= stageHeight.current;
             }
             // Save artworks in tiles
             // noinspection JSUnresolvedVariable
             tilesOnStage.current.set(next_zoom_level + "-" + tile.x + "-" + tile.y,
                 data.map(entity => entity["index"]));
         });
+
+        // Log for debugging
+        // console.log("Count: ", count, "Count visible: ", count_visible);
 
         // Apply blur
         applyBlur();
@@ -1037,60 +1061,67 @@ const ClustersMap = (props) => {
 
     // Create function for managing zoom ticker
     const awaitZoomTicker = (tile, image) => {
+        // Compute total depth that has to be added or subtracted to get to the correct zoom level.
+        let total_depth = tile[0] - zoomLevel.current - depth.current;
+        // Compute total number of steps
+        let total_steps = Math.ceil(Math.abs(total_depth) / DEPTH_STEP);
+
+        if (total_steps === 0) {
+            return Promise.resolve();
+        }
+
         return new Promise((resolve) => {
             const zoom_ticker = new PIXI.Ticker();
+            // Define counter for number of steps
+            let counter = 0;
 
             zoom_ticker.add(() => {
-                if (zoomLevel.current === tile[0] && depth.current === 0) {
+                if (counter === total_steps) {
                     // Stop ticker
                     zoom_ticker.stop();
                     // Update stage
                     updateStage();
                     resolve();
                 } else {
-                    // Change depth by 0.05. If the depth is -1 or 1, then change zoom level by 1 and reset depth sum or
-                    // subtract 1 from delta.
+                    // Change depth by DEPTH_STEP
                     let delta;
-                    if (zoomLevel.current !== tile[0]) {
-                        delta = Math.sign(tile[0] - zoomLevel.current) * DEPTH_STEP;
-                    } else {
-                        delta = -Math.sign(depth.current) * DEPTH_STEP; // If depth is greater than 0, then we have to reduce
-                        // depth by 0.05, hence we have to subtract 0.05 from delta. If depth is smaller than 0, then we have
-                        // to increase depth by 0.05, hence we have to add 0.05 to delta.
+                    if (counter !== total_steps - 1) {
+                        delta = Math.sign(total_depth) * DEPTH_STEP;
+                        depth.current += delta;
+
+                        // Change zoom level if delta is bigger than or equal to 1 in absolute value
+                        if (Math.abs(depth.current) >= 1) {
+                            // Change zoom level
+                            zoomLevel.current += Math.sign(depth.current);
+                            // Change depth
+                            depth.current += depth.current > 0 ? -1 : 1;
+                        }
                     }
-
-                    // Update depth
-                    depth.current = Math.min(Math.max(depth.current + delta, -1), 1);
-
-                    const position = {
-                        x: image.x,
-                        y: image.y
+                    else {
+                        // Compute delta remaining
+                        delta = total_depth > 0 ? total_depth - (total_steps - 1) * DEPTH_STEP : total_depth + (total_steps - 1) * DEPTH_STEP;
+                        depth.current = 0;
+                        zoomLevel.current = tile[0];
                     }
 
                     // First, compute the new effective position and effective size of the stage.
                     // Get translation of the mouse position from the upper left corner of the stage in global coordinates
-                    const translation_x = position.x - effectivePosition.current.x
-                    const translation_y = position.y - effectivePosition.current.y;
+                    const translation_x = image.x - effectivePosition.current.x
+                    const translation_y = image.y - effectivePosition.current.y;
 
                     changeLimitsOfEmbeddingSpace();
 
                     // Change the effective position of the stage. Make sure that it does not exceed the limits of the embedding space.
                     // The translation of the mouse is adjusted so that the mouse position in global coordinates remains the same.
                     effectivePosition.current.x = Math.max(
-                        Math.min(position.x - translation_x * 2 ** (-delta), maxX.current -
+                        Math.min(image.x - translation_x * 2 ** (-delta), maxX.current -
                             effectiveWidth.current), minX.current);
                     effectivePosition.current.y = Math.max(
-                        Math.min(position.y - translation_y * 2 ** (-delta), maxY.current -
+                        Math.min(image.y - translation_y * 2 ** (-delta), maxY.current -
                             effectiveHeight.current), minY.current);
 
-                    // Check if we have reached a new zoom level. If so, update zoom level and reset depth.
-                    if (Math.abs(depth.current) === 1) {
-                        // Change zoom level
-                        zoomLevel.current += Math.sign(depth.current);
-                        // Reset depth
-                        depth.current = 0;
-                    }
-
+                    // Update counter
+                    counter++;
                     // Update stage
                     updateStage(2);
                 }
@@ -1280,6 +1311,8 @@ const ClustersMap = (props) => {
 
     const momentumTranslation = (averageVelocityX, averageVelocityY, multiplicativeFactor) => {
         const frames = 40;
+        // Change multiplicative factor based on width and height of the stage
+        multiplicativeFactor *= Math.max(1000 / stageWidth.current, 1);
         // Transform velocities, which are in pixels per millisecond, to velocities in the embedding space.
         averageVelocityX *= (effectiveWidth.current * multiplicativeFactor) / width.current;
         averageVelocityY *= (effectiveHeight.current * multiplicativeFactor) / height.current;
@@ -1314,9 +1347,9 @@ const ClustersMap = (props) => {
     }
 
     const handleTouchEnd = async () => {
-        if (isPinching.current) {
+        if (countOfPinching.current > 0) {
             touchVelocities.current = [];
-            isPinching.current = false;
+            countOfPinching.current -= 1;
             return;
         }
         if (totalMovement.current < 20)
@@ -1373,7 +1406,7 @@ const ClustersMap = (props) => {
 
     // Handle pinch start. Only reset previous scale.
     const handlePinchStart = () => {
-        isPinching.current = true;
+        countOfPinching.current += 1;
         previousScale.current = 1;
     };
 
