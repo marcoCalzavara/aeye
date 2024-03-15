@@ -226,6 +226,8 @@ const ClustersMap = (props) => {
     const momentum_translation_ticker = useRef(null);
     // Define ref for total movement for activation of the momentum translation ticker
     const totalMovement = useRef(0);
+    // Define ref for first render completion
+    const firstRenderCompleted = useRef(false);
 
     const mapGlobalCoordinatesToStageCoordinates = (global_x, global_y) => {
         // Map global coordinates to stage coordinates
@@ -653,6 +655,9 @@ const ClustersMap = (props) => {
                 .on('touchmove', handleTouchMove)
                 .on('touchend', handleTouchEnd)
                 .on('touchstart', handleTouchStart);
+
+            // First render completed
+            firstRenderCompleted.current = true;
         });
     }, [props.selectedDataset]);
 
@@ -666,6 +671,7 @@ const ClustersMap = (props) => {
     }, [props.searchBarIsClicked]);
 
     useEffect(() => {
+        if (!firstRenderCompleted.current) return;
         // Update ref for stage width and height and width and height of the embedding space, and also for the overflow.
         stageWidth.current = props.stageWidth;
         stageHeight.current = props.stageHeight;
@@ -716,6 +722,8 @@ const ClustersMap = (props) => {
             sprites.current.get(index).x = artwork_position.x;
             sprites.current.get(index).y = artwork_position.y;
         }
+        // Update stage
+        updateStage();
     }, [props.width, props.height, props.overflowX, props.overflowY, props.stageWidth, props.stageHeight]);
 
     useEffect(() => {
@@ -868,10 +876,9 @@ const ClustersMap = (props) => {
         let count_visible = 0;
         visible_tiles.map(async tile => {
             // Stop execution if the tilesCache does not contain the tile
-            if (!tilesCache.current.has(next_zoom_level + "-" + tile.x + "-" + tile.y)) {
-                console.log("Fetching missing tiles.")
+            if (!tilesCache.current.has(next_zoom_level + "-" + tile.x + "-" + tile.y))
                 await Promise.all(unresolvedPromises.current);
-            }
+
             // Get data from tilesCache
             const data = tilesCache.current.get(next_zoom_level + "-" + tile.x + "-" + tile.y);
 
