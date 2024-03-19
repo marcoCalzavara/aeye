@@ -38,6 +38,7 @@ const StickyBar = (props) => {
                            selectedDataset={props.selectedDataset}
                            searchBarIsClicked={props.searchBarIsClicked}
                            setSearchBarIsClicked={props.setSearchBarIsClicked}
+                           searchBarIsBlocked={props.searchBarIsBlocked}
                 />
             }
             <div>

@@ -1,4 +1,4 @@
-import {useEffect, useRef} from 'react';
+import React, {useEffect, useRef} from 'react';
 import * as PIXI from "pixi.js";
 import Hammer from "hammerjs";
 import {useApp} from "@pixi/react";
@@ -13,6 +13,9 @@ import {
 } from "./utilities";
 import {getUrlForImage} from "../utilities";
 import {KawaseBlurFilter} from "@pixi/filter-kawase-blur";
+import ReactLoading from 'react-loading';
+import Typography from "@mui/material/Typography";
+import {createRoot} from "react-dom/client";
 
 const DURATION = 2; // seconds
 const SPRITEPOOLSIZE = 800;
@@ -22,85 +25,12 @@ const BLUR_RADIUS_CAROUSEL = 3;
 // const NUM_BLUR_RADII = 10;
 // const BLUR_RADII = Array.from({length: NUM_BLUR_RADII}, (_, i) => BLUR_RADIUS_MIN + i * (BLUR_RADIUS_MAX - BLUR_RADIUS_MIN) / (NUM_BLUR_RADII - 1));
 const QUALITY = 5;
-// const DEPTH_ALPHA_FLICKERING = 0.2
 // Define constant for transition steps and depth steps
-const INITIAL_TRANSITION_STEPS = 100;
+const INITIAL_TRANSITION_STEPS = 80;
 const DEPTH_STEP = 0.02;
 const NUM_OF_VELOCITIES = 10;
+const PENDING_TILES_THRESHOLD = 250;
 
-function getUrlForFirstTiles(dataset, host = "") {
-    return `${host}/api/first-tiles?collection=${dataset}_zoom_levels_clusters`;
-}
-
-export function fetchTiles(indexes, tilesCache, pendingTiles, dataset, host) {
-    // Create url
-    const url = `${host}/api/tiles?indexes=${indexes.join(",")}&collection=${dataset}_zoom_levels_clusters`;
-    return fetch(url,
-        {
-            method: 'GET',
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Tile data could not be retrieved from the server.' +
-                    ' Please try again later. Status: ' + response.status + ' ' + response.statusText);
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Save data in the cache. Use the triple of zoom level, tile x and tile y as key.
-            for (let tile of data) {
-                // Get tile from index
-                const zoom_plus_tile = convertIndexToTile(tile["index"]);
-                tilesCache.set(zoom_plus_tile.zoom + "-" + zoom_plus_tile.x + "-" + zoom_plus_tile.y, tile["data"]);
-                // Remove index from pending tiles
-                pendingTiles.delete(tile["index"]);
-            }
-        })
-        .catch(error => {
-            // Handle any errors that occur during the fetch operation
-            console.error('Error:', error);
-        });
-}
-
-/**
- * The function fetches the first few zoom levels in one unique batch at the beginning of the execution of the application.
- * @param url
- * @param signal
- * @param tilesCache The tiles cache is used to fetch the tiles. The tiles cache is an LRU cache.
- * @returns {Promise<unknown>}
- */
-export function fetchFirstTiles(url, signal, tilesCache) {
-    return fetch(url, {
-            method: 'GET'
-        }
-    )
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Cluster data could not be retrieved from the server.' +
-                    ' Please try again later. Status: ' + response.status + ' ' + response.statusText);
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Save data in the cache. Use the triple of zoom level, tile x and tile y as key.
-            // noinspection JSUnresolvedVariable
-            let range;
-            for (let tile of data) {
-                // Convert index to tile
-                const zoom_plus_tile = convertIndexToTile(tile["index"]);
-                tilesCache.set(zoom_plus_tile.zoom + "-" + zoom_plus_tile.x + "-" + zoom_plus_tile.y, tile["data"]);
-                if (tile["index"] === 0) {
-                    range = tile["range"];
-                }
-            }
-            return range;
-        })
-        .catch(error => {
-            // Handle any errors that occur during the fetch operation
-            console.error('Error:', error);
-        });
-
-}
 
 /* function throttle(func, limit) {
     // Throttle function. The function func is called at most once every limit milliseconds.
@@ -117,36 +47,6 @@ export function fetchFirstTiles(url, signal, tilesCache) {
 } */
 
 
-/**
- * The implementation is as follows:
- *     1. The stage is where we place our artworks. The visible area of the stage is from (0, 0) to (props.width, props.height),
- *        where props.width and props.height are the width and height of the viewport.
- *     2. The stage is fixed, but we keep a reference to the effective position of the stage within the real embedding space.
- *     3. The effective position of the stage determines the artworks that are visible. The data is fetched from the server.
- *        Using the stage allows as to have partially visible artworks.
- *     4. The stage can be "virtually" moved by the user. This means that the effective position of the stage changes,
- *        but the stage itself is fixed.
- *     5. From the server, we receive global coordinates for the artworks. The function mapGlobalCoordinatesToStageCoordinates
- *        maps the global coordinates to stage coordinates. This is just a translation of the global coordinates by the effective
- *        position of the stage.
- *     6. The user can also zoom in and out. When zooming in, what changes is the effective size of the stage. The effective
- *        position of the stage changes (see note *). When zooming out, the effective size of the stage increases, while it
- *        decreases when zooming in.
- *     7. At the beginning, we create a pool of sprites. The sprites are reused. Whe keep a map from index of artwork to sprite
- *        for fast access.
- *
- *     * Note: The mouse position in global coordinates must remain the same after zooming in/out. This means that the effective
- *       position of the stage must change, so that the mouse position in global coordinates remains the same. This is done
- *       simply by measuring the distance between the mouse position and the effective position of the stage before the
- *       zooming operation and then applying the same scaled translation after the zooming operation to obtain the new
- *       position of the upper left corner of the stage.
- *
- *     Observation: we re-render the stage manually through a call to app1.render(). Hence, we do not use state or tickers
- *     to re-render the stage.
- * @param props
- * @returns {JSX.Element}
- * @constructor
- */
 const ClustersMap = (props) => {
     // Define state for the selected dataset
     const selectedDataset = useRef(props.selectedDataset);
@@ -196,8 +96,6 @@ const ClustersMap = (props) => {
         updateAgeOnHas: true,
         updateAgeOnGet: true
     }));
-    // Define array of unresolved promises for fetching tiles
-    const unresolvedPromises = useRef([]);
     // Define set for pending tiles
     const pendingTiles = useRef(new Set());
     // Define state for the app1
@@ -206,8 +104,6 @@ const ClustersMap = (props) => {
     const containerForeground = useRef(null);
     // Create container for the background
     const containerBackground = useRef(null);
-    // Create container for when the other container is disabled
-    const containerForCarousel = useRef(new PIXI.Container());
     // Define hammer
     const hammer = useRef(null);
     // Define state for previous scale for pinching
@@ -228,6 +124,82 @@ const ClustersMap = (props) => {
     const totalMovement = useRef(0);
     // Define ref for first render completion
     const firstRenderCompleted = useRef(false);
+    // Define map for storing a flag if the texture has been loaded for a sprite
+    const textureAbortController = useRef(new Map());
+    // Define map for storing flag that texture has been loaded
+    const textureLoaded = useRef(new Map());
+    // Define ref for fetch first tiles abort controller
+    const abortControllerFirstTiles = useRef(null);
+    // Define map of abort controllers for fetching tiles
+    const abortControllersFetchTiles = useRef(new Map());
+
+    // FETCH OPERATIONS
+    const fetchTiles = (indexes) => {
+        // Create url
+        const url = `${props.host}/api/tiles?indexes=${indexes.join(",")}&collection=${selectedDataset.current}_zoom_levels_clusters`;
+        // Create abort controller for the fetch operation and add it to the map of abort controllers. Generate key
+        // using the current time.
+        const abortController = new AbortController();
+        const key = Date.now().toString();
+        abortControllersFetchTiles.current.set(key, abortController);
+        const options = {
+            method: 'GET',
+            signal: abortController.signal,
+            priority: "high"
+        }
+        return fetch(url, options)
+            .then(response => {
+                if (!response.ok)
+                    throw new Error('Tile data could not be retrieved from the server.' +
+                        ' Please try again later. Status: ' + response.status + ' ' + response.statusText);
+                return response.json();
+            })
+            .then(data => {
+                // Save data in the cache. Use the triple of zoom level, tile x and tile y as key.
+                for (let tile of data) {
+                    // Get tile from index
+                    const zoom_plus_tile = convertIndexToTile(tile["index"]);
+                    tilesCache.current.set(zoom_plus_tile.zoom + "-" + zoom_plus_tile.x + "-" + zoom_plus_tile.y, tile["data"]);
+                    // Remove index from pending tiles
+                    pendingTiles.current.delete(tile["index"]);
+                }
+                // Remove abort controller from the map of abort controllers
+                abortControllersFetchTiles.current.delete(key);
+            })
+            .catch(error => {
+                if (error.name !== 'AbortError')
+                    console.error('Error:', error);
+            });
+    }
+
+    const fetchFirstTiles = (signal) => {
+        const url = `${props.host}/api/first-tiles?collection=${selectedDataset.current}_zoom_levels_clusters`
+        return fetch(url, {
+            signal: signal,
+            method: 'GET'
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Cluster data could not be retrieved from the server.' +
+                        ' Please try again later. Status: ' + response.status + ' ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Save data in the cache. Use the triple of zoom level, tile x and tile y as key.
+                // noinspection JSUnresolvedVariable
+                let range;
+                for (let tile of data) {
+                    // Convert index to tile
+                    const zoom_plus_tile = convertIndexToTile(tile["index"]);
+                    tilesCache.current.set(zoom_plus_tile.zoom + "-" + zoom_plus_tile.x + "-" + zoom_plus_tile.y, tile["data"]);
+                    if (tile["index"] === 0) {
+                        range = tile["range"];
+                    }
+                }
+                return range;
+            });
+    }
 
     const mapGlobalCoordinatesToStageCoordinates = (global_x, global_y) => {
         // Map global coordinates to stage coordinates
@@ -246,6 +218,76 @@ const ClustersMap = (props) => {
         return {
             x: global_x + effectivePosition.current.x,
             y: global_y + effectivePosition.current.y
+        }
+    }
+
+    const hideContainers = () => {
+        // Make foreground container not interactive
+        containerForeground.current.interactive = false;
+        containerForeground.current.interactiveChildren = false;
+        containerForeground.current.cursor = 'default';
+        // Set mouse down to false
+        mouseDown.current = false;
+        // Decrease alpha of both containers
+        containerForeground.current.alpha = 0;
+        containerBackground.current.alpha = 0;
+    }
+
+    const restoreContainers = () => {
+        // Make both containers interactive
+        containerForeground.current.interactive = true;
+        containerForeground.current.interactiveChildren = true;
+        if (containerForeground.current.cursor === 'default')
+            containerForeground.current.cursor = 'grab';
+        // Increase alpha of both containers
+        containerForeground.current.alpha = 1;
+        containerBackground.current.alpha = 1;
+    }
+
+    const addLoadingSpinner = () => {
+        // Create new div for loading
+        if (!document.getElementById("loading-div")) {
+            const div = document.createElement("div-loading");
+            div.id = "loading-div";
+            div.style.position = "fixed";
+            div.style.display = "grid";
+            div.style.placeItems = "center";
+            div.style.top = "50%";
+            div.style.left = "50%";
+            div.style.transform = "translate(-50%, -50%)";
+            createRoot(div).render(
+                <>
+                    <ReactLoading type="spinningBubbles" color="#ffffff" height={100} width={100}/>
+                    <Typography variant="h1" sx={
+                        {
+                            fontSize: 'calc(min(3vh, 3vw))',
+                            fontStyle: 'italic',
+                            fontWeight: 'bold',
+                            fontFamily: 'Roboto Slab, serif',
+                            textAlign: 'center',
+                            color: 'white',
+                            marginTop: '20px'
+                        }
+                    }>
+                        Loading...
+                    </Typography>
+                </>);
+            document.getElementById("home").appendChild(div);
+        }
+    }
+
+    // Function for blocking the interaction with the stage if there are too many unresolved promises
+    const blockInteraction = () => {
+        if (!firstRenderCompleted.current) return;
+        if (pendingTiles.current.size >= PENDING_TILES_THRESHOLD) {
+            hideContainers();
+            addLoadingSpinner();
+        } else {
+            // Remove div for loading
+            if (document.getElementById("loading-div"))
+                document.getElementById("loading-div").remove();
+            
+            restoreContainers();
         }
     }
 
@@ -331,8 +373,6 @@ const ClustersMap = (props) => {
             // Activate the second blur filter if the blur of the first filter is lower than the blur of the second filter
             containerBackground.current.filters[0].enabled = containerBackground.current.filters[0].blur >= BLUR_RADIUS_CAROUSEL;
             containerBackground.current.filters[1].enabled = containerBackground.current.filters[0].blur < BLUR_RADIUS_CAROUSEL;
-            // Make background container not interactive
-            containerBackground.current.interactiveChildren = false;
         } else {
             // Deactivate blur filters for the sprites in the foreground
             if (prevShowCarouselRef.current) {
@@ -349,7 +389,6 @@ const ClustersMap = (props) => {
                     containerBackground.current.filters[0].blur = BLUR_RADIUS_MAX * (1 - Math.sin((1 + depth.current) * Math.PI / 2)) ** 3;
                 // containerBackground.current.filters[0].blur = BLUR_RADII[Math.floor((1 + depth.current) * (NUM_BLUR_RADII - 1))];
             }
-            containerBackground.current.interactiveChildren = containerBackground.current.filters[0].blur >= (2 / 5) * BLUR_RADIUS_MAX;
         }
         prevShowCarouselRef.current = showCarouselRef.current;
     }
@@ -452,10 +491,54 @@ const ClustersMap = (props) => {
             && artwork_position.y >= -maxHeight.current
             && artwork_position.y <= stageHeight.current;
 
+        // Give sprite a gray color
+        sprite.texture = PIXI.Texture.WHITE;
+        sprite.tint = 0x404040
+        // Set flag that texture has not been loaded
+        textureLoaded.current.set(index, false);
+        sprite.zIndex = 8;
+
         // Add texture to the sprite if the sprite is either in the visible area or in its immediate vicinity
-        if (artwork_position.x > - 3 * maxHeight.current * width / height && artwork_position.x <= stageWidth.current + 3 * maxHeight.current * width / height
-            && artwork_position.y >= - 3 * maxHeight.current && artwork_position.y <= stageHeight.current + 3 * maxHeight.current)
-            sprite.texture = PIXI.Texture.from(getUrlForImage(path, selectedDataset.current, props.host));
+        if (artwork_position.x > -3 * maxHeight.current * width / height && artwork_position.x <= stageWidth.current + 3 * maxHeight.current * width / height
+            && artwork_position.y >= -3 * maxHeight.current && artwork_position.y <= stageHeight.current + 3 * maxHeight.current) {
+            // Set flag that texture has been loaded. This makes sure that the texture is not loaded again.
+            textureLoaded.current.set(index, true);
+            // Create abort controller for the texture
+            const controller = new AbortController();
+            textureAbortController.current.set(index, controller);
+            // Load main texture
+            const options = {
+                signal: controller.signal,
+                method: 'GET',
+                priority: 'low'
+            }
+            fetch(getUrlForImage(path, selectedDataset.current, props.host), options)
+                .then((response) => {
+                    // Remove abort controller from the map
+                    textureAbortController.current.delete(index);
+                    return response.blob()
+                })
+                .then((blob) => {
+                    // The fetching is successful. Set the texture of the sprite to the fetched texture.
+                    if (sprites.current.has(index)) {
+                        sprite.tint = 0xFFFFFF;
+                        // noinspection all
+                        sprite.texture = PIXI.Texture.from(URL.createObjectURL(blob));
+                        sprite.zIndex = 10;
+                        containerForeground.current.sortChildren();
+                    } else {
+                        // Do this as a safety measure.
+                        if (textureLoaded.current.has(index))
+                            textureLoaded.current.delete(index);
+                        if (textureAbortController.current.has(index))
+                            textureAbortController.current.delete(index);
+                    }
+                })
+                .catch((error) => {
+                    if (error.name !== 'AbortError')
+                        console.error('Error loading texture:', error);
+                });
+        }
 
         if (!is_in_previous_zoom_level && !(zoomLevel.current === props.maxZoomLevel && depth.current === 0)) {
             // Add sprite to background container
@@ -475,7 +558,17 @@ const ClustersMap = (props) => {
         sprite.cursor = 'pointer';
     }
 
+    const stopMomentumTranslationTicker = () => {
+        if (momentum_translation_ticker.current !== null) {
+            momentum_translation_ticker.current.stop();
+            momentum_translation_ticker.current.destroy();
+            momentum_translation_ticker.current = null;
+        }
+    }
+
     const reset = () => {
+        // Stop momentum translation ticker if it is active
+        stopMomentumTranslationTicker();
         // Reset zoom level
         zoomLevel.current = 0;
         depth.current = 0;
@@ -494,24 +587,53 @@ const ClustersMap = (props) => {
         tilesOnStage.current.clear();
         // Clear tiles cache
         tilesCache.current.clear();
+        // Clear pending tiles
+        pendingTiles.current.clear();
+        // Clear abort controllers for fetching tiles
+        abortControllersFetchTiles.current.clear();
+        // Clear texture abort controllers
+        textureAbortController.current.clear();
+        // Clear texture loaded
+        textureLoaded.current.clear();
+        // Clear spriteIsInForeground
+        spriteIsInForeground.current.clear();
+        // Reset variables for interaction
+        previousScale.current = 1;
+        touchStartPositionSprite.current = {x: 0, y: 0};
+        touchPrevTime.current = 0;
+        touchPrevPos.current = {x: 0, y: 0};
+        touchVelocities.current = [];
+        countOfPinching.current = 0;
+        totalMovement.current = 0;
         // Make sure spritePool contains SPRITEPOOLSIZE sprites
         console.assert(spritePool.current.length === SPRITEPOOLSIZE);
     }
 
-    const setPropertiesOfCarouselContainer = (container) => {
-        container.interactive = true;
-        container.zIndex = 1;
-        // noinspection all
-        container.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
-        // noinspection all
-        container
-            .on('mousedown', () => props.setShowCarousel(false))
-            .on('touchstart', () => props.setShowCarousel(false));
+    const setHandlersOfContainerForeground = () => {
+        if (showCarouselRef.current) {
+            containerForeground.current.cursor = 'pointer';
+            containerForeground.current.removeAllListeners();
+            containerForeground.current
+                .on('mousedown', () => props.setShowCarousel(false))
+                .on('touchstart', () => props.setShowCarousel(false))
+        } else {
+            containerForeground.current.cursor = 'grab';
+            containerForeground.current.removeAllListeners();
+            containerForeground.current
+                .on("mouseleave", handleMouseUpOrLeave)
+                .on('mousedown', handleMouseDown)
+                .on('mouseup', handleMouseUpOrLeave)
+                .on('mousemove', handleMouseMove)
+                .on('wheel', handleMouseWheel)
+                .on('touchmove', handleTouchMove)
+                .on('touchend', handleTouchEnd)
+                .on('touchstart', handleTouchStart);
+        }
     }
 
     const setPropertiesOfContainer = (container, zIndex, isForeground) => {
         // Define container pointer
-        container.cursor = 'grab';
+        container.cursor = isForeground ? 'grab' : 'default';
         // noinspection all
         container.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
         // noinspection all
@@ -524,6 +646,21 @@ const ClustersMap = (props) => {
 
     // useEffect for initialization of the component. This is called every time the selected dataset changes.
     useEffect(() => {
+        // Block search bar
+        props.setSearchBarIsBlocked(true);
+        // Set first render to false
+        firstRenderCompleted.current = false;
+
+        // Abort an ongoing fetch for the first tiles
+        if (abortControllerFirstTiles.current)
+            abortControllerFirstTiles.current.abort();
+        // Abort any ongoing fetch for tiles
+        for (let controller of abortControllersFetchTiles.current.values())
+            controller.abort();
+        // Abort any ongoing fetch for textures
+        for (let controller of textureAbortController.current.values())
+            controller.abort();
+
         // Change selected dataset
         selectedDataset.current = props.selectedDataset;
         // Reset everything at the initial state
@@ -547,22 +684,29 @@ const ClustersMap = (props) => {
             app.stage.addChild(containerBackground.current);
         }
 
-        // Set properties of carousel container
-        setPropertiesOfCarouselContainer(containerForCarousel.current);
-
         // Set properties of containers
-        setPropertiesOfContainer(containerForeground.current, 3, true);
-        setPropertiesOfContainer(containerBackground.current, 2, false);
+        setPropertiesOfContainer(containerForeground.current, 2, true);
+        setPropertiesOfContainer(containerBackground.current, 1, false);
         // Sort app stage
         app.stage.sortChildren();
 
         // Populate the sprite pool
         for (let i = 0; i < spritePool.current.length; i++)
-            spritePool.current[i] = new PIXI.Sprite(PIXI.Texture.WHITE);
+            spritePool.current[i] = new PIXI.Sprite();
+
+        // Hide containers
+        hideContainers();
+        // Add loading spinner
+        addLoadingSpinner();
+
+        // Define abort controller for fetch first tiles
+        abortControllerFirstTiles.current = new AbortController();
 
         // Fetch first zoom levels
-        fetchFirstTiles(getUrlForFirstTiles(selectedDataset.current, props.host), null, tilesCache.current)
+        fetchFirstTiles(abortControllerFirstTiles.current.signal)
             .then((range) => {
+                // Set abort controller to null
+                abortControllerFirstTiles.current = null;
                 // Get cluster data for the first zoom level
                 const data = tilesCache.current.get("0-0-0");
 
@@ -641,23 +785,26 @@ const ClustersMap = (props) => {
             hammer.current.get('rotate').set({enable: false});
             hammer.current.get('pan').set({enable: false});
             hammer.current.get('swipe').set({enable: false});
-            hammer.current.get('pinch').set({enable: true});
+            hammer.current.get('pinch').set({enable: !showCarouselRef.current});
             hammer.current.on('pinchstart', handlePinchStart);
             hammer.current.on('pinchmove', handlePinch);
 
-            // Add all handlers to the stage
-            containerForeground.current
-                .on("mouseleave", handleMouseUpOrLeave)
-                .on('mousedown', handleMouseDown)
-                .on('mouseup', handleMouseUpOrLeave)
-                .on('mousemove', handleMouseMove)
-                .on('wheel', handleMouseWheel)
-                .on('touchmove', handleTouchMove)
-                .on('touchend', handleTouchEnd)
-                .on('touchstart', handleTouchStart);
-
+            // Remove div for loading
+            if (document.getElementById("loading-div"))
+                document.getElementById("loading-div").remove();
+            // Restore containers
+            restoreContainers();
+            // Set handlers of containerForeground
+            setHandlersOfContainerForeground();
             // First render completed
             firstRenderCompleted.current = true;
+            // Unblock search bar
+            props.setSearchBarIsBlocked(false);
+            // Execute blockInteraction every 300ms
+            setInterval(blockInteraction, 300);
+        }).catch((error) => {
+            if (error.name !== 'AbortError')
+                console.error('Error fetching first tiles:', error);
         });
     }, [props.selectedDataset]);
 
@@ -672,6 +819,8 @@ const ClustersMap = (props) => {
 
     useEffect(() => {
         if (!firstRenderCompleted.current) return;
+        // Block search bar
+        props.setSearchBarIsBlocked(true);
         // Update ref for stage width and height and width and height of the embedding space, and also for the overflow.
         stageWidth.current = props.stageWidth;
         stageHeight.current = props.stageHeight;
@@ -680,11 +829,15 @@ const ClustersMap = (props) => {
         overflowX.current = Math.round(props.overflowX / 2);
         overflowY.current = Math.round(props.overflowY / 2);
 
-        // Resize container and set hit area
+        // Resize hit and filter areas of containers
         // noinspection all
         containerForeground.current.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
         // noinspection all
+        containerForeground.current.filterArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
+        // noinspection all
         containerBackground.current.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
+        // noinspection all
+        containerBackground.current.filterArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
 
         // Save current minX, maxX, minY, maxY
         const prevMinX = minX.current;
@@ -724,6 +877,8 @@ const ClustersMap = (props) => {
         }
         // Update stage
         updateStage();
+        // Unblock search bar
+        props.setSearchBarIsBlocked(false);
     }, [props.width, props.height, props.overflowX, props.overflowY, props.stageWidth, props.stageHeight]);
 
     useEffect(() => {
@@ -738,26 +893,13 @@ const ClustersMap = (props) => {
     useEffect(() => {
         // Update ref for showCarousel
         showCarouselRef.current = props.showCarousel;
-        // Block movement of the stage if the carousel is shown
-        containerForeground.current.interactive = !props.showCarousel;
-        containerBackground.current.interactive = !props.showCarousel;
-        if (hammer.current) {
-            hammer.current.get('pinch').set({enable: !props.showCarousel});
-        }
-        if (props.showCarousel) {
-            // Add containerForCarousel to stage
-            app.stage.addChild(containerForCarousel.current);
-            app.stage.sortChildren();
-        } else {
-            // Remove containerForCarousel from stage
-            app.stage.removeChild(containerForCarousel.current);
-            app.stage.sortChildren();
-        }
+        if (hammer.current)
+            hammer.current.get('pinch').set({enable: !showCarouselRef.current});
 
+        // Set handlers of containerForeground
+        setHandlersOfContainerForeground();
         // Set mouse down to false
         mouseDown.current = false;
-        containerForeground.current.cursor = 'grab';
-
         // Blur the containers
         applyBlur();
     }, [props.showCarousel]);
@@ -766,7 +908,14 @@ const ClustersMap = (props) => {
         // Remove every event handler from sprite
         sprites.current.get(index).removeAllListeners();
         // Reset texture of sprite
-        sprites.current.get(index).texture = PIXI.Texture.WHITE;
+        sprites.current.get(index).texture = null;
+        // Abort fetching the texture
+        if (textureAbortController.current.has(index)) {
+            textureAbortController.current.get(index).abort();
+            textureAbortController.current.delete(index);
+        }
+        // Remove flag that texture has been loaded
+        textureLoaded.current.delete(index);
         // Remove filters from sprite
         sprites.current.get(index).filters = null;
         // Remove sprite from stage
@@ -790,13 +939,10 @@ const ClustersMap = (props) => {
         // Get zoom level. Obs: We keep as tiles on stage the tiles at the next zoom level. This is because these tiles
         // also contain the artworks from the current zoom level.
         const next_zoom_level = Math.min(depth.current >= 0 ? zoomLevel.current + 1 : zoomLevel.current, props.maxZoomLevel);
-        const current_zoom_level = Math.max(depth.current > 0 ? zoomLevel.current : zoomLevel.current - 1, 0);
 
         const number_of_tiles = 2 ** next_zoom_level;
         const tile_step_x = (maxX.current - minX.current) / number_of_tiles;
         const tile_step_y = (maxY.current - minY.current) / number_of_tiles;
-        const tile_step_x_for_sprites = (realMaxX.current - realMinX.current) / number_of_tiles;
-        const tile_step_y_for_sprites = (realMaxY.current - realMinY.current) / number_of_tiles;
 
         // Get tile coordinates of the tile that contains the upper left corner of the stage.
         const tile_x = Math.min(Math.max(Math.floor((effectivePosition.current.x - minX.current) / tile_step_x), 0), number_of_tiles - 1);
@@ -804,15 +950,14 @@ const ClustersMap = (props) => {
 
         // Get indexes of tiles to fetch
         let indexes;
-        if (is_ticker === 0) {
+        if (is_ticker === 0)
             indexes = getTilesToFetch(tile_x, tile_y, next_zoom_level, props.maxZoomLevel, tilesCache.current);
-        } else if (is_ticker === 1) {
+        else if (is_ticker === 1)
             // Translation ticker behavior. Fetch only tiles at the current zoom level.
             indexes = getTilesForTranslationTicker(tile_x, tile_y, next_zoom_level, tilesCache.current);
-        } else if (is_ticker === 2) {
+        else if (is_ticker === 2)
             // Zoom ticker behavior. Fetch tiles at the next zoom level.
             indexes = getTilesForZoomTicker(tile_x, tile_y, next_zoom_level, props.maxZoomLevel, tilesCache.current);
-        }
 
         // Filter out the indexes that are in the cache or in the pending tiles
         let tile;
@@ -829,35 +974,63 @@ const ClustersMap = (props) => {
         });
 
         // Create promise with null
-        if (indexes.length > 0) {
-            unresolvedPromises.current.push(fetchTiles(indexes, tilesCache.current, pendingTiles.current, selectedDataset.current, props.host));
-        }
+        if (indexes.length > 0)
+            // noinspection JSIgnoredPromiseFromCall
+            fetchTiles(indexes);
+
         // Get visible tiles
         const visible_tiles = getTilesFromZoomLevel(tile_x, tile_y, next_zoom_level);
 
+        // Order tilesOnStage by decreasing zoom level
+        // tilesOnStage.current = new Map([...tilesOnStage.current.entries()].sort((a, b) => parseInt(b[0].split("-")[0]) - parseInt(a[0].split("-")[0])));
         // Remove tiles and sprites of tiles that are not visible
         for (let tile of tilesOnStage.current.keys()) {
             // If the tile is from the current zoom level, delete the entry from tilesOnStage but do not delete all
             // the sprites. This is because some of the sprites might still be visible.
-            if (current_zoom_level === parseInt(tile.split("-")[0])) {
+            if (next_zoom_level - 1 >= parseInt(tile.split("-")[0])) {
+                // Check that the sprite is actually in the visible area
                 for (let index of tilesOnStage.current.get(tile)) {
-                    // Check the tile the sprite is in. If the sprite is not among the tiles in visible_tiles, then
-                    // remove it, else set is_in_current_zoom_level to true.
-                    if (!spritesGlobalInfo.current.has(index)) {
-                        continue;
-                    }
-                    const spriteGlobalPosition = spritesGlobalInfo.current.get(index);
-                    const tile_x = Math.min(Math.max(Math.floor((spriteGlobalPosition.x - realMinX.current) / tile_step_x_for_sprites), 0), number_of_tiles - 1);
-                    const tile_y = Math.min(Math.max(Math.floor((spriteGlobalPosition.y - realMinY.current) / tile_step_y_for_sprites), 0), number_of_tiles - 1);
-                    if (!visible_tiles.some(visible_tile =>
-                        visible_tile.x === tile_x && visible_tile.y === tile_y)) {
-                        // Remove sprite from stage
-                        removeSprite(index);
+                    if (sprites.current.has(index)) {
+                        // Get position of artwork in stage coordinates.
+                        const sprite_tile_x = Math.max(
+                            Math.min(Math.floor(((spritesGlobalInfo.current.get(index).x - realMinX.current) * number_of_tiles) / (realMaxX.current - realMinX.current)),
+                                number_of_tiles - 1), 0);
+                        const sprite_tile_y = Math.max(
+                            Math.min(Math.floor(((spritesGlobalInfo.current.get(index).y - realMinY.current) * number_of_tiles) / (realMaxY.current - realMinY.current)),
+                                number_of_tiles - 1), 0);
+                        if (!visible_tiles.some(visible_tile => visible_tile.x === sprite_tile_x && visible_tile.y === sprite_tile_y)) {
+                            // Remove sprite from stage
+                            removeSprite(index);
+                        }
                     }
                 }
                 // Delete tile from tilesOnStage
                 tilesOnStage.current.delete(tile);
-            } else if (!(next_zoom_level === parseInt(tile.split("-")[0])) || !visible_tiles.some(visible_tile =>
+            }
+                // The tile is at the zoom level after the next zoom level. Remove only the entries that have is_in_current_zoom_level
+            // set to false.
+            else if (next_zoom_level + 1 === parseInt(tile.split("-")[0])) {
+                if (!visible_tiles.some(visible_tile =>
+                    visible_tile.x === (Math.floor(parseInt(tile.split("-")[1]) / 2)) && visible_tile.y === (Math.floor(parseInt(tile.split("-")[2]) / 2)))) {
+                    // Remove all sprites from the tile
+                    for (let index of tilesOnStage.current.get(tile))
+                        if (sprites.current.has(index))
+                            // Remove sprite from stage
+                            removeSprite(index);
+                } else {
+                    // Remove only sprites with is_in_current_zoom_level set to false
+                    for (let index of tilesOnStage.current.get(tile)) {
+                        if (!spritesGlobalInfo.current.get(index).is_in_previous_zoom_level)
+                            if (sprites.current.has(index))
+                                // Remove sprite from stage
+                                removeSprite(index);
+                    }
+                }
+                // Delete tile from tilesOnStage
+                tilesOnStage.current.delete(tile);
+            }
+            // The tile is from the next zoom level, but it is not among the visible ones.
+            else if (next_zoom_level === parseInt(tile.split("-")[0]) && !visible_tiles.some(visible_tile =>
                 visible_tile.x === parseInt(tile.split("-")[1]) && visible_tile.y === parseInt(tile.split("-")[2]))) {
                 // The tile is not among the visible ones.
                 for (let index of tilesOnStage.current.get(tile)) {
@@ -868,6 +1041,8 @@ const ClustersMap = (props) => {
                 }
                 // Delete tile from tilesOnStage
                 tilesOnStage.current.delete(tile);
+            } else if (next_zoom_level + 2 <= parseInt(tile.split("-")[0])) {
+                console.log("Error: tile is not in the visible tiles and it is not from the current zoom level or the next zoom level.");
             }
         }
 
@@ -875,84 +1050,128 @@ const ClustersMap = (props) => {
         let count = 0;
         let count_visible = 0;
         visible_tiles.map(async tile => {
-            // Stop execution if the tilesCache does not contain the tile
-            if (!tilesCache.current.has(next_zoom_level + "-" + tile.x + "-" + tile.y))
-                await Promise.all(unresolvedPromises.current);
-
             // Get data from tilesCache
             const data = tilesCache.current.get(next_zoom_level + "-" + tile.x + "-" + tile.y);
-
             // Loop over artworks in tile and add them to the stage.
             // noinspection JSUnresolvedVariable
-            for (let j = 0; j < data.length; j++) {
-                // Increment count
-                count += 1;
-                // Get index
-                const index = data[j]["index"];
-                // Check if the artwork is already on stage. If it is not, add it to the stage.
-                if (!sprites.current.has(index)) {
-                    // Add sprite to stage
-                    addSpriteToStage(
-                        index,
-                        data[j]["path"],
-                        data[j]["width"],
-                        data[j]["height"],
-                        data[j]["x"],
-                        data[j]["y"],
-                        data[j]["in_previous"],
-                    );
-                    count_visible += sprites.current.get(index).visible ? 1 : 0;
-                } else {
-                    spritesGlobalInfo.current.get(index).is_in_previous_zoom_level = data[j]["in_previous"];
-
-                    // Check if sprite should be moved to the foreground or background
-                    if (!spritesGlobalInfo.current.get(index).is_in_previous_zoom_level && !(zoomLevel.current === props.maxZoomLevel && depth.current === 0)) {
-                        // Move sprite to background
-                        if (spriteIsInForeground.current.get(index))
-                            moveSpriteToBackground(index);
+            if (data) {
+                for (let j = 0; j < data.length; j++) {
+                    // Increment count
+                    count += 1;
+                    // Get index
+                    const index = data[j]["index"];
+                    // Check if the artwork is already on stage. If it is not, add it to the stage.
+                    if (!sprites.current.has(index)) {
+                        // Add sprite to stage
+                        addSpriteToStage(
+                            index,
+                            data[j]["path"],
+                            data[j]["width"],
+                            data[j]["height"],
+                            data[j]["x"],
+                            data[j]["y"],
+                            data[j]["in_previous"],
+                        );
+                        count_visible += sprites.current.get(index).visible ? 1 : 0;
                     } else {
-                        if (!spriteIsInForeground.current.get(index))
-                            moveSpriteToForeground(index);
+                        spritesGlobalInfo.current.get(index).is_in_previous_zoom_level = data[j]["in_previous"];
+
+                        // Check if sprite should be moved to the foreground or background
+                        if (!spritesGlobalInfo.current.get(index).is_in_previous_zoom_level && !(zoomLevel.current === props.maxZoomLevel && depth.current === 0)) {
+                            // Move sprite to background
+                            if (spriteIsInForeground.current.get(index))
+                                moveSpriteToBackground(index);
+                        } else {
+                            if (!spriteIsInForeground.current.get(index))
+                                moveSpriteToForeground(index);
+                        }
+
+                        // Get position of artwork in stage coordinates.
+                        const artwork_position = mapGlobalCoordinatesToStageCoordinates(
+                            spritesGlobalInfo.current.get(index).x,
+                            spritesGlobalInfo.current.get(index).y
+                        );
+
+                        // Update position of sprite if it varies from the current position by more than 1 pixel
+                        sprites.current.get(index).x = artwork_position.x;
+                        sprites.current.get(index).y = artwork_position.y;
+
+                        // Set size of sprite
+                        scaleSprite(index);
+
+                        // Make sprite not visible if outside the viewing area
+                        const aspect_ratio = spritesGlobalInfo.current.get(index).width / spritesGlobalInfo.current.get(index).height;
+                        sprites.current.get(index).visible = sprites.current.get(index).x > -maxHeight.current * aspect_ratio
+                            && sprites.current.get(index).x <= stageWidth.current
+                            && sprites.current.get(index).y >= -maxHeight.current
+                            && sprites.current.get(index).y <= stageHeight.current;
+
+                        count_visible += sprites.current.get(index).visible ? 1 : 0;
+
+                        // Add texture to the sprite if the sprite is either in the visible area or in its immediate vicinity
+                        if (artwork_position.x > -3 * maxHeight.current * aspect_ratio && artwork_position.x <= stageWidth.current + 3 * maxHeight.current * aspect_ratio
+                            && artwork_position.y >= -3 * maxHeight.current && artwork_position.y <= stageHeight.current + 3 * maxHeight.current) {
+                            if (!textureLoaded.current.get(index)) {
+                                // Set flag that texture has been loaded.
+                                textureLoaded.current.set(index, true);
+                                // Create abort controller for the texture
+                                const controller = new AbortController();
+                                textureAbortController.current.set(index, controller);
+                                // Load main texture
+                                const options = {
+                                    signal: controller.signal,
+                                    method: 'GET',
+                                    priority: 'low'
+                                }
+                                fetch(getUrlForImage(spritesGlobalInfo.current.get(index).path, selectedDataset.current, props.host), options)
+                                    .then((response) => {
+                                        // Remove abort controller from the map
+                                        textureAbortController.current.delete(index);
+                                        return response.blob()
+                                    })
+                                    .then(async (blob) => {
+                                        // The fetching is successful. Set the texture of the sprite to the fetched texture.
+                                        if (sprites.current.has(index)) {
+                                            sprites.current.get(index).tint = 0xFFFFFF;
+                                            // noinspection all
+                                            sprites.current.get(index).texture = PIXI.Texture.from(URL.createObjectURL(blob));
+                                            sprites.current.get(index).zIndex = 10;
+                                            containerForeground.current.sortChildren();
+                                        } else {
+                                            // Do this as a safety measure.
+                                            if (textureLoaded.current.has(index))
+                                                textureLoaded.current.delete(index);
+                                            if (textureAbortController.current.has(index))
+                                                textureAbortController.current.delete(index);
+                                        }
+                                    })
+                                    .catch((error) => {
+                                        if (error.name !== 'AbortError')
+                                            console.error('Error loading texture:', error);
+                                    });
+                            }
+                        } else {
+                            // Abort fetching the texture
+                            if (textureAbortController.current.has(index)) {
+                                // The fetching has not been completed. Abort it to avoid taking too much bandwidth.
+                                textureAbortController.current.get(index).abort();
+                                textureAbortController.current.delete(index);
+                                // Set sprite to gray
+                                if (sprites.current.has(index)) {
+                                    sprites.current.get(index).texture = PIXI.Texture.WHITE;
+                                    sprites.current.get(index).tint = 0x404040;
+                                    // Set flag that texture has not been loaded
+                                    textureLoaded.current.set(index, false);
+                                }
+                            }
+                        }
                     }
-
-                    // Get position of artwork in stage coordinates.
-                    const artwork_position = mapGlobalCoordinatesToStageCoordinates(
-                        spritesGlobalInfo.current.get(index).x,
-                        spritesGlobalInfo.current.get(index).y
-                    );
-
-                    // Update position of sprite if it varies from the current position by more than 1 pixel
-                    sprites.current.get(index).x = Math.abs(sprites.current.get(index).x - artwork_position.x) > 1 ?
-                        artwork_position.x : sprites.current.get(index).x;
-                    sprites.current.get(index).y = Math.abs(sprites.current.get(index).y - artwork_position.y) > 1 ?
-                        artwork_position.y : sprites.current.get(index).y;
-
-                    // Set size of sprite
-                    scaleSprite(index);
-
-                    // Make sprite not visible if outside the viewing area
-                    const aspect_ratio = spritesGlobalInfo.current.get(index).width / spritesGlobalInfo.current.get(index).height;
-                    sprites.current.get(index).visible = sprites.current.get(index).x > -maxHeight.current * aspect_ratio
-                        && sprites.current.get(index).x <= stageWidth.current
-                        && sprites.current.get(index).y >= -maxHeight.current
-                        && sprites.current.get(index).y <= stageHeight.current;
-
-                    count_visible += sprites.current.get(index).visible ? 1 : 0;
-
-                    // Add texture to the sprite if the sprite is either in the visible area or in its immediate vicinity
-                    if (artwork_position.x > - 3 * maxHeight.current * aspect_ratio && artwork_position.x <= stageWidth.current + 3 * maxHeight.current * aspect_ratio
-                        && artwork_position.y >= - 3 * maxHeight.current && artwork_position.y <= stageHeight.current + 3 * maxHeight.current)
-                        if (sprites.current.get(index).texture === PIXI.Texture.WHITE)
-                            // Change texture of sprite
-                            sprites.current.get(index).texture = PIXI.Texture.from(getUrlForImage(spritesGlobalInfo.current.get(index).path,
-                                selectedDataset.current, props.host)
-                            );
                 }
+                // Save artworks in tiles
+                // noinspection JSUnresolvedVariable
+                tilesOnStage.current.set(next_zoom_level + "-" + tile.x + "-" + tile.y,
+                    data.map(entity => entity["index"]));
             }
-            // Save artworks in tiles
-            // noinspection JSUnresolvedVariable
-            tilesOnStage.current.set(next_zoom_level + "-" + tile.x + "-" + tile.y,
-                data.map(entity => entity["index"]));
         });
 
         // Log for debugging
@@ -962,7 +1181,7 @@ const ClustersMap = (props) => {
         applyBlur();
 
         // Do asserts to check that everything is correct
-        console.assert(count === sprites.current.size);
+        // console.assert(count === sprites.current.size);
         console.assert(containerForeground.current.children.length
             + containerBackground.current.children.length === sprites.current.size);
         console.assert(sprites.current.size === spritesGlobalInfo.current.size);
@@ -993,24 +1212,20 @@ const ClustersMap = (props) => {
     }
 
     // Create function for managing translation ticker
-    const awaitTranslationTicker = (image) => {
-        // Compute translation such that at the end of the translation the tile is perfectly centered. The translation is
-        // computed in global coordinates.
-        let final_effective_position_x = image.x - effectiveWidth.current / 2;
-        let final_effective_position_y = image.y - effectiveHeight.current / 2;
-
-        // Make sure the final position is within the limits of the embedding space
-        final_effective_position_x = Math.max(Math.min(final_effective_position_x, maxX.current - effectiveWidth.current), minX.current);
-        final_effective_position_y = Math.max(Math.min(final_effective_position_y, maxY.current - effectiveHeight.current), minY.current);
+    const awaitTranslationTicker = (targetLocation) => {
+        // Compute final position
+        const final_effective_position_x = Math.max(
+            Math.min(targetLocation.x - effectiveWidth.current / 2, maxX.current - effectiveWidth.current), minX.current);
+        const final_effective_position_y = Math.max(
+            Math.min(targetLocation.y - effectiveHeight.current / 2, maxY.current - effectiveHeight.current), minY.current);
 
         // Define steps
         let step_x = (final_effective_position_x - effectivePosition.current.x) / INITIAL_TRANSITION_STEPS;
         let step_y = (final_effective_position_y - effectivePosition.current.y) / INITIAL_TRANSITION_STEPS;
 
         // If both steps are 0, then we do not need to do anything
-        if (Math.abs(step_x) <= 0.0001 && Math.abs(step_y) <= 0.0001) {
+        if (Math.abs(step_x) <= 0.0001 && Math.abs(step_y) <= 0.0001)
             return Promise.resolve();
-        }
 
         // Define variable for transition steps
         let transition_steps = INITIAL_TRANSITION_STEPS;
@@ -1019,12 +1234,9 @@ const ClustersMap = (props) => {
             transition_steps = Math.ceil(INITIAL_TRANSITION_STEPS / 2);
             step_x = (final_effective_position_x - effectivePosition.current.x) / transition_steps;
             step_y = (final_effective_position_y - effectivePosition.current.y) / transition_steps;
-        } else if (Math.max(Math.abs(step_x), Math.abs(step_y)) > 0.01) {
+        }
+        else if (Math.max(Math.abs(step_x), Math.abs(step_y)) > 0.05) {
             transition_steps = Math.ceil(INITIAL_TRANSITION_STEPS * 2);
-            step_x = (final_effective_position_x - effectivePosition.current.x) / transition_steps;
-            step_y = (final_effective_position_y - effectivePosition.current.y) / transition_steps;
-        } else if (Math.max(Math.abs(step_x), Math.abs(step_y)) > 0.05) {
-            transition_steps = Math.ceil(INITIAL_TRANSITION_STEPS * 4);
             step_x = (final_effective_position_x - effectivePosition.current.x) / transition_steps;
             step_y = (final_effective_position_y - effectivePosition.current.y) / transition_steps;
         }
@@ -1061,21 +1273,19 @@ const ClustersMap = (props) => {
                     updateStage(1);
                 }
             });
-
             translation_ticker.start();
         });
     }
 
     // Create function for managing zoom ticker
-    const awaitZoomTicker = (tile, image) => {
+    const awaitZoomTicker = (tile, targetLocation) => {
         // Compute total depth that has to be added or subtracted to get to the correct zoom level.
         let total_depth = tile[0] - zoomLevel.current - depth.current;
         // Compute total number of steps
         let total_steps = Math.ceil(Math.abs(total_depth) / DEPTH_STEP);
 
-        if (total_steps === 0) {
+        if (total_steps === 0)
             return Promise.resolve();
-        }
 
         return new Promise((resolve) => {
             const zoom_ticker = new PIXI.Ticker();
@@ -1103,28 +1313,26 @@ const ClustersMap = (props) => {
                             // Change depth
                             depth.current += depth.current > 0 ? -1 : 1;
                         }
-                    }
-                    else {
+                    } else {
                         // Compute delta remaining
                         delta = total_depth > 0 ? total_depth - (total_steps - 1) * DEPTH_STEP : total_depth + (total_steps - 1) * DEPTH_STEP;
                         depth.current = 0;
                         zoomLevel.current = tile[0];
                     }
 
-                    // First, compute the new effective position and effective size of the stage.
                     // Get translation of the mouse position from the upper left corner of the stage in global coordinates
-                    const translation_x = image.x - effectivePosition.current.x
-                    const translation_y = image.y - effectivePosition.current.y;
+                    const translation_x = targetLocation.x - effectivePosition.current.x
+                    const translation_y = targetLocation.y - effectivePosition.current.y;
 
                     changeLimitsOfEmbeddingSpace();
 
                     // Change the effective position of the stage. Make sure that it does not exceed the limits of the embedding space.
                     // The translation of the mouse is adjusted so that the mouse position in global coordinates remains the same.
                     effectivePosition.current.x = Math.max(
-                        Math.min(image.x - translation_x * 2 ** (-delta), maxX.current -
+                        Math.min(targetLocation.x - translation_x * 2 ** (-delta), maxX.current -
                             effectiveWidth.current), minX.current);
                     effectivePosition.current.y = Math.max(
-                        Math.min(image.y - translation_y * 2 ** (-delta), maxY.current -
+                        Math.min(targetLocation.y - translation_y * 2 ** (-delta), maxY.current -
                             effectiveHeight.current), minY.current);
 
                     // Update counter
@@ -1137,33 +1345,12 @@ const ClustersMap = (props) => {
         });
     }
 
-    // Create function for handling click on image or search
-    const moveToImage = async (tile, image) => {
-        // Close the carousel if it is open
-        if (props.showCarousel) {
-            props.setShowCarousel(false);
-        }
-
-        // Make container not interactive.
-        containerForeground.current.interactive = false;
-        containerForeground.current.interactiveChildren = false;
-        containerBackground.current.interactive = false;
-        containerBackground.current.interactiveChildren = false;
-
-        // 1. Transition to the new location in the embedding space without changing the zoom level.
-        // Wait for first translation ticker to finish
-        await awaitTranslationTicker(image);
-
-        // Wait for zoom ticker to finish
-        await awaitZoomTicker(tile, image);
-
-        // Wait for second translation ticker to finish
-        await awaitTranslationTicker(image);
-
+    // Make sprite pulse and open carousel
+    const finalStepsOfMoveToImage = (image) => {
         // 2. Pulse the sprite of the image that was clicked on.
         setTimeout(() => {
             pulseIfAvailable(image.index);
-        }, 10);
+        }, 100);
 
         // 3. Open the carousel after the transition is finished.
         setTimeout(() => {
@@ -1171,9 +1358,62 @@ const ClustersMap = (props) => {
             // Make container interactive again
             containerForeground.current.interactive = true;
             containerForeground.current.interactiveChildren = true;
-            containerBackground.current.interactive = true;
-            containerBackground.current.interactiveChildren = true;
-        }, DURATION * 1000 + 10);
+            // Unblock search bar
+            props.setSearchBarIsBlocked(false);
+        }, DURATION * 1000 + 100);
+    }
+
+    // Create function for handling click on image or search
+    const moveToImage = (tile, image) => {
+        // Block search bar
+        props.setSearchBarIsBlocked(true);
+        // Stop momentum translation ticker if it is running
+        stopMomentumTranslationTicker();
+
+        // Close the carousel if it is open
+        if (props.showCarousel)
+            props.setShowCarousel(false);
+
+        // Make container not interactive.
+        containerForeground.current.interactive = false;
+        containerForeground.current.interactiveChildren = false;
+
+        // Compute final position
+        const final_effective_position_x = Math.max(
+            Math.min(image.x - effectiveWidth.current / 2, maxX.current - effectiveWidth.current), minX.current);
+        const final_effective_position_y = Math.max(
+            Math.min(image.y - effectiveHeight.current / 2, maxY.current - effectiveHeight.current), minY.current);
+        // Define steps
+        let step_x = (final_effective_position_x - effectivePosition.current.x) / INITIAL_TRANSITION_STEPS;
+        let step_y = (final_effective_position_y - effectivePosition.current.y) / INITIAL_TRANSITION_STEPS;
+
+        if (Math.max(Math.abs(step_x), Math.abs(step_y)) > 0.005) {
+            // 1. Transition to the first zoom level.
+            awaitZoomTicker([0, 0, 0], {
+                x: effectivePosition.current.x + effectiveWidth.current / 2,
+                y: effectivePosition.current.y + effectiveHeight.current / 2
+            }).then(() => {
+                // 2.Transition to the image
+                awaitZoomTicker(tile, {x: image.x, y: image.y}).then(() => {
+                    // 3. Transition to the new location in the embedding space without changing the zoom level.
+                    awaitTranslationTicker({x: image.x, y: image.y}).then(() => {
+                        finalStepsOfMoveToImage(image);
+                    });
+                });
+            });
+        } else {
+            // 1. Transition to the new location in the embedding space without changing the zoom level.
+            // Wait for first translation ticker to finish
+            awaitTranslationTicker({x: image.x, y: image.y}).then(() => {
+                // 2. Transition to the first zoom level.
+                awaitZoomTicker(tile, {x: image.x, y: image.y}).then(() => {
+                    // 3.Transition to the image
+                    awaitTranslationTicker({x: image.x, y: image.y}).then(() => {
+                        finalStepsOfMoveToImage(image);
+                    });
+                });
+            });
+        }
     }
 
     // Create handler for mouse down
@@ -1181,12 +1421,7 @@ const ClustersMap = (props) => {
         if (!searchBarIsClickedRef.current)
             return;
 
-        // Stop ticker
-        if (momentum_translation_ticker.current !== null) {
-            momentum_translation_ticker.current.stop();
-            momentum_translation_ticker.current.destroy();
-            momentum_translation_ticker.current = null;
-        }
+        stopMomentumTranslationTicker();
         // Set mouse down to true
         containerForeground.current.cursor = 'grabbing';
         mouseDown.current = true;
@@ -1204,6 +1439,7 @@ const ClustersMap = (props) => {
     const handleMouseUpOrLeave = () => {
         if (!mouseDown.current || totalMovement.current < 2) {
             mouseDown.current = false;
+            containerForeground.current.cursor = 'grab';
             return;
         }
         // Set mouse down to false
@@ -1255,12 +1491,8 @@ const ClustersMap = (props) => {
 
     // Create handler for touch start and touch end
     const handleTouchStart = (event) => {
-        // Stop ticker
-        if (momentum_translation_ticker.current !== null) {
-            momentum_translation_ticker.current.stop();
-            momentum_translation_ticker.current.destroy();
-            momentum_translation_ticker.current = null;
-        }
+        // Stop momentum translation ticker
+        stopMomentumTranslationTicker();
         // Save touch position
         touchPrevPos.current = event.data.getLocalPosition(containerForeground.current);
         // Save touch start time
@@ -1319,7 +1551,6 @@ const ClustersMap = (props) => {
     const momentumTranslation = (averageVelocityX, averageVelocityY, multiplicativeFactor) => {
         const frames = 40;
         // Change multiplicative factor based on width and height of the stage
-        multiplicativeFactor *= Math.max(1000 / stageWidth.current, 1);
         // Transform velocities, which are in pixels per millisecond, to velocities in the embedding space.
         averageVelocityX *= (effectiveWidth.current * multiplicativeFactor) / width.current;
         averageVelocityY *= (effectiveHeight.current * multiplicativeFactor) / height.current;
@@ -1375,7 +1606,8 @@ const ClustersMap = (props) => {
             averageVelocityX /= touchVelocities.current.length;
             averageVelocityY /= touchVelocities.current.length;
             // Start momentum translation
-           momentumTranslation(averageVelocityX, averageVelocityY, 6);
+            const multiplicativeFactor = Math.min(stageWidth.current / 50, 10);
+            momentumTranslation(averageVelocityX, averageVelocityY, multiplicativeFactor);
         }
     }
 

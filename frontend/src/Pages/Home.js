@@ -112,6 +112,8 @@ const Home = (props) => {
     let host = useRef(props.host);
     // Define data from text search
     const [searchData, setSearchData] = useState({});
+    // Define state for blocking search bar during loading or other operations
+    const [searchBarIsBlocked, setSearchBarIsBlocked] = useState(false);
     // Define boolean for showing the carousel with the nearest neighbors of a clicked image
     const [showCarousel, setShowCarousel] = useState(false);
     // Define variable for storing the index of the clicked image
@@ -188,7 +190,7 @@ const Home = (props) => {
     return (
         <>
             {(selectedDataset !== null && datasetInfo.get(selectedDataset) !== undefined) &&
-                <div hidden={props.page !== "home" || !initialLoadingDone}>
+                <div hidden={props.page !== "home" || !initialLoadingDone} id="home">
                     <StickyBar host={host.current}
                                hasSearchBar={true}
                                setSearchData={setSearchData}
@@ -200,6 +202,7 @@ const Home = (props) => {
                                setPage={props.setPage}
                                searchBarIsClicked={props.searchBarIsClicked}
                                setSearchBarIsClicked={props.setSearchBarIsClicked}
+                               searchBarIsBlocked={searchBarIsBlocked}
                     />
                     {/*<HamburgerMenu*/}
                     {/*    menuOpen={menuOpen}*/}
@@ -232,6 +235,7 @@ const Home = (props) => {
                                          setClickedImageIndex={setClickedImageIndex}
                                          setInitialLoadingDone={setInitialLoadingDone}
                                          searchBarIsClicked={props.searchBarIsClicked}
+                                         setSearchBarIsBlocked={setSearchBarIsBlocked}
                             />
                         </Stage>
                         <div

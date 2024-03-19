@@ -5,28 +5,26 @@ import {IconButton, InputBase} from "@mui/material";
 export default function SearchBar(props) {
     const [inputValue, setInputValue] = useState("");
     const host = useRef(props.host);
+    const ongoingRequest = useRef(false);
 
-    const sendText = async (text) => {
+    const sendText = (text, signal) => {
+        ongoingRequest.current = true;
         let url = host.current + '/api/image-text?collection=' + props.selectedDataset + '&text=' + text + '&page=1';
-        const result = await fetch(url, {
-            method: 'GET'
-        })
+        const options = {
+            method: 'GET',
+        };
+        fetch(url, options)
             .then(response => {
-                if (!response.ok) {
+                if (!response.ok)
                     throw new Error('Data could not be retrieved. Status: ' + response.status + ' ' + response.statusText);
-                }
                 return response.json();
             })
             .then(firstGet => {
                 url = host.current + '/api/image-to-tile?index=' + firstGet.index + '&collection=' + props.selectedDataset + "_image_to_tile";
-
-                return fetch(url, {
-                    method: 'GET'
-                })
+                return fetch(url, options)
                     .then(response => {
-                        if (!response.ok) {
+                        if (!response.ok)
                             throw new Error('Data could not be retrieved. Status: ' + response.status + ' ' + response.statusText);
-                        }
                         return response.json();
                     })
                     .then(secondGet => {
@@ -35,28 +33,31 @@ export default function SearchBar(props) {
                             secondGet: secondGet
                         };
                     });
-            }).catch(error => {
+            })
+            .then(result => {
+                // Group result into object with fields tile and image. Tile is an array of three elements, while image contains
+                // the global position of the image, and its width and height.
+                let groupedResult = {};
+                // noinspection JSUnresolvedVariable
+                groupedResult.tile = result.secondGet.tile;
+                groupedResult.image = {};
+                // noinspection JSUnresolvedVariable
+                groupedResult.image.x = result.firstGet.x;
+                // noinspection JSUnresolvedVariable
+                groupedResult.image.y = result.firstGet.y;
+                groupedResult.image.width = result.firstGet.width;
+                groupedResult.image.height = result.firstGet.height;
+                groupedResult.image.index = result.firstGet.index;
+                // Set result in parent component
+                props.setShowCarousel(false);
+                props.setSearchData(groupedResult);
+                ongoingRequest.current = false;
+            })
+            .catch(error => {
                 // Handle any errors that occur during the fetch operation
                 console.error('Error:', error);
+                ongoingRequest.current = false;
             });
-
-        // Group result into object with fields tile and image. Tile is an array of three elements, while image contains
-        // the global position of the image, and its width and height.
-        let groupedResult = {};
-        // noinspection JSUnresolvedVariable
-        groupedResult.tile = result.secondGet.tile;
-        groupedResult.image = {};
-        // noinspection JSUnresolvedVariable
-        groupedResult.image.x = result.firstGet.x;
-        // noinspection JSUnresolvedVariable
-        groupedResult.image.y = result.firstGet.y;
-        groupedResult.image.width = result.firstGet.width;
-        groupedResult.image.height = result.firstGet.height;
-        groupedResult.image.index = result.firstGet.index;
-
-        // Set result in parent component
-        props.setShowCarousel(false);
-        props.setSearchData(groupedResult);
     };
 
     const handleInputChange = (event) => {
@@ -72,8 +73,9 @@ export default function SearchBar(props) {
         if (inputValue !== "") {
             if (!props.searchBarIsClicked)
                 props.setSearchBarIsClicked(true);
-            // noinspection JSIgnoredPromiseFromCall
-            sendText(inputValue);
+            if (!props.searchBarIsBlocked && !ongoingRequest.current)
+                // noinspection JSIgnoredPromiseFromCall
+                sendText(inputValue);
         }
     };
 
