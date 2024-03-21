@@ -8,6 +8,8 @@ echo "WIKIART_COLLECTION=$WIKIART_COLLECTION" >> /.env
 echo "WIKIART_DIR=/wikiart" >> /.env
 echo "BEST_ARTWORKS_COLLECTION=$BEST_ARTWORKS_COLLECTION" >> /.env
 echo "BEST_ARTWORKS_DIR=/best_artworks" >> /.env
+echo "CELEBAHQ_COLLECTION=$CELEBAHQ_COLLECTION" >> /.env
+echo "CELEBAHQ_DIR=/celeba_hq" >> /.env
 echo "ROOT=1" >> /.env
 
 # Export .env file location

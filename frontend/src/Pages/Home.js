@@ -114,6 +114,8 @@ const Home = (props) => {
     const [searchData, setSearchData] = useState({});
     // Define state for blocking search bar during loading or other operations
     const [searchBarIsBlocked, setSearchBarIsBlocked] = useState(false);
+    // Define state for ongoing request of tile after text search or swipe up
+    const [onGoingRequest, setOnGoingRequest] = useState(false);
     // Define boolean for showing the carousel with the nearest neighbors of a clicked image
     const [showCarousel, setShowCarousel] = useState(false);
     // Define variable for storing the index of the clicked image
@@ -203,6 +205,8 @@ const Home = (props) => {
                                searchBarIsClicked={props.searchBarIsClicked}
                                setSearchBarIsClicked={props.setSearchBarIsClicked}
                                searchBarIsBlocked={searchBarIsBlocked}
+                               onGoingRequest={onGoingRequest}
+                               setOnGoingRequest={setOnGoingRequest}
                     />
                     {/*<HamburgerMenu*/}
                     {/*    menuOpen={menuOpen}*/}
@@ -271,7 +275,11 @@ const Home = (props) => {
                                 {clickedImageIndex !== -1 &&
                                     <NeighborsCarousel host={host.current} clickedImageIndex={clickedImageIndex}
                                                        setClickedImageIndex={setClickedImageIndex}
-                                                       selectedDataset={selectedDataset}/>}
+                                                       selectedDataset={selectedDataset}
+                                                       setSearchData={setSearchData}
+                                                       setShowCarousel={setShowCarousel}
+                                                       onGoingRequest={onGoingRequest}
+                                                       setOnGoingRequest={setOnGoingRequest}/>}
                             </div>
                         </div>
                     </div>

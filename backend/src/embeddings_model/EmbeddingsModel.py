@@ -28,6 +28,15 @@ class EmbeddingsModel(ABC):
         pass
 
     @abstractmethod
+    def getImageEmbeddings(self, image) -> torch.Tensor | np.ndarray:
+        """
+        Return image embedding of an image.
+        :param image: Image to embed.
+        :return: Embeddings for image.
+        """
+        pass
+
+    @abstractmethod
     def processData(self, data):
         """
         Return the inputs to the embeddings_model which generates the encodings.

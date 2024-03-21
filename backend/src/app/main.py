@@ -1,7 +1,7 @@
 import logging
 from io import BytesIO
 
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, File, UploadFile
 from fastapi.responses import Response
 from fastapi_utils.timing import add_timing_middleware
 from pymilvus import db, MilvusException
@@ -198,3 +198,23 @@ def get_compressed_image(path: str, quality: int):
     except Exception:
         # Error in fetching image
         raise HTTPException(status_code=404, detail="Image not found")
+
+
+@app.post("/api/image-image")
+async def get_image_from_image(file: UploadFile = File(...),
+                               collection: Collection = Depends(dataset_collection_name_getter)):
+    if collection is None:
+        # Collection not found, return 404
+        raise HTTPException(status_code=404, detail="Collection not found")
+    else:
+        try:
+            # Get image
+            image_data = await file.read()
+            # Get image embedding
+            image_embedding = embeddings.embeddings.getImageEmbeddings(Image.open(BytesIO(image_data)))
+            # Collection found, return image path
+            data = gets.get_image_info_from_image_embedding(collection, image_embedding)
+            return data
+        except MilvusException:
+            # Milvus error, return code 505
+            raise HTTPException(status_code=505, detail="Milvus error")

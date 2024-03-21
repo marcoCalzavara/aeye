@@ -144,7 +144,7 @@ def get_neighbors(index: int, collection: Collection, top_k: int) -> List[dict]:
         anns_field=EMBEDDING_VECTOR_FIELD_NAME,
         param=search_params,
         limit=top_k + 1,
-        output_fields=["index", "author", "path", "width", "height", "genre", "date", "title", "caption"]
+        output_fields=["index", "author", "path", "width", "height", "genre", "date", "title", "caption", "x", "y"]
     )
     # Return results
     return [hit.to_dict()["entity"] for hit in results[0]]
@@ -221,3 +221,27 @@ def get_random_image(num: float, collection: Collection) -> dict:
     )
     # Return results
     return results[0]
+
+
+def get_image_info_from_image_embedding(collection: Collection, image_embeddings: torch.Tensor) -> dict:
+    """
+    Get the image from the collection for a given image embedding.
+    @param collection:
+    @param image_embeddings:
+    @return:
+    """
+    # Define search parameters
+    search_params = {
+        "metric_type": COSINE_METRIC,
+        "offset": 0
+    }
+    # Search image
+    results = collection.search(
+        data=image_embeddings.tolist(),
+        anns_field=EMBEDDING_VECTOR_FIELD_NAME,
+        param=search_params,
+        limit=1,
+        output_fields=["index", "author", "path", "width", "height", "genre", "date", "title", "caption", "x", "y"]
+    )
+    # Return image path
+    return results[0][0].to_dict()["entity"]

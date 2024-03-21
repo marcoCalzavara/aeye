@@ -127,7 +127,9 @@ const NeighborsCarousel = (props) => {
                         index: image.index,
                         author: image.author,
                         width: image.width,
-                        height: image.height
+                        height: image.height,
+                        x: image.x,
+                        y: image.y
                     }
                     // noinspection JSUnresolvedVariable
                     if (image.genre !== undefined)
@@ -165,14 +167,22 @@ const NeighborsCarousel = (props) => {
         setImages([]);
     }, [props.selectedDataset]);
 
+
+
     return (
         <>
             {/* Place space for the main image of the carousel */}
             {height > 500 && image &&
                 <MainImageCard image={image}
                                placeholderSrc={getUrlForImage(image.path, selectedDataset.current, props.host)}
-                               src={`${props.host}/${selectedDataset.current}/${image.path}`}/>
-
+                               src={`${props.host}/${selectedDataset.current}/${image.path}`}
+                               host={props.host}
+                               selectedDataset={selectedDataset.current}
+                               setSearchData={props.setSearchData}
+                               setShowCarousel={props.setShowCarousel}
+                               onGoingRequest={props.onGoingRequest}
+                               setOnGoingRequest={props.setOnGoingRequest}
+                />
             }
             {height > 500 &&
                 <div className="w-full h-carousel flex flex-row justify-center items-center pointer-events-none">
@@ -261,7 +271,13 @@ const NeighborsCarousel = (props) => {
                                         key={index} onClick={() => {}} onTouchStart={() => {}}>
                                 <MainImageCard image={image}
                                                placeholderSrc={getUrlForImage(image.path, selectedDataset.current, props.host)}
-                                               src={`${props.host}/${selectedDataset.current}/${image.path}`}/>
+                                               src={`${props.host}/${selectedDataset.current}/${image.path}`}
+                                               host={props.host}
+                                               selectedDataset={selectedDataset.current}
+                                               setSearchData={props.setSearchData}
+                                               setShowCarousel={props.setShowCarousel}
+                                               onGoingRequest={props.onGoingRequest}
+                                               setOnGoingRequest={props.setOnGoingRequest}/>
                             </div>
                         })}
                     </Carousel>

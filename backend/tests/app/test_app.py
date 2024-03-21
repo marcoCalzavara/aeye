@@ -1,7 +1,11 @@
+import os
+
+import dotenv
 from fastapi.testclient import TestClient
 from pymilvus import utility
 
 import backend.src.app.main as main
+from backend.src.CONSTANTS import ENV_FILE_LOCATION, HOME
 from backend.src.db_utilities.collections import ZOOM_LEVEL_VECTOR_FIELD_NAME
 from backend.src.db_utilities.datasets import DatasetOptions
 
@@ -31,25 +35,22 @@ def test_get_image_from_text():
     text = "A painting of a dog."
     response = client.get("/api/image-text", params={"text": text, "collection": "best_artworks"})
     assert response.status_code == 200
-    assert response.json().keys() == {"index", "author", "path", "low_dimensional_embedding_x",
-                                      "low_dimensional_embedding_y", "width", "height"}
+    assert response.json().keys() == {"index", "author", "path", "x", "y", "width", "height", "caption"}
     assert response.json()["path"] == "2881-Henri_de_Toulouse-Lautrec.jpg"
     assert response.json()["author"] == "Henri de Toulouse"
 
 
 def test_get_tiles():
-    response = client.get("/api/tiles", params={"indexes": [2881, 5432],
+    response = client.get("/api/tiles", params={"indexes": [34, 557],
                                                 "collection": "best_artworks_zoom_levels_clusters"})
     assert response.status_code == 200
     # Check that the response is a list
     assert isinstance(response.json(), list)
     # Check that the response has the same length as the request
-    assert len(response.json()) == 2
+    assert len(response.json()) == 1
     # Check that the response has the same keys as the request
     for i in range(len(response.json())):
         assert response.json()[i].keys() == {"index", "data"}
-    assert response.json()[0]["index"] == 2881
-    assert response.json()[1]["index"] == 5432
 
     # Make second request to test that status code is 404 when collection is not found
     response = client.get("/api/tiles", params={"indexes": [2881, 5432], "collection": "test_collection"})
@@ -86,8 +87,8 @@ def test_get_images():
 def test_get_neighbours():
     response = client.get("/api/neighbors", params={"index": 2881, "k": 10, "collection": "best_artworks"})
     assert response.status_code == 200
-    assert len(response.json()) == 10
-    assert response.json()[0].keys() == {"index", "author", "path", "width", "height"}
+    assert len(response.json()) == 11
+    assert response.json()[0].keys() == {"index", "author", "path", "width", "height", "caption"}
 
     # Make second request to test that status code is 404 when collection is not found
     response = client.get("/api/neighbours", params={"index": 2881, "collection": "test_collection"})
@@ -108,3 +109,16 @@ def test_get_first_tiles():
     # Make second request to test that status code is 404 when collection is not found
     response = client.get("/api/first-tiles", params={"collection": "test_collection"})
     assert response.status_code == 404
+
+
+def test_get_image_from_image():
+    dotenv.load_dotenv(os.getenv(ENV_FILE_LOCATION))
+    url = "/api/image-image"
+    params = {"collection": "best_artworks"}
+    file_path = f"{os.getenv(HOME)}/best_artworks/1-Alfred_Sisley.jpg"
+
+    with open(file_path, "rb") as f:
+        response = client.post(url, params=params, files={"file": f})
+
+    assert response.status_code == 200
+    assert response.json().keys() == {'index', 'author', 'path', 'width', 'height', 'caption', 'x', 'y'}

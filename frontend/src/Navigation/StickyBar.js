@@ -39,6 +39,8 @@ const StickyBar = (props) => {
                            searchBarIsClicked={props.searchBarIsClicked}
                            setSearchBarIsClicked={props.setSearchBarIsClicked}
                            searchBarIsBlocked={props.searchBarIsBlocked}
+                           onGoingRequest={props.onGoingRequest}
+                           setOnGoingRequest={props.setOnGoingRequest}
                 />
             }
             <div>

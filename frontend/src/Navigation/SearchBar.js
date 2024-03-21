@@ -5,10 +5,9 @@ import {IconButton, InputBase} from "@mui/material";
 export default function SearchBar(props) {
     const [inputValue, setInputValue] = useState("");
     const host = useRef(props.host);
-    const ongoingRequest = useRef(false);
 
-    const sendText = (text, signal) => {
-        ongoingRequest.current = true;
+    const sendText = (text) => {
+        props.setOnGoingRequest(true);
         let url = host.current + '/api/image-text?collection=' + props.selectedDataset + '&text=' + text + '&page=1';
         const options = {
             method: 'GET',
@@ -51,12 +50,12 @@ export default function SearchBar(props) {
                 // Set result in parent component
                 props.setShowCarousel(false);
                 props.setSearchData(groupedResult);
-                ongoingRequest.current = false;
+                props.setOnGoingRequest(false);
             })
             .catch(error => {
                 // Handle any errors that occur during the fetch operation
                 console.error('Error:', error);
-                ongoingRequest.current = false;
+                props.setOnGoingRequest(false);
             });
     };
 
@@ -73,7 +72,7 @@ export default function SearchBar(props) {
         if (inputValue !== "") {
             if (!props.searchBarIsClicked)
                 props.setSearchBarIsClicked(true);
-            if (!props.searchBarIsBlocked && !ongoingRequest.current)
+            if (!props.searchBarIsBlocked && !props.onGoingRequest)
                 // noinspection JSIgnoredPromiseFromCall
                 sendText(inputValue);
         }

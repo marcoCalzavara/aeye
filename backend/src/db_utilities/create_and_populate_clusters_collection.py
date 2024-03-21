@@ -1,5 +1,4 @@
 import getpass
-import json
 import os
 import sys
 
@@ -23,13 +22,6 @@ Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 MAX_IMAGES_PER_TILE = 40
 NUMBER_OF_CLUSTERS = 30
 THRESHOLD = 0.8
-
-
-class NumpyEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.float32):
-            return float(obj)
-        return json.JSONEncoder.default(self, obj)
 
 
 def load_vectors_from_collection(collection: Collection) -> list | None:
@@ -60,6 +52,7 @@ def load_vectors_from_collection(collection: Collection) -> list | None:
 
 
 def create_clusters_collection(zoom_levels,
+                               images_to_tile,
                                collection_name: str,
                                repopulate: bool) -> None:
     if utility.has_collection(collection_name) and repopulate:
@@ -86,7 +79,7 @@ def create_clusters_collection(zoom_levels,
                         "y": float(representative["representative"]["y"]),
                         "width": int(representative["representative"]["width"]),
                         "height": int(representative["representative"]["height"]),
-                        "in_previous": bool(representative["in_previous"])
+                        "zoom": int(images_to_tile[representative["representative"]["index"]][0])
                     }
                     new_representatives.append(new_representative)
 
@@ -665,7 +658,7 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                                 zoom_level, tile_x_index, tile_y_index
                             ]
 
-    create_clusters_collection(zoom_levels, zoom_levels_collection_name, repopulate)
+    create_clusters_collection(zoom_levels, images_to_tile, zoom_levels_collection_name, repopulate)
     create_image_to_tile_collection(images_to_tile, images_to_tile_collection_name, repopulate)
 
 

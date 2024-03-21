@@ -123,7 +123,8 @@ function getStyle(expanded, heightAndWidth) {
 }
 
 
-export default function MainImageCard({image, placeholderSrc, src}) {
+export default function MainImageCard({image, placeholderSrc, src, host, selectedDataset,
+                                          setSearchData, setShowCarousel, onGoingRequest, setOnGoingRequest}) {
     const [heightAndWidth, setHeightAndWidth] = React.useState({height: 0, width: 0});
     const [expanded, setExpanded] = React.useState(false);
     const [height, setHeight] = React.useState(window.innerHeight);
@@ -171,6 +172,13 @@ export default function MainImageCard({image, placeholderSrc, src}) {
                         width={(heightAndWidth.width - MARGIN * 2) + 'px'}
                         height={(heightAndWidth.height * 0.9 - MARGIN * 2) + 'px'}
                         margin={MARGIN}
+                        image={image}
+                        host={host}
+                        selectedDataset={selectedDataset}
+                        setSearchData={setSearchData}
+                        setShowCarousel={setShowCarousel}
+                        onGoingRequest={onGoingRequest}
+                        setOnGoingRequest={setOnGoingRequest}
                     />
                     <div style={getStyle(expanded, heightAndWidth)}>
                         <TextArea

@@ -4,7 +4,7 @@ import os
 from abc import ABC, abstractmethod
 from enum import Enum
 
-import deeplake
+# import deeplake
 import numpy as np
 import torch
 from PIL import Image
@@ -112,6 +112,23 @@ def best_artworks_collate_fn(batch):
         return
 
 
+def celebahq_collate_fn(batch):
+    try:
+        return {
+            "images": {key: torch.cat([x["images"][key] if isinstance(x["images"][key], torch.Tensor)
+                                       else torch.Tensor(np.array(x["images"][key])) for x in batch], dim=0).detach()
+                       for key in batch[0]["images"].keys()},
+            "index": [x["index"] for x in batch],
+            "path": [x["path"] for x in batch],
+            "width": [x["width"] for x in batch],
+            "height": [x["height"] for x in batch]
+        }
+    except Exception as e:
+        print(e.__str__())
+        print("Error in collate_fn of celebahq.")
+        return
+
+
 # SUPPORT DATASET FOR IMAGES
 
 class SupportDatasetForImages(TorchDataset):
@@ -123,7 +140,7 @@ class SupportDatasetForImages(TorchDataset):
             if not os.path.isdir(os.path.join(self.root_dir, file)):
                 self.file_list.append(file)
 
-        # Check that filenames start with a number, and that the indexes go from 0 to len(file_list) - 1
+        # Check that filenames start with a number
         for file in self.file_list:
             if not file.split(separator)[0].isdigit():
                 raise Exception("Filenames must start with a number.")
@@ -221,6 +238,27 @@ class SupportDatasetForImagesWikiArt(SupportDatasetForImages):
         return return_value
 
 
+class SupportDatasetForImagesCelebAHQ(SupportDatasetForImages):
+    def __init__(self, root_dir):
+        super().__init__(root_dir, "_")
+
+    def __getitem__(self, idx):
+        img_name = os.path.join(self.root_dir, self.file_list[idx])
+        # Get image height and width
+        image = Image.open(img_name)
+        width, height = image.size
+        if self.transform:
+            image = self.transform(image)
+
+        return {
+            'images': image,
+            'index': idx,
+            'path': self.file_list[idx],
+            'width': width,
+            'height': height
+        }
+
+
 class SupportSamplerForImages(Sampler):
     def __init__(self, data_source, indices):
         super().__init__(data_source)
@@ -240,6 +278,7 @@ class DatasetOptions(Enum):
     WIKIART = {"name": "wikiart", "collate_fn": wikiart_collate_fn, "zoom_levels": 10, "directory": WIKIART_DIR}
     BEST_ARTWORKS = {"name": "best_artworks", "collate_fn": best_artworks_collate_fn, "zoom_levels": 7,
                      "directory": BEST_ARTWORKS_DIR}
+    # CELEBAHQ = {"name": "celebahq", "collate_fn": celebahq_collate_fn, "zoom_levels": 0, "directory": CELEBAHQ_DIR}
 
 
 # DATASET ABSTRACT CLASS
@@ -265,7 +304,7 @@ class Dataset(ABC):
 # DATASET CLASSES
 
 class WikiArtDataset(Dataset):
-    def __init__(self, dataset: deeplake.Dataset, collate_fn):
+    def __init__(self, dataset, collate_fn):
         super().__init__(dataset, collate_fn)
 
     def get_size(self):
@@ -354,6 +393,11 @@ def get_dataset_object(dataset_name) -> Dataset:
         ds = SupportDatasetForImagesBestArtworks(os.getenv(BEST_ARTWORKS_DIR))
         # Create and return dataset object
         return LocalArtworksDataset(ds, DatasetOptions.BEST_ARTWORKS.value["collate_fn"])
+    elif dataset_name == DatasetOptions.CELEBAHQ.value["name"]:
+        # Create SupportDatasetForImages object
+        ds = SupportDatasetForImagesCelebAHQ(os.getenv(CELEBAHQ_DIR))
+        # Create and return dataset object
+        return LocalArtworksDataset(ds, DatasetOptions.CELEBAHQ.value["collate_fn"])
     else:
         # TODO add support for other datasets
         pass

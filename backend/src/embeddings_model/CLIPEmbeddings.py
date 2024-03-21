@@ -34,6 +34,15 @@ class ClipEmbeddings(EmbeddingsModel, ABC):
         except Exception as e:
             print(e.__str__())
 
+    def getImageEmbeddings(self, image):
+        try:
+            # Get image inputs
+            inputs = self.processor(images=image, return_tensors="pt").to(self.device)
+            # Return _embeddings
+            return self.model.get_image_features(**inputs)
+        except Exception as e:
+            print(e.__str__())
+
     def processData(self, data):
         # Return inputs for CLIP embeddings_model
         try:
