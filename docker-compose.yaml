@@ -81,6 +81,7 @@ services:
       - ./backend/src:/code/src
       - ../best_artworks:/best_artworks
       - ../wikiart:/wikiart
+      - ../celeba_hq:/celeba_hq
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
@@ -113,6 +114,7 @@ services:
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template
       - ../best_artworks:/usr/share/nginx/best_artworks
       - ../wikiart:/usr/share/nginx/wikiart
+      - ../celeba_hq:/usr/share/nginx/celeba_hq
     ports:
       - "80:80"
     depends_on:

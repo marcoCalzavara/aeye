@@ -48,6 +48,9 @@ find /best_artworks -type f -exec chmod 755 {} \;
 chmod 755 /wikiart
 find /wikiart -type d -exec chmod 755 {} \;
 find /wikiart -type f -exec chmod 755 {} \;
+chmod 755 /celeba_hq
+find /celeba_hq -type d -exec chmod 755 {} \;
+find /celeba_hq -type f -exec chmod 755 {} \;
 
 # Create default database
 echo "Creating default database..."
