@@ -30,8 +30,11 @@ const getHeightAndWidthOfMainImage = (height, width) => {
 }
 
 const generateText = (image) => {
-    const author = image.author.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-    let text = "Author: " + author + ".   ";
+    let text = "";
+    if (image.author !== undefined) {
+        const author = image.author.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        text += "Author: " + author + ".   ";
+    }
     if (image.title !== undefined) {
         // Capitalize first letter of each word
         const title = image.title.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
