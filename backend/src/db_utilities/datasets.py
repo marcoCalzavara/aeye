@@ -278,7 +278,7 @@ class DatasetOptions(Enum):
     WIKIART = {"name": "wikiart", "collate_fn": wikiart_collate_fn, "zoom_levels": 10, "directory": WIKIART_DIR}
     BEST_ARTWORKS = {"name": "best_artworks", "collate_fn": best_artworks_collate_fn, "zoom_levels": 7,
                      "directory": BEST_ARTWORKS_DIR}
-    CELEBAHQ = {"name": "celebahq", "collate_fn": celebahq_collate_fn, "zoom_levels": 0, "directory": CELEBAHQ_DIR}
+    CELEBAHQ = {"name": "celebahq", "collate_fn": celebahq_collate_fn, "zoom_levels": 9, "directory": CELEBAHQ_DIR}
 
 
 # DATASET ABSTRACT CLASS
