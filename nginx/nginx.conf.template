@@ -80,9 +80,9 @@ http {
             alias /usr/share/nginx/wikiart/;
         }
 
-        location /celeba_hq/ {
+        location /celebahq/ {
             add_header Access-Control-Allow-Origin *;
-            alias /usr/share/nginx/celeba_hq/;
+            alias /usr/share/nginx/celebahq/;
         }
     }
 }
