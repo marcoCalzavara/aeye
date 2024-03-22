@@ -72,9 +72,6 @@ services:
       dockerfile: Dockerfile
     environment:
       - BACKEND_PORT=${BACKEND_PORT}
-      - WIKIART_COLLECTION=${WIKIART_COLLECTION}
-      - BEST_ARTWORKS_COLLECTION=${BEST_ARTWORKS_COLLECTION}
-      - CELEBAHQ_COLLECTION=${CELEBAHQ_COLLECTION}
       - MILVUS_IP=milvus-standalone
       - MILVUS_PORT=${MILVUS_PORT}
     volumes:
