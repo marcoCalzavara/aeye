@@ -50,6 +50,8 @@ const UNAVAILABLE_TILES_THRESHOLD = 15;
 const ClustersMap = (props) => {
     // Define state for the selected dataset
     const selectedDataset = useRef(props.selectedDataset);
+    // Define ref for max zoom level
+    const maxZoomLevel = useRef(2);
     // Define state for the effective position of the stage. The change of the effective position of the stage does not
     // necessary trigger a re-rendering of the stage.
     const effectivePosition = useRef({x: 0, y: 0});
@@ -298,7 +300,7 @@ const ClustersMap = (props) => {
         }
     }
 
-    const makeSpritePulse = (sprite) => {
+    const makeSpritePulse = (sprite, selectedDatasetAtCall) => {
         // Make the image pulse for 4 seconds
         const ticker = new PIXI.Ticker();
         const originalWidth = sprite.width;
@@ -311,10 +313,14 @@ const ClustersMap = (props) => {
             const now = performance.now();
             const elapsed = (now - startTime) / 1000; // convert to seconds
 
-            if (elapsed > DURATION) {
+            if (elapsed > DURATION || selectedDatasetAtCall !== selectedDataset.current) {
                 // Decrease z-index of sprite
                 sprite.zIndex = 10;
-                // Stop the ticker after 5 seconds
+                if (sprite.width !== originalWidth)
+                    sprite.width = originalWidth;
+                if (sprite.height !== originalHeight)
+                    sprite.height = originalHeight;
+                // Stop the ticker
                 ticker.stop();
             } else {
                 // Calculate scale factor using a sine function
@@ -403,8 +409,8 @@ const ClustersMap = (props) => {
     const scaleSprite = (index) => {
         // Get scale
         let scale = 1;
-        const zoom_level = Math.min(depth.current >= 0 ? zoomLevel.current + 1 : zoomLevel.current, props.maxZoomLevel);
-        if (spritesGlobalInfo.current.get(index).zoom >= zoom_level && !(zoomLevel.current === props.maxZoomLevel && depth.current === 0)) {
+        const zoom_level = Math.min(depth.current >= 0 ? zoomLevel.current + 1 : zoomLevel.current, maxZoomLevel.current);
+        if (spritesGlobalInfo.current.get(index).zoom >= zoom_level && !(zoomLevel.current === maxZoomLevel.current && depth.current === 0)) {
             if (depth.current >= 0) {
                 scale = 1 / (2 ** (1 - depth.current));
             } else {
@@ -546,8 +552,8 @@ const ClustersMap = (props) => {
                 });
         }
 
-        const zoom_level = Math.min(depth.current >= 0 ? zoomLevel.current + 1 : zoomLevel.current, props.maxZoomLevel);
-        if (zoom >= zoom_level && !(zoomLevel.current === props.maxZoomLevel && depth.current === 0)) {
+        const zoom_level = Math.min(depth.current >= 0 ? zoomLevel.current + 1 : zoomLevel.current, maxZoomLevel.current);
+        if (zoom >= zoom_level && !(zoomLevel.current === maxZoomLevel.current && depth.current === 0)) {
             // Add sprite to background container
             containerBackground.current.addChild(sprite);
             spriteIsInForeground.current.set(index, false);
@@ -576,9 +582,6 @@ const ClustersMap = (props) => {
     const reset = () => {
         // Stop momentum translation ticker if it is active
         stopMomentumTranslationTicker();
-        // Reset zoom level
-        zoomLevel.current = 0;
-        depth.current = 0;
         // Remove all children from stage
         app.stage.removeChildren();
         // Set containers to null
@@ -712,6 +715,12 @@ const ClustersMap = (props) => {
             .then((range) => {
                 // Set abort controller to null
                 abortControllerFirstTiles.current = null;
+
+                // Reset zoom level
+                zoomLevel.current = 0;
+                depth.current = 0;
+                maxZoomLevel.current = props.maxZoomLevel;
+
                 // Get cluster data for the first zoom level
                 const data = tilesCache.current.get("0-0-0");
 
@@ -805,7 +814,7 @@ const ClustersMap = (props) => {
             if (error.name !== 'AbortError')
                 console.error('Error fetching first tiles:', error);
         });
-    }, [props.selectedDataset]);
+    }, [props.selectedDataset, props.maxZoomLevel]);
 
     useEffect(() => {
         // Update ref for clicked search bar
@@ -937,7 +946,7 @@ const ClustersMap = (props) => {
         // is_ticker is 0 for normal behavior, 1 for translation ticker, 2 for zoom ticker
         // Get zoom level. Obs: We keep as tiles on stage the tiles at the next zoom level. This is because these tiles
         // also contain the artworks from the current zoom level.
-        const next_zoom_level = Math.min(depth.current >= 0 ? zoomLevel.current + 1 : zoomLevel.current, props.maxZoomLevel);
+        const next_zoom_level = Math.min(depth.current >= 0 ? zoomLevel.current + 1 : zoomLevel.current, maxZoomLevel.current);
 
         const number_of_tiles = 2 ** next_zoom_level;
         const tile_step_x = (maxX.current - minX.current) / number_of_tiles;
@@ -950,13 +959,13 @@ const ClustersMap = (props) => {
         // Get indexes of tiles to fetch
         let indexes;
         if (is_ticker === 0)
-            indexes = getTilesToFetch(tile_x, tile_y, next_zoom_level, props.maxZoomLevel, tilesCache.current);
+            indexes = getTilesToFetch(tile_x, tile_y, next_zoom_level, maxZoomLevel.current, tilesCache.current);
         else if (is_ticker === 1)
             // Translation ticker behavior. Fetch only tiles at the current zoom level.
             indexes = getTilesForTranslationTicker(tile_x, tile_y, next_zoom_level, tilesCache.current);
         else if (is_ticker === 2)
             // Zoom ticker behavior. Fetch tiles at the next zoom level.
-            indexes = getTilesForZoomTicker(tile_x, tile_y, next_zoom_level, props.maxZoomLevel, tilesCache.current);
+            indexes = getTilesForZoomTicker(tile_x, tile_y, next_zoom_level, maxZoomLevel.current, tilesCache.current);
 
         // Filter out the indexes that are in the cache or in the pending tiles
         let tile;
@@ -1031,7 +1040,7 @@ const ClustersMap = (props) => {
                         count_visible += sprites.current.get(index).visible ? 1 : 0;
                     } else {
                         // Check if sprite should be moved to the foreground or background
-                        if (spritesGlobalInfo.current.get(index).zoom === next_zoom_level && !(zoomLevel.current === props.maxZoomLevel && depth.current === 0)) {
+                        if (spritesGlobalInfo.current.get(index).zoom === next_zoom_level && !(zoomLevel.current === maxZoomLevel.current && depth.current === 0)) {
                             // Move sprite to background
                             if (spriteIsInForeground.current.get(index))
                                 moveSpriteToBackground(index);
@@ -1156,17 +1165,17 @@ const ClustersMap = (props) => {
     }
 
     // Create function for making the sprite pulse once it becomes available
-    function pulseIfAvailable(spriteIndex) {
+    function pulseIfAvailable(spriteIndex, selectedDatasetAtCall) {
         const sprite = sprites.current.get(spriteIndex);
         if (sprite) {
             // Put sprite in front
             sprite.zIndex = 11;
-            makeSpritePulse(sprite);
+            makeSpritePulse(sprite, selectedDatasetAtCall);
         }
     }
 
     // Create function for managing translation ticker
-    const awaitTranslationTicker = (targetLocation) => {
+    const awaitTranslationTicker = (targetLocation, selectedDatasetAtCall) => {
         // Compute final position
         const final_effective_position_x = Math.max(
             Math.min(targetLocation.x - effectiveWidth.current / 2, maxX.current - effectiveWidth.current), minX.current);
@@ -1204,7 +1213,7 @@ const ClustersMap = (props) => {
                 // Check if position is equal to the target position.
                 if ((effectivePosition.current.x === final_effective_position_x
                         && effectivePosition.current.y === final_effective_position_y)
-                    || counter === transition_steps) {
+                    || counter === transition_steps || selectedDataset.current !== selectedDatasetAtCall) {
                     // Stop ticker
                     translation_ticker.stop();
                     // Update stage
@@ -1232,7 +1241,7 @@ const ClustersMap = (props) => {
     }
 
     // Create function for managing zoom ticker
-    const awaitZoomTicker = (tile, targetLocation) => {
+    const awaitZoomTicker = (tile, targetLocation, selectedDatasetAtCall) => {
         // Compute total depth that has to be added or subtracted to get to the correct zoom level.
         let total_depth = tile[0] - zoomLevel.current - depth.current;
         // Compute total number of steps
@@ -1247,7 +1256,7 @@ const ClustersMap = (props) => {
             let counter = 0;
 
             zoom_ticker.add(() => {
-                if (counter === total_steps) {
+                if (counter === total_steps || selectedDataset.current !== selectedDatasetAtCall) {
                     // Stop ticker
                     zoom_ticker.stop();
                     // Update stage
@@ -1299,26 +1308,43 @@ const ClustersMap = (props) => {
         });
     }
 
+    const beforeReturnFromMoveToImage = () => {
+        containerForeground.current.interactive = true;
+        containerForeground.current.interactiveChildren = true;
+        // Unblock search bar
+        props.setSearchBarIsBlocked(false);
+    }
+
     // Make sprite pulse and open carousel
-    const finalStepsOfMoveToImage = (image) => {
+    const finalStepsOfMoveToImage = (image, selectedDatasetAtCall) => {
+        if (selectedDataset.current !== selectedDatasetAtCall) {
+            beforeReturnFromMoveToImage();
+            return;
+        }
         // 2. Pulse the sprite of the image that was clicked on.
         setTimeout(() => {
-            pulseIfAvailable(image.index);
+            if (selectedDataset.current !== selectedDatasetAtCall) {
+                beforeReturnFromMoveToImage();
+                return;
+            }
+            pulseIfAvailable(image.index, selectedDatasetAtCall);
         }, 100);
 
         // 3. Open the carousel after the transition is finished.
         setTimeout(() => {
+            if (selectedDataset.current !== selectedDatasetAtCall) {
+                beforeReturnFromMoveToImage();
+                return;
+            }
             openCarousel(image.index);
-            // Make container interactive again
-            containerForeground.current.interactive = true;
-            containerForeground.current.interactiveChildren = true;
-            // Unblock search bar
-            props.setSearchBarIsBlocked(false);
+            beforeReturnFromMoveToImage();
         }, DURATION * 1000 + 100);
     }
 
     // Create function for handling click on image or search
     const moveToImage = (tile, image) => {
+        // Save current reference of selected dataset
+        const selectedDatasetInit = selectedDataset.current;
         // Block search bar
         props.setSearchBarIsBlocked(true);
         // Stop momentum translation ticker if it is running
@@ -1342,28 +1368,52 @@ const ClustersMap = (props) => {
         let step_y = (final_effective_position_y - effectivePosition.current.y) / INITIAL_TRANSITION_STEPS;
 
         if (Math.max(Math.abs(step_x), Math.abs(step_y)) > 0.005) {
+            if (selectedDataset.current !== selectedDatasetInit) {
+                beforeReturnFromMoveToImage();
+                return;
+            }
             // 1. Transition to the first zoom level.
             awaitZoomTicker([0, 0, 0], {
                 x: effectivePosition.current.x + effectiveWidth.current / 2,
                 y: effectivePosition.current.y + effectiveHeight.current / 2
-            }).then(() => {
+            }, selectedDatasetInit).then(() => {
                 // 2.Transition to the image
-                awaitZoomTicker(tile, {x: image.x, y: image.y}).then(() => {
+                if (selectedDataset.current !== selectedDatasetInit) {
+                    beforeReturnFromMoveToImage();
+                    return;
+                }
+                awaitZoomTicker(tile, {x: image.x, y: image.y}, selectedDatasetInit).then(() => {
                     // 3. Transition to the new location in the embedding space without changing the zoom level.
-                    awaitTranslationTicker({x: image.x, y: image.y}).then(() => {
-                        finalStepsOfMoveToImage(image);
+                    if (selectedDataset.current !== selectedDatasetInit) {
+                        beforeReturnFromMoveToImage();
+                        return;
+                    }
+                    awaitTranslationTicker({x: image.x, y: image.y}, selectedDatasetInit).then(() => {
+                        finalStepsOfMoveToImage(image, selectedDatasetInit);
                     });
                 });
             });
         } else {
             // 1. Transition to the new location in the embedding space without changing the zoom level.
             // Wait for first translation ticker to finish
-            awaitTranslationTicker({x: image.x, y: image.y}).then(() => {
+            if (selectedDataset.current !== selectedDatasetInit) {
+                beforeReturnFromMoveToImage();
+                return;
+            }
+            awaitTranslationTicker({x: image.x, y: image.y}, selectedDatasetInit).then(() => {
                 // 2. Transition to the first zoom level.
-                awaitZoomTicker(tile, {x: image.x, y: image.y}).then(() => {
+                if (selectedDataset.current !== selectedDatasetInit) {
+                    beforeReturnFromMoveToImage();
+                    return;
+                }
+                awaitZoomTicker(tile, {x: image.x, y: image.y}, selectedDatasetInit).then(() => {
                     // 3.Transition to the image
-                    awaitTranslationTicker({x: image.x, y: image.y}).then(() => {
-                        finalStepsOfMoveToImage(image);
+                    if (selectedDataset.current !== selectedDatasetInit) {
+                        beforeReturnFromMoveToImage();
+                        return;
+                    }
+                    awaitTranslationTicker({x: image.x, y: image.y}, selectedDatasetInit).then(() => {
+                        finalStepsOfMoveToImage(image, selectedDatasetInit);
                     });
                 });
             });
@@ -1445,6 +1495,7 @@ const ClustersMap = (props) => {
 
     // Create handler for touch start and touch end
     const handleTouchStart = (event) => {
+        // console.log("Touch start", " Timestamp: ", Date.now())
         // Stop momentum translation ticker
         stopMomentumTranslationTicker();
         // Save touch position
@@ -1481,6 +1532,8 @@ const ClustersMap = (props) => {
 
     // Create handler for touch move
     const handleTouchMove = (event) => {
+        if (countOfPinching.current > 0) return;
+        // console.log("Touch move", " Timestamp: ", Date.now())
         // Update velocities
         updateVelocities(event);
         // Get mouse position. Transform movement of the mouse to movement in the embedding space.
@@ -1539,6 +1592,7 @@ const ClustersMap = (props) => {
     }
 
     const handleTouchEnd = async () => {
+        // console.log("Touch end ", countOfPinching.current, " Timestamp: ", Date.now())
         if (countOfPinching.current > 0) {
             touchVelocities.current = [];
             countOfPinching.current -= 1;
@@ -1599,6 +1653,7 @@ const ClustersMap = (props) => {
 
     // Handle pinch start. Only reset previous scale.
     const handlePinchStart = () => {
+        // console.log("Pinch start", " Timestamp: ", Date.now())
         countOfPinching.current += 1;
         previousScale.current = 1;
     };
@@ -1613,8 +1668,8 @@ const ClustersMap = (props) => {
         const delta = event.scale - previousScale.current;
         // Update previous scale
         previousScale.current = event.scale;
-        // Handle zoom
-        handleZoom(delta, event.center);
+        if (!(zoomLevel.current === maxZoomLevel.current && depth.current === 0 && delta > 0) && Math.abs(delta) > 0.0001)
+            handleZoom(delta, event.center);
     }
 
     // Create handler for mouse wheel. We change the zoom level only if the user scrolls until a certain value of change in
@@ -1647,7 +1702,7 @@ const ClustersMap = (props) => {
 
     const handleZoom = (delta, mousePosition) => {
         // Deal with border cases
-        if (zoomLevel.current === props.maxZoomLevel && depth.current + delta > 0) {
+        if (zoomLevel.current === maxZoomLevel.current && depth.current + delta > 0) {
             // Keep depth at 0
             depth.current = 0;
             changeLimitsOfEmbeddingSpace();
@@ -1709,7 +1764,7 @@ const ClustersMap = (props) => {
             // Change zoom level
             zoomLevel.current += Math.sign(depth.current);
             // Make sure the zoom level is within the limits
-            zoomLevel.current = Math.min(Math.max(zoomLevel.current, 0), props.maxZoomLevel);
+            zoomLevel.current = Math.min(Math.max(zoomLevel.current, 0), maxZoomLevel.current);
             // Reset depth
             depth.current = 0;
         }

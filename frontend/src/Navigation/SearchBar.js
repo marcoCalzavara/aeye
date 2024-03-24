@@ -64,12 +64,15 @@ export default function SearchBar(props) {
     };
 
     const handleEnter = (event) => {
-        if (event.key === 'Enter')
+        if (event.key === 'Enter') {
+            document.getElementById("search-bar").blur();
             handleClickSearch(event);
+        }
     }
 
     const handleClickSearch = () => {
         if (inputValue !== "") {
+            document.getElementById("search-bar").blur();
             if (!props.searchBarIsClicked)
                 props.setSearchBarIsClicked(true);
             if (!props.searchBarIsBlocked && !props.onGoingRequest)
@@ -79,7 +82,7 @@ export default function SearchBar(props) {
     };
 
     return (
-        <div className={`w-searchbar h-searchbar flex justify-between items-center z-10 bg-white rounded-full pointer-events-auto
+        <div id="search-bar" className={`w-searchbar h-searchbar flex justify-between items-center z-10 bg-white rounded-full pointer-events-auto
         ${props.searchBarIsClicked ? 'searchBarPositionTransition' : 'searchBarCentered'}`}>
             <InputBase
                 id="search-bar-id"
