@@ -12,7 +12,8 @@ import {
     getTilesToFetch
 } from "./utilities";
 import {getUrlForImage} from "../utilities";
-import {KawaseBlurFilter} from "@pixi/filter-kawase-blur";
+// import {KawaseBlurFilter} from "@pixi/filter-kawase-blur";
+import {BlurFilter} from "pixi.js";
 import ReactLoading from 'react-loading';
 import Typography from "@mui/material/Typography";
 import {createRoot} from "react-dom/client";
@@ -210,18 +211,18 @@ const ClustersMap = (props) => {
         const stage_x = ((global_x - effectivePosition.current.x) * (width.current - maxWidth.current)) / effectiveWidth.current - overflowX.current;
         const stage_y = ((global_y - effectivePosition.current.y) * (height.current - maxHeight.current)) / effectiveHeight.current - overflowY.current;
         return {
-            x: Math.round(stage_x),
-            y: Math.round(stage_y)
+            x: stage_x,
+            y: stage_y
         }
     }
 
     const mapStageCoordinatesToGlobalCoordinates = (stage_x, stage_y) => {
         // Map stage coordinates to global coordinates
-        const global_x = (stage_x * effectiveWidth.current) / stageWidth.current;
-        const global_y = (stage_y * effectiveHeight.current) / stageHeight.current;
+        const global_x = (stage_x + overflowX.current) * effectiveWidth.current / (width.current - maxWidth.current) + effectivePosition.current.x;
+        const global_y = (stage_y + overflowY.current) * effectiveHeight.current / (height.current - maxHeight.current) + effectivePosition.current.y;
         return {
-            x: global_x + effectivePosition.current.x,
-            y: global_y + effectivePosition.current.y
+            x: global_x,
+            y: global_y
         }
     }
 
@@ -421,8 +422,17 @@ const ClustersMap = (props) => {
         const width = spritesGlobalInfo.current.get(index).width;
         const height = spritesGlobalInfo.current.get(index).height;
         const aspect_ratio = width / height;
-        sprites.current.get(index).height = Math.round(maxHeight.current * scale);
-        sprites.current.get(index).width = Math.round(maxHeight.current * scale * aspect_ratio);
+
+        const width_sprite_non_scaled = maxHeight.current * aspect_ratio;
+        // Change size if the width is larger than the maximum width
+        if (width_sprite_non_scaled > maxWidth.current) {
+            sprites.current.get(index).width = Math.round(maxWidth.current * scale);
+            sprites.current.get(index).height = Math.round((maxWidth.current / aspect_ratio) * scale);
+        }
+        else {
+            sprites.current.get(index).height = Math.round(maxHeight.current * scale);
+            sprites.current.get(index).width = Math.round(maxHeight.current * scale * aspect_ratio);
+        }
     }
 
     const setSpriteHandlers = (sprite, index) => {
@@ -488,7 +498,7 @@ const ClustersMap = (props) => {
 
         // Define blur filter for the sprite, but deactivate it. The filter is only used for the sprites in the foreground
         // when the carousel is open.
-        sprite.filters = [new KawaseBlurFilter(BLUR_RADIUS_CAROUSEL, QUALITY)];
+        sprite.filters = [new BlurFilter(BLUR_RADIUS_CAROUSEL, QUALITY)];
         sprite.filters[0].enabled = false;
 
         // Get position of artwork in stage coordinates.
@@ -580,6 +590,8 @@ const ClustersMap = (props) => {
     }
 
     const reset = () => {
+        // Set roundPixels to true
+        app.renderer.roundPixels = true;
         // Stop momentum translation ticker if it is active
         stopMomentumTranslationTicker();
         // Remove all children from stage
@@ -642,6 +654,8 @@ const ClustersMap = (props) => {
     const setPropertiesOfContainer = (container, zIndex, isForeground) => {
         // Define container pointer
         container.cursor = isForeground ? 'grab' : 'default';
+        container.x = 0;
+        container.y = 0;
         // noinspection all
         container.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
         // noinspection all
@@ -678,7 +692,7 @@ const ClustersMap = (props) => {
         if (!containerForeground.current) {
             // Create container
             containerForeground.current = new PIXI.Container();
-            containerForeground.current.filters = [new KawaseBlurFilter(BLUR_RADIUS_CAROUSEL, QUALITY)];
+            containerForeground.current.filters = [new BlurFilter(BLUR_RADIUS_CAROUSEL, QUALITY)];
             containerForeground.current.filters[0].enabled = false;
             app.stage.addChild(containerForeground.current);
         }
@@ -686,9 +700,9 @@ const ClustersMap = (props) => {
             // Create container
             containerBackground.current = new PIXI.Container();
             // Define first filter for when the carousel is not shown
-            containerBackground.current.filters = [new KawaseBlurFilter(BLUR_RADIUS_MAX, QUALITY)];
+            containerBackground.current.filters = [new BlurFilter(BLUR_RADIUS_MAX, QUALITY)];
             // Define second filter for when the carousel is shown
-            containerBackground.current.filters.push(new KawaseBlurFilter(BLUR_RADIUS_CAROUSEL, QUALITY));
+            containerBackground.current.filters.push(new BlurFilter(BLUR_RADIUS_CAROUSEL, QUALITY));
             app.stage.addChild(containerBackground.current);
         }
 
@@ -942,7 +956,7 @@ const ClustersMap = (props) => {
         spritesGlobalInfo.current.delete(index);
     }
 
-    const updateStage = (is_ticker = 0) => {
+    const updateStage = (is_ticker = 0, delta_zoom = 0, shift_x = undefined, shift_y = undefined) => {
         // is_ticker is 0 for normal behavior, 1 for translation ticker, 2 for zoom ticker
         // Get zoom level. Obs: We keep as tiles on stage the tiles at the next zoom level. This is because these tiles
         // also contain the artworks from the current zoom level.
@@ -1050,17 +1064,23 @@ const ClustersMap = (props) => {
                         }
 
                         // Get position of artwork in stage coordinates.
-                        const artwork_position = mapGlobalCoordinatesToStageCoordinates(
-                            spritesGlobalInfo.current.get(index).x,
-                            spritesGlobalInfo.current.get(index).y
-                        );
+                        if (shift_x === undefined || shift_y === undefined) {
+                            const artwork_position = mapGlobalCoordinatesToStageCoordinates(
+                                spritesGlobalInfo.current.get(index).x,
+                                spritesGlobalInfo.current.get(index).y
+                            );
+                            // Update position of sprite if it varies from the current position by more than 1 pixel
+                            sprites.current.get(index).x = artwork_position.x;
+                            sprites.current.get(index).y = artwork_position.y;
+                        }
+                        else {
+                            sprites.current.get(index).x += shift_x;
+                            sprites.current.get(index).y += shift_y;
+                        }
 
-                        // Update position of sprite if it varies from the current position by more than 1 pixel
-                        sprites.current.get(index).x = artwork_position.x;
-                        sprites.current.get(index).y = artwork_position.y;
-
-                        // Set size of sprite
-                        scaleSprite(index);
+                        // Change size of sprite
+                        if (delta_zoom !== 0)
+                            scaleSprite(index);
 
                         // Make sprite not visible if outside the viewing area
                         const aspect_ratio = spritesGlobalInfo.current.get(index).width / spritesGlobalInfo.current.get(index).height;
@@ -1072,8 +1092,8 @@ const ClustersMap = (props) => {
                         count_visible += sprites.current.get(index).visible ? 1 : 0;
 
                         // Add texture to the sprite if the sprite is either in the visible area or in its immediate vicinity
-                        if (artwork_position.x > -3 * maxHeight.current * aspect_ratio && artwork_position.x <= stageWidth.current + 3 * maxHeight.current * aspect_ratio
-                            && artwork_position.y >= -3 * maxHeight.current && artwork_position.y <= stageHeight.current + 3 * maxHeight.current) {
+                        if (sprites.current.get(index).x > -3 * maxHeight.current * aspect_ratio && sprites.current.get(index).x <= stageWidth.current + 3 * maxHeight.current * aspect_ratio
+                            && sprites.current.get(index).y >= -3 * maxHeight.current && sprites.current.get(index).y <= stageHeight.current + 3 * maxHeight.current) {
                             if (!textureLoaded.current.get(index)) {
                                 // Set flag that texture has been loaded.
                                 textureLoaded.current.set(index, true);
@@ -1216,24 +1236,32 @@ const ClustersMap = (props) => {
                     || counter === transition_steps || selectedDataset.current !== selectedDatasetAtCall) {
                     // Stop ticker
                     translation_ticker.stop();
-                    // Update stage
-                    updateStage();
                     resolve();
                 } else {
                     // Check if adding the step would make us go over the target position. If so, set the position to the
                     // target position.
-                    if (Math.sign(step_x) === Math.sign(final_effective_position_x - effectivePosition.current.x))
+                    let shift_x;
+                    let shift_y;
+                    if (Math.sign(step_x) === Math.sign(final_effective_position_x - effectivePosition.current.x)) {
+                        shift_x = (step_x * (width.current - maxWidth.current)) / effectiveWidth.current;
                         effectivePosition.current.x += step_x;
-                    else
+                    }
+                    else {
+                        shift_x = ((final_effective_position_x - effectivePosition.current.x) * (width.current - maxWidth.current)) / effectiveWidth.current;
                         effectivePosition.current.x = final_effective_position_x;
-                    if (Math.sign(step_y) === Math.sign(final_effective_position_y - effectivePosition.current.y))
+                    }
+                    if (Math.sign(step_y) === Math.sign(final_effective_position_y - effectivePosition.current.y)) {
+                        shift_y = (step_y * (height.current - maxHeight.current)) / effectiveHeight.current;
                         effectivePosition.current.y += step_y;
-                    else
+                    }
+                    else {
+                        shift_y = ((final_effective_position_y - effectivePosition.current.y) * (height.current - maxHeight.current)) / effectiveHeight.current;
                         effectivePosition.current.y = final_effective_position_y;
+                    }
                     // Increment counter
                     counter++;
                     // Update stage
-                    updateStage(1);
+                    updateStage(1, 0, -shift_x, -shift_y);
                 }
             });
             translation_ticker.start();
@@ -1301,7 +1329,7 @@ const ClustersMap = (props) => {
                     // Update counter
                     counter++;
                     // Update stage
-                    updateStage(2);
+                    updateStage(2, delta);
                 }
             });
             zoom_ticker.start();
@@ -1467,29 +1495,37 @@ const ClustersMap = (props) => {
         }
     }
 
+    const handleMove = (event) => {
+        // Update velocities
+        updateVelocities(event);
+        // Get mouse position. Transform movement of the mouse to movement in the embedding space.
+        const mouse_x = ((-event.movementX) * effectiveWidth.current) / (width.current - maxWidth.current);
+        const mouse_y = ((-event.movementY) * effectiveHeight.current) / (height.current - maxHeight.current);
+        // Change the effective position of the stage. Make sure that it does not exceed the limits of the embedding space.
+        const new_x = Math.max(
+            Math.min(effectivePosition.current.x + mouse_x, maxX.current - effectiveWidth.current), minX.current);
+        const new_y = Math.max(
+            Math.min(effectivePosition.current.y + mouse_y, maxY.current - effectiveHeight.current), minY.current);
+
+        // Compute shift
+        const shift_x = ((new_x - effectivePosition.current.x) * (width.current - maxWidth.current)) / effectiveWidth.current;
+        const shift_y = ((new_y - effectivePosition.current.y) * (height.current - maxHeight.current)) / effectiveHeight.current;
+
+        // Update the effective position of the stage
+        effectivePosition.current.x = new_x;
+        effectivePosition.current.y = new_y;
+
+        // Update the data that is displayed on the stage. This consists of finding out the tiles that are visible,
+        // fetching the data from the server and putting on stage the sprites that are visible.
+        updateStage(0, 0, -shift_x, -shift_y);
+        // updateStageThrottled();
+    }
+
     // Create handler for mouse move
     const handleMouseMove = (event) => {
         // If mouse is down, then move the stage
         if (mouseDown.current) {
-            // Update velocities
-            updateVelocities(event);
-            // Get mouse position. Transform movement of the mouse to movement in the embedding space.
-            const mouse_x = ((-event.movementX) * effectiveWidth.current) / width.current;
-            const mouse_y = ((-event.movementY) * effectiveHeight.current) / height.current;
-            // Change the effective position of the stage. Make sure that it does not exceed the limits of the embedding space.
-            const new_x = Math.max(
-                Math.min(effectivePosition.current.x + mouse_x, maxX.current - effectiveWidth.current), minX.current);
-            const new_y = Math.max(
-                Math.min(effectivePosition.current.y + mouse_y, maxY.current - effectiveHeight.current), minY.current);
-
-            // Update the effective position of the stage
-            effectivePosition.current.x = new_x;
-            effectivePosition.current.y = new_y;
-
-            // Update the data that is displayed on the stage. This consists of finding out the tiles that are visible,
-            // fetching the data from the server and putting on stage the sprites that are visible.
-            updateStage();
-            // updateStageThrottled();
+            handleMove(event);
         }
     }
 
@@ -1534,25 +1570,7 @@ const ClustersMap = (props) => {
     const handleTouchMove = (event) => {
         if (countOfPinching.current > 0) return;
         // console.log("Touch move", " Timestamp: ", Date.now())
-        // Update velocities
-        updateVelocities(event);
-        // Get mouse position. Transform movement of the mouse to movement in the embedding space.
-        const mouse_x = ((-event.movementX) * effectiveWidth.current) / width.current;
-        const mouse_y = ((-event.movementY) * effectiveHeight.current) / height.current;
-        // Change the effective position of the stage. Make sure that it does not exceed the limits of the embedding space.
-        const new_x = Math.max(
-            Math.min(effectivePosition.current.x + mouse_x, maxX.current - effectiveWidth.current), minX.current);
-        const new_y = Math.max(
-            Math.min(effectivePosition.current.y + mouse_y, maxY.current - effectiveHeight.current), minY.current);
-
-        // Update the effective position of the stage
-        effectivePosition.current.x = new_x;
-        effectivePosition.current.y = new_y;
-
-        // Update the data that is displayed on the stage. This consists of finding out the tiles that are visible,
-        // fetching the data from the server and putting on stage the sprites that are visible.
-        updateStage();
-        // updateStageThrottled();
+        handleMove(event);
     }
 
     const momentumTranslation = (averageVelocityX, averageVelocityY, multiplicativeFactor) => {
@@ -1572,20 +1590,25 @@ const ClustersMap = (props) => {
                 if (momentum_translation_ticker.current !== null) {
                     momentum_translation_ticker.current.stop();
                     // Update stage
-                    updateStage();
+                    updateStage(0, 0, 0, 0);
                 }
             } else {
+                const effectivePositionX = effectivePosition.current.x;
+                const effectivePositionY = effectivePosition.current.y;
                 effectivePosition.current.x = Math.max(
                     Math.min(effectivePosition.current.x - averageVelocityX, maxX.current - effectiveWidth.current), minX.current);
                 effectivePosition.current.y = Math.max(
                     Math.min(effectivePosition.current.y - averageVelocityY, maxY.current - effectiveHeight.current), minY.current);
+                // Compute shift
+                const shift_x = (effectivePosition.current.x - effectivePositionX) * (width.current - maxWidth.current) / effectiveWidth.current;
+                const shift_y = (effectivePosition.current.y - effectivePositionY) * (height.current - maxHeight.current) / effectiveHeight.current;
                 // Increment counter
                 counter++;
                 // Decrease velocity
                 averageVelocityX *= 0.97;
                 averageVelocityY *= 0.97;
                 // Update stage
-                updateStage();
+                updateStage(0, 0, -shift_x, -shift_y);
             }
         });
         momentum_translation_ticker.current.start();
@@ -1703,17 +1726,25 @@ const ClustersMap = (props) => {
     const handleZoom = (delta, mousePosition) => {
         // Deal with border cases
         if (zoomLevel.current === maxZoomLevel.current && depth.current + delta > 0) {
+            if (depth.current < 0)
+                delta = -depth.current;
+            else
+                delta = 0;
             // Keep depth at 0
             depth.current = 0;
             changeLimitsOfEmbeddingSpace();
-            updateStage();
+            updateStage(0, delta, 0, 0);
             // updateStageThrottled();
             return;
         } else if (zoomLevel.current === 0 && depth.current + delta < 0) {
+            if (depth.current > 0)
+                delta = -depth.current;
+            else
+                delta = 0;
             // Keep depth at 0
             depth.current = 0;
             changeLimitsOfEmbeddingSpace();
-            updateStage();
+            updateStage(0, delta, 0, 0);
             // updateStageThrottled();
             return;
         }
@@ -1770,7 +1801,7 @@ const ClustersMap = (props) => {
         }
 
         // Update stage
-        updateStage();
+        updateStage(0, delta);
         // updateStageThrottled();
     }
 
