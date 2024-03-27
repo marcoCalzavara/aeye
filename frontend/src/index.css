@@ -22,11 +22,11 @@
     --m-canvas-top-1024: 20px;
     --m-canvas-top-1200: 20px;
 
-    --searchbar-width-320: 200px;
-    --searchbar-width-480: 300px;
-    --searchbar-width-768: 400px;
-    --searchbar-width-1024: 500px;
-    --searchbar-width-1200: 500px;
+    --searchbar-width-320: 250px;
+    --searchbar-width-480: 380px;
+    --searchbar-width-768: 500px;
+    --searchbar-width-1024: 600px;
+    --searchbar-width-1200: 600px;
 
     --searchbar-height-320: 30px;
     --searchbar-height-480: 30px;

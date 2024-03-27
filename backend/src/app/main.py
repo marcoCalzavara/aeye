@@ -201,8 +201,8 @@ def get_compressed_image(path: str, quality: int):
 
 
 @app.post("/api/image-image")
-async def get_image_from_image(file: UploadFile = File(...),
-                               collection: Collection = Depends(dataset_collection_name_getter)):
+async def get_image_from_image(collection: Collection = Depends(dataset_collection_name_getter),
+                               file: UploadFile = File(...)):
     if collection is None:
         # Collection not found, return 404
         raise HTTPException(status_code=404, detail="Collection not found")

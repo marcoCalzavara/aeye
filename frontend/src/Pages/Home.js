@@ -133,6 +133,10 @@ const Home = (props) => {
     const [pageHasChanged, setPageHasChanged] = useState(false);
     // Define ref for previous page
     const prevPage = useRef(props.page);
+    // Define state for making the stage not interactive during a search
+    const [stageIsInteractive, setStageIsInteractive] = useState(true);
+    // Define state for upload div open
+    const [uploadDivOpen, setUploadDivOpen] = useState(false);
 
     useEffect(() => {
         // Define function for updating the dimensions of the stage
@@ -207,6 +211,8 @@ const Home = (props) => {
                                searchBarIsBlocked={searchBarIsBlocked}
                                onGoingRequest={onGoingRequest}
                                setOnGoingRequest={setOnGoingRequest}
+                               setStageIsInteractive={setStageIsInteractive}
+                               setUploadDivOpen={setUploadDivOpen}
                     />
                     {/*<HamburgerMenu*/}
                     {/*    menuOpen={menuOpen}*/}
@@ -240,6 +246,10 @@ const Home = (props) => {
                                          setInitialLoadingDone={setInitialLoadingDone}
                                          searchBarIsClicked={props.searchBarIsClicked}
                                          setSearchBarIsBlocked={setSearchBarIsBlocked}
+                                         stageIsInteractive={stageIsInteractive}
+                                         setStageIsInteractive={setStageIsInteractive}
+                                         uploadDivOpen={uploadDivOpen}
+                                         setUploadDivOpen={setUploadDivOpen}
                             />
                         </Stage>
                         <div

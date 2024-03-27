@@ -5,9 +5,10 @@ import {
     height_transition,
     margin_between_images_bottom,
     responsive_carousel_heights,
-    responsive_heights,
     responsive_margins,
-    responsive_menu_item_heights
+    responsive_menu_item_heights,
+    responsive_searchbar_heights,
+    responsive_searchbar_widths
 } from "./CONSTANTS";
 
 /* FUNCTION TO GET CONSTANT VALUES */
@@ -29,7 +30,7 @@ export function getResponsiveMargin() {
     }
 }
 
-export function getResponsiveHeight() {
+/* export function getResponsiveHeight() {
     switch (true) {
         case document.documentElement.clientWidth >= 320 && document.documentElement.clientWidth <= 480:
             return responsive_heights.h_sticky_320;
@@ -44,7 +45,7 @@ export function getResponsiveHeight() {
         default:
             return responsive_heights.h_sticky_320;
     }
-}
+}*/
 
 export function getButtonSize() {
     return button_size;
@@ -100,6 +101,40 @@ export function getResponsiveCarouselHeight() {
         default:
             return responsive_carousel_heights.h_carousel_320;
     }
+}
+
+export function getResponsiveSearchBarHeight() {
+    switch (true) {
+        case document.documentElement.clientWidth >= 320 && document.documentElement.clientWidth <= 480:
+            return responsive_searchbar_heights.h_searchbar_320;
+        case document.documentElement.clientWidth > 480 && document.documentElement.clientWidth <= 768:
+            return responsive_searchbar_heights.h_searchbar_480;
+        case document.documentElement.clientWidth > 768 && document.documentElement.clientWidth <= 1024:
+            return responsive_searchbar_heights.h_searchbar_768;
+        case document.documentElement.clientWidth > 1024 && document.documentElement.clientWidth <= 1200:
+            return responsive_searchbar_heights.h_searchbar_1024;
+        case document.documentElement.clientWidth > 1200:
+            return responsive_searchbar_heights.h_searchbar_1200;
+        default:
+            return responsive_searchbar_heights.h_searchbar_320;
+    }
+}
+
+export function getResponsiveSearchBarWidth() {
+    switch (true) {
+        case document.documentElement.clientWidth >= 320 && document.documentElement.clientWidth <= 480:
+            return responsive_searchbar_widths.w_searchbar_320;
+        case document.documentElement.clientWidth > 480 && document.documentElement.clientWidth <= 768:
+            return responsive_searchbar_widths.w_searchbar_480;
+        case document.documentElement.clientWidth > 768 && document.documentElement.clientWidth <= 1024:
+            return responsive_searchbar_widths.w_searchbar_768;
+        case document.documentElement.clientWidth > 1024 && document.documentElement.clientWidth <= 1200:
+            return responsive_searchbar_widths.w_searchbar_1024;
+        case document.documentElement.clientWidth > 1200:
+            return responsive_searchbar_widths.w_searchbar_1200;
+        default:
+            return responsive_searchbar_widths.w_searchbar_320;
+    }
 
 }
 
@@ -119,8 +154,4 @@ export function getMaxHeightMainImage() {
 
 export function getUrlForImage(path, dataset, host = "") {
     return `${host}/${dataset}/resized_images/${path}`;
-}
-
-export function getUrlForBlurredImage(path, dataset, radius, host = "") {
-    return `${host}/images/blurred-image?path=/${dataset}/resized_images/${path}&radius=${radius}`;
 }

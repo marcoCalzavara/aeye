@@ -1,8 +1,8 @@
 import * as React from 'react';
+import {useEffect} from 'react';
 import {GoDatabase} from "react-icons/go";
 import {iconStyle, itemsStyle} from "../styles";
 import {Unstable_Popup as BasePopup} from '@mui/base/Unstable_Popup';
-import {useEffect} from "react";
 
 function cleanText(text) {
     // Split text on underscore
@@ -27,8 +27,7 @@ const SelectDataset = (props) => {
         const closePopup = (event) => {
             if (!event.target.id.endsWith("dataset") || event.target.id === undefined) {
                 setOpen(false);
-            }
-            else if (event.target.id === "icon-dataset") {
+            } else if (event.target.id === "icon-dataset") {
                 setOpen(true);
                 setAnchor(anchor ? null : event.target);
             }
@@ -42,6 +41,7 @@ const SelectDataset = (props) => {
     }, []);
 
     const handleChange = (dataset) => {
+        props.removeUploadDiv();
         setDataset(dataset);
         props.setSelectedDataset(dataset);
         setOpen(false);
@@ -64,7 +64,8 @@ const SelectDataset = (props) => {
                 <div id="div-dataset" className="flex flex-col justify-start items-start w-full h-full">
                     {dataset && props.datasets.map((d, index) => {
                         return (
-                            <button id={`button-${index}-dataset`} key={index} onTouchStart={() => handleChange(d)} onClick={() => handleChange(d)} style={
+                            <button id={`button-${index}-dataset`} key={index} onTouchStart={() => handleChange(d)}
+                                    onClick={() => handleChange(d)} style={
                                 {
                                     height: itemsStyle.height.replace("px", "") + "px",
                                     fontSize: itemsStyle.fontSize.replace("px", "") * 0.6 + "px",

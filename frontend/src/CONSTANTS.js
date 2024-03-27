@@ -43,3 +43,19 @@ export const responsive_carousel_heights = {
     h_carousel_1024: getComputedStyle(document.documentElement).getPropertyValue("--h-carousel-1024"),
     h_carousel_1200: getComputedStyle(document.documentElement).getPropertyValue("--h-carousel-1200"),
 };
+
+export const responsive_searchbar_heights = {
+    h_searchbar_320: getComputedStyle(document.documentElement).getPropertyValue("--searchbar-height-320"),
+    h_searchbar_480: getComputedStyle(document.documentElement).getPropertyValue("--searchbar-height-480"),
+    h_searchbar_768: getComputedStyle(document.documentElement).getPropertyValue("--searchbar-height-768"),
+    h_searchbar_1024: getComputedStyle(document.documentElement).getPropertyValue("--searchbar-height-1024"),
+    h_searchbar_1200: getComputedStyle(document.documentElement).getPropertyValue("--searchbar-height-1200"),
+};
+
+export const responsive_searchbar_widths = {
+    w_searchbar_320: getComputedStyle(document.documentElement).getPropertyValue("--searchbar-width-320"),
+    w_searchbar_480: getComputedStyle(document.documentElement).getPropertyValue("--searchbar-width-480"),
+    w_searchbar_768: getComputedStyle(document.documentElement).getPropertyValue("--searchbar-width-768"),
+    w_searchbar_1024: getComputedStyle(document.documentElement).getPropertyValue("--searchbar-width-1024"),
+    w_searchbar_1200: getComputedStyle(document.documentElement).getPropertyValue("--searchbar-width-1200"),
+};

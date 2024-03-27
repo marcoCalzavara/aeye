@@ -1,4 +1,4 @@
-import React, {useRef} from 'react';
+import React from 'react';
 import SearchBar from "./SearchBar";
 // import {Spin as Hamburger} from 'hamburger-react'
 import {TfiInfoAlt} from "react-icons/tfi";
@@ -7,7 +7,12 @@ import SelectDataset from "./SelectDataset";
 
 
 const StickyBar = (props) => {
-    const setSearchData = useRef(props.setSearchData);
+    const removeUploadDiv = () => {
+        if (document.getElementById('upload-div')) {
+            document.body.removeChild(document.getElementById('upload-div'));
+        }
+        props.setUploadDivOpen(false);
+    }
 
     return (
         <div
@@ -29,11 +34,13 @@ const StickyBar = (props) => {
                         justifyContent: "center"
                     }
                 }>
-                    <SelectDataset datasets={props.datasets} setSelectedDataset={props.setSelectedDataset}/>
+                    <SelectDataset datasets={props.datasets} setSelectedDataset={props.setSelectedDataset}
+                                   removeUploadDiv={removeUploadDiv}/>
                 </div>
             </div>
             {props.hasSearchBar &&
-                <SearchBar host={props.host} setSearchData={setSearchData.current}
+                <SearchBar host={props.host}
+                           setSearchData={props.setSearchData}
                            setShowCarousel={props.setShowCarousel}
                            selectedDataset={props.selectedDataset}
                            searchBarIsClicked={props.searchBarIsClicked}
@@ -41,12 +48,16 @@ const StickyBar = (props) => {
                            searchBarIsBlocked={props.searchBarIsBlocked}
                            onGoingRequest={props.onGoingRequest}
                            setOnGoingRequest={props.setOnGoingRequest}
+                           setStageIsInteractive={props.setStageIsInteractive}
+                           setUploadDivOpen={props.setUploadDivOpen}
+                           removeUploadDiv={removeUploadDiv}
                 />
             }
             <div>
                 {/*<Hamburger color={"white"} toggle={props.setMenuOpen} toggled={props.menuOpen}/>*/}
 
                 <div onClick={() => {
+                    removeUploadDiv();
                     props.setPage("about");
                 }} style={
                     {

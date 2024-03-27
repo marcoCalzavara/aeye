@@ -12,8 +12,7 @@ import {
     getTilesToFetch
 } from "./utilities";
 import {getUrlForImage} from "../utilities";
-// import {KawaseBlurFilter} from "@pixi/filter-kawase-blur";
-import {BlurFilter} from "pixi.js";
+import {KawaseBlurFilter} from "@pixi/filter-kawase-blur";
 import ReactLoading from 'react-loading';
 import Typography from "@mui/material/Typography";
 import {createRoot} from "react-dom/client";
@@ -99,7 +98,7 @@ const ClustersMap = (props) => {
     }));
     // Define set for pending tiles
     const pendingTiles = useRef(new Set());
-    // Define state for the app1
+    // Define state for the app
     const app = useApp();
     // Create container for the foreground
     const containerForeground = useRef(null);
@@ -137,8 +136,12 @@ const ClustersMap = (props) => {
     const unavailableTiles = useRef(0);
     // Define ref for knowing if the interaction was blocked
     const interactionWasBlocked = useRef(false);
+    // Define ref for upload div open
+    const uploadDivOpen = useRef(props.uploadDivOpen);
+    const prevUploadDivOpen = useRef(props.uploadDivOpen);
 
-    // FETCH OPERATIONS
+
+    // FETCHING OPERATIONS
     const fetchTiles = (indexes) => {
         // Create url
         const url = `${props.host}/api/tiles?indexes=${indexes.join(",")}&collection=${selectedDataset.current}_zoom_levels_clusters`;
@@ -206,6 +209,8 @@ const ClustersMap = (props) => {
             });
     }
 
+
+    // METHODS FOR MAPPING OF COORDINATES
     const mapGlobalCoordinatesToStageCoordinates = (global_x, global_y) => {
         // Map global coordinates to stage coordinates
         const stage_x = ((global_x - effectivePosition.current.x) * (width.current - maxWidth.current)) / effectiveWidth.current - overflowX.current;
@@ -226,27 +231,18 @@ const ClustersMap = (props) => {
         }
     }
 
+
+    // METHODS FOR MANAGING THE LOADING SPINNER FOR SLOW CONNECTIONS
     const hideContainers = () => {
         // Make foreground container not interactive
-        containerForeground.current.interactive = false;
-        containerForeground.current.interactiveChildren = false;
+        app.stage.interactive = false;
+        app.stage.interactiveChildren = false;
         containerForeground.current.cursor = 'default';
         // Set mouse down to false
         mouseDown.current = false;
         // Decrease alpha of both containers
         containerForeground.current.alpha = 0;
         containerBackground.current.alpha = 0;
-    }
-
-    const restoreContainers = () => {
-        // Make both containers interactive
-        containerForeground.current.interactive = true;
-        containerForeground.current.interactiveChildren = true;
-        if (containerForeground.current.cursor === 'default')
-            containerForeground.current.cursor = 'grab';
-        // Increase alpha of both containers
-        containerForeground.current.alpha = 1;
-        containerBackground.current.alpha = 1;
     }
 
     const addLoadingSpinner = () => {
@@ -281,7 +277,17 @@ const ClustersMap = (props) => {
         }
     }
 
-    // Function for blocking the interaction with the stage if there are too many unresolved promises
+    const restoreContainers = () => {
+        // Make both containers interactive
+        app.stage.interactive = true;
+        app.stage.interactiveChildren = true;
+        if (containerForeground.current.cursor === 'default')
+            containerForeground.current.cursor = 'grab';
+        // Increase alpha of both containers
+        containerForeground.current.alpha = 1;
+        containerBackground.current.alpha = 1;
+    }
+
     const blockInteraction = () => {
         if (!firstRenderCompleted.current) return;
         if (unavailableTiles.current >= UNAVAILABLE_TILES_THRESHOLD && pendingTiles.current.size > 0) {
@@ -291,61 +297,16 @@ const ClustersMap = (props) => {
         } else {
             if (interactionWasBlocked.current) {
                 updateStage();
+                if (document.getElementById("loading-div"))
+                    document.getElementById("loading-div").remove();
+                restoreContainers();
                 interactionWasBlocked.current = false;
             }
-            // Remove div for loading
-            if (document.getElementById("loading-div"))
-                document.getElementById("loading-div").remove();
-            
-            restoreContainers();
         }
     }
 
-    const makeSpritePulse = (sprite, selectedDatasetAtCall) => {
-        // Make the image pulse for 4 seconds
-        const ticker = new PIXI.Ticker();
-        const originalWidth = sprite.width;
-        const originalHeight = sprite.height;
-        const originalX = sprite.x;
-        const originalY = sprite.y;
-        const startTime = performance.now();
 
-        ticker.add(() => {
-            const now = performance.now();
-            const elapsed = (now - startTime) / 1000; // convert to seconds
-
-            if (elapsed > DURATION || selectedDatasetAtCall !== selectedDataset.current) {
-                // Decrease z-index of sprite
-                sprite.zIndex = 10;
-                if (sprite.width !== originalWidth)
-                    sprite.width = originalWidth;
-                if (sprite.height !== originalHeight)
-                    sprite.height = originalHeight;
-                // Stop the ticker
-                ticker.stop();
-            } else {
-                // Calculate scale factor using a sine function
-                const scaleFactor = 1 + 0.5 * Math.abs(Math.sin(elapsed * Math.PI / (DURATION / 2)));
-
-                // Calculate the difference in size before and after scaling
-                const diffWidth = originalWidth * scaleFactor - originalWidth;
-                const diffHeight = originalHeight * scaleFactor - originalHeight;
-                // Adjust the x and y coordinates of the sprite by half of the difference in size
-                sprite.x = originalX - diffWidth / 2;
-                sprite.y = originalY - diffHeight / 2;
-                // Increase size of sprite from the center
-                sprite.width = originalWidth * scaleFactor;
-                sprite.height = originalHeight * scaleFactor;
-            }
-        });
-        ticker.start();
-    }
-
-    const openCarousel = (index) => {
-        props.setClickedImageIndex(index);
-        props.setShowCarousel(true);
-    }
-
+    // METHODS FOR MOVING SPRITES FROM ONE CONTAINER TO ANOTHER
     const moveSpriteToForeground = (index) => {
         // Remove sprite from background container
         containerBackground.current.removeChild(sprites.current.get(index));
@@ -364,15 +325,18 @@ const ClustersMap = (props) => {
         spriteIsInForeground.current.set(index, false);
     }
 
+
+    // METHODS FOR BLURRING AND SCALING
     const applyBlur = () => {
         if (!searchBarIsClickedRef.current) {
             // The searchbar has not been clicked yet, activate blur filter on the foreground container,
             // keep the background container with blur filter active.
             containerForeground.current.filters[0].enabled = true;
             prevShowCarouselRef.current = showCarouselRef.current;
+            prevUploadDivOpen.current = uploadDivOpen.current;
             return;
         }
-        if (props.showCarousel) {
+        if (showCarouselRef.current || uploadDivOpen.current) {
             // Activate blur filters for the sprites in the foreground
             for (let child of containerForeground.current.children)
                 child.filters[0].enabled = true;
@@ -389,7 +353,7 @@ const ClustersMap = (props) => {
             containerBackground.current.filters[1].enabled = containerBackground.current.filters[0].blur < BLUR_RADIUS_CAROUSEL;
         } else {
             // Deactivate blur filters for the sprites in the foreground
-            if (prevShowCarouselRef.current) {
+            if (prevShowCarouselRef.current || prevUploadDivOpen.current) {
                 for (let child of containerForeground.current.children)
                     child.filters[0].enabled = false;
             }
@@ -405,6 +369,7 @@ const ClustersMap = (props) => {
             }
         }
         prevShowCarouselRef.current = showCarouselRef.current;
+        prevUploadDivOpen.current = uploadDivOpen.current;
     }
 
     const scaleSprite = (index) => {
@@ -428,13 +393,14 @@ const ClustersMap = (props) => {
         if (width_sprite_non_scaled > maxWidth.current) {
             sprites.current.get(index).width = Math.round(maxWidth.current * scale);
             sprites.current.get(index).height = Math.round((maxWidth.current / aspect_ratio) * scale);
-        }
-        else {
+        } else {
             sprites.current.get(index).height = Math.round(maxHeight.current * scale);
             sprites.current.get(index).width = Math.round(maxHeight.current * scale * aspect_ratio);
         }
     }
 
+
+    // METHODS FOR SETTING SPRITE HANDLERS
     const setSpriteHandlers = (sprite, index) => {
         // Remove all listeners
         sprite.removeAllListeners();
@@ -491,14 +457,21 @@ const ClustersMap = (props) => {
         // Add sprite to sprites
         sprites.current.set(index, sprite);
         // Save global coordinates of the artwork
-        spritesGlobalInfo.current.set(index, {x: global_x, y: global_y, width: width, height: height, path: path, zoom: zoom});
+        spritesGlobalInfo.current.set(index, {
+            x: global_x,
+            y: global_y,
+            width: width,
+            height: height,
+            path: path,
+            zoom: zoom
+        });
 
         // Define size of sprite
         scaleSprite(index);
 
         // Define blur filter for the sprite, but deactivate it. The filter is only used for the sprites in the foreground
         // when the carousel is open.
-        sprite.filters = [new BlurFilter(BLUR_RADIUS_CAROUSEL, QUALITY)];
+        sprite.filters = [new KawaseBlurFilter(BLUR_RADIUS_CAROUSEL, QUALITY)];
         sprite.filters[0].enabled = false;
 
         // Get position of artwork in stage coordinates.
@@ -625,30 +598,6 @@ const ClustersMap = (props) => {
         touchVelocities.current = [];
         countOfPinching.current = 0;
         totalMovement.current = 0;
-        // Make sure spritePool contains SPRITEPOOLSIZE sprites
-        console.assert(spritePool.current.length === SPRITEPOOLSIZE);
-    }
-
-    const setHandlersOfContainerForeground = () => {
-        if (showCarouselRef.current) {
-            containerForeground.current.cursor = 'pointer';
-            containerForeground.current.removeAllListeners();
-            containerForeground.current
-                .on('mousedown', () => props.setShowCarousel(false))
-                .on('touchstart', () => props.setShowCarousel(false))
-        } else {
-            containerForeground.current.cursor = 'grab';
-            containerForeground.current.removeAllListeners();
-            containerForeground.current
-                .on("mouseleave", handleMouseUpOrLeave)
-                .on('mousedown', handleMouseDown)
-                .on('mouseup', handleMouseUpOrLeave)
-                .on('mousemove', handleMouseMove)
-                .on('wheel', handleMouseWheel)
-                .on('touchmove', handleTouchMove)
-                .on('touchend', handleTouchEnd)
-                .on('touchstart', handleTouchStart);
-        }
     }
 
     const setPropertiesOfContainer = (container, zIndex, isForeground) => {
@@ -664,6 +613,43 @@ const ClustersMap = (props) => {
         container.sortableChildren = true;
         container.interactive = isForeground;
         container.inteactiveChildren = isForeground;
+    }
+
+    const closeCarouselAndRemoveUploadDiv = () => {
+        props.setShowCarousel(false);
+        props.setUploadDivOpen(false);
+        const div = document.getElementById('upload-div');
+        if (div)
+            document.body.removeChild(div);
+    }
+
+    const setHandlersOfContainerForeground = (carousel = true) => {
+        if (showCarouselRef.current || uploadDivOpen.current) {
+            containerForeground.current.cursor = 'pointer';
+            containerForeground.current.removeAllListeners();
+            if (carousel) {
+                containerForeground.current
+                    .on('mousedown', () => props.setShowCarousel(false))
+                    .on('touchstart', () => props.setShowCarousel(false))
+            } else {
+                containerForeground.current
+                    .on('mousedown', () => closeCarouselAndRemoveUploadDiv())
+                    .on('touchstart', () => closeCarouselAndRemoveUploadDiv())
+            }
+        } else {
+            console.log('Setting handlers of containerForeground')
+            containerForeground.current.cursor = 'grab';
+            containerForeground.current.removeAllListeners();
+            containerForeground.current
+                .on("mouseleave", handleMouseUpOrLeave)
+                .on('mousedown', handleMouseDown)
+                .on('mouseup', handleMouseUpOrLeave)
+                .on('mousemove', handleMouseMove)
+                .on('wheel', handleMouseWheel)
+                .on('touchmove', handleTouchMove)
+                .on('touchend', handleTouchEnd)
+                .on('touchstart', handleTouchStart);
+        }
     }
 
     // useEffect for initialization of the component. This is called every time the selected dataset changes.
@@ -692,7 +678,7 @@ const ClustersMap = (props) => {
         if (!containerForeground.current) {
             // Create container
             containerForeground.current = new PIXI.Container();
-            containerForeground.current.filters = [new BlurFilter(BLUR_RADIUS_CAROUSEL, QUALITY)];
+            containerForeground.current.filters = [new KawaseBlurFilter(BLUR_RADIUS_CAROUSEL, QUALITY)];
             containerForeground.current.filters[0].enabled = false;
             app.stage.addChild(containerForeground.current);
         }
@@ -700,9 +686,9 @@ const ClustersMap = (props) => {
             // Create container
             containerBackground.current = new PIXI.Container();
             // Define first filter for when the carousel is not shown
-            containerBackground.current.filters = [new BlurFilter(BLUR_RADIUS_MAX, QUALITY)];
+            containerBackground.current.filters = [new KawaseBlurFilter(BLUR_RADIUS_MAX, QUALITY)];
             // Define second filter for when the carousel is shown
-            containerBackground.current.filters.push(new BlurFilter(BLUR_RADIUS_CAROUSEL, QUALITY));
+            containerBackground.current.filters.push(new KawaseBlurFilter(BLUR_RADIUS_CAROUSEL, QUALITY));
             app.stage.addChild(containerBackground.current);
         }
 
@@ -903,6 +889,7 @@ const ClustersMap = (props) => {
         props.setSearchBarIsBlocked(false);
     }, [props.width, props.height, props.overflowX, props.overflowY, props.stageWidth, props.stageHeight]);
 
+    // useEffect for moving the stage to a specific image when the search data changes.
     useEffect(() => {
         // This effect is called when the search data changes.
         if (Object.keys(props.searchData).length !== 0) {
@@ -925,6 +912,46 @@ const ClustersMap = (props) => {
         // Blur the containers
         applyBlur();
     }, [props.showCarousel]);
+
+
+    useEffect(() => {
+        // Update ref for showCarousel
+        uploadDivOpen.current = props.uploadDivOpen;
+        if (hammer.current)
+            hammer.current.get('pinch').set({enable: !uploadDivOpen.current});
+
+        // Set handlers of containerForeground
+        setHandlersOfContainerForeground(false);
+        // Set mouse down to false
+        mouseDown.current = false;
+        // Manage mouse enter and leave handlers of sprites
+        if (uploadDivOpen.current)
+            for (let child of containerForeground.current.children)
+                child.removeAllListeners();
+        else
+            for (let index of sprites.current.keys())
+                if (spriteIsInForeground.current.get(index))
+                    if (sprites.current.get(index).eventNames().length === 0)
+                        setSpriteHandlers(sprites.current.get(index), index);
+
+        // Blur the containers
+        applyBlur();
+    }, [props.uploadDivOpen]);
+
+
+    useEffect(() => {
+        if (!props.stageIsInteractive) {
+            app.stage.interactive = false;
+            app.stage.interactiveChildren = false;
+            if (hammer.current)
+                hammer.current.get('pinch').set({enable: false});
+        } else {
+            app.stage.interactive = true;
+            app.stage.interactiveChildren = true;
+            if (hammer.current)
+                hammer.current.get('pinch').set({enable: !showCarouselRef.current});
+        }
+    }, [props.stageIsInteractive]);
 
     const removeSprite = (index) => {
         // Remove every event handler from sprite
@@ -1008,8 +1035,7 @@ const ClustersMap = (props) => {
             if (spritesGlobalInfo.current.get(index).zoom > next_zoom_level) {
                 // Remove sprite from stage, as the sprite should not be visible.
                 removeSprite(index);
-            }
-            else {
+            } else {
                 // Get tile of the sprite
                 const sprite_tile_x = Math.max(
                     Math.min(Math.floor(((spritesGlobalInfo.current.get(index).x - realMinX.current) * number_of_tiles) / (realMaxX.current - realMinX.current)),
@@ -1072,8 +1098,7 @@ const ClustersMap = (props) => {
                             // Update position of sprite if it varies from the current position by more than 1 pixel
                             sprites.current.get(index).x = artwork_position.x;
                             sprites.current.get(index).y = artwork_position.y;
-                        }
-                        else {
+                        } else {
                             sprites.current.get(index).x += shift_x;
                             sprites.current.get(index).y += shift_y;
                         }
@@ -1150,8 +1175,7 @@ const ClustersMap = (props) => {
                         }
                     }
                 }
-            }
-            else
+            } else
                 count_unavailable_tiles += 1;
         });
 
@@ -1173,15 +1197,44 @@ const ClustersMap = (props) => {
 
     // const updateStageThrottled = throttle(updateStage, 50);
 
-    const changeLimitsOfEmbeddingSpace = () => {
-        // Change the effective size of the stage.
-        effectiveWidth.current = (realMaxX.current - realMinX.current) / (2 ** (zoomLevel.current + depth.current));
-        effectiveHeight.current = (realMaxY.current - realMinY.current) / (2 ** (zoomLevel.current + depth.current));
-        // Change the limits of the embedding space
-        minX.current = realMinX.current - Math.max(overflowX.current * effectiveWidth.current / width.current, 0);
-        maxX.current = realMaxX.current + Math.max(overflowX.current * effectiveWidth.current / width.current, 0);
-        minY.current = realMinY.current - Math.max(overflowY.current * effectiveHeight.current / height.current, 0);
-        maxY.current = realMaxY.current + Math.max(overflowY.current * effectiveHeight.current / height.current, 0);
+    const makeSpritePulse = (sprite, selectedDatasetAtCall) => {
+        // Make the image pulse for 4 seconds
+        const ticker = new PIXI.Ticker();
+        const originalWidth = sprite.width;
+        const originalHeight = sprite.height;
+        const originalX = sprite.x;
+        const originalY = sprite.y;
+        const startTime = performance.now();
+
+        ticker.add(() => {
+            const now = performance.now();
+            const elapsed = (now - startTime) / 1000; // convert to seconds
+
+            if (elapsed > DURATION || selectedDatasetAtCall !== selectedDataset.current) {
+                // Decrease z-index of sprite
+                sprite.zIndex = 10;
+                if (sprite.width !== originalWidth)
+                    sprite.width = originalWidth;
+                if (sprite.height !== originalHeight)
+                    sprite.height = originalHeight;
+                // Stop the ticker
+                ticker.stop();
+            } else {
+                // Calculate scale factor using a sine function
+                const scaleFactor = 1 + 0.5 * Math.abs(Math.sin(elapsed * Math.PI / (DURATION / 2)));
+
+                // Calculate the difference in size before and after scaling
+                const diffWidth = originalWidth * scaleFactor - originalWidth;
+                const diffHeight = originalHeight * scaleFactor - originalHeight;
+                // Adjust the x and y coordinates of the sprite by half of the difference in size
+                sprite.x = originalX - diffWidth / 2;
+                sprite.y = originalY - diffHeight / 2;
+                // Increase size of sprite from the center
+                sprite.width = originalWidth * scaleFactor;
+                sprite.height = originalHeight * scaleFactor;
+            }
+        });
+        ticker.start();
     }
 
     // Create function for making the sprite pulse once it becomes available
@@ -1195,12 +1248,16 @@ const ClustersMap = (props) => {
     }
 
     // Create function for managing translation ticker
-    const awaitTranslationTicker = (targetLocation, selectedDatasetAtCall) => {
+    const awaitTranslationTicker = (targetLocation, selectedDatasetAtCall, image_width, image_height) => {
         // Compute final position
+        const width_image_in_global_coordinates = image_width * effectiveWidth.current / (width.current - maxWidth.current);
+        const height_image_in_global_coordinates = image_height * effectiveHeight.current / (height.current - maxHeight.current);
         const final_effective_position_x = Math.max(
-            Math.min(targetLocation.x - effectiveWidth.current / 2, maxX.current - effectiveWidth.current), minX.current);
+            Math.min(targetLocation.x - effectiveWidth.current / 2 - width_image_in_global_coordinates / 4,
+                maxX.current - effectiveWidth.current), minX.current);
         const final_effective_position_y = Math.max(
-            Math.min(targetLocation.y - effectiveHeight.current / 2, maxY.current - effectiveHeight.current), minY.current);
+            Math.min(targetLocation.y - effectiveHeight.current / 2 - height_image_in_global_coordinates / 4,
+                maxY.current - effectiveHeight.current), minY.current);
 
         // Define steps
         let step_x = (final_effective_position_x - effectivePosition.current.x) / INITIAL_TRANSITION_STEPS;
@@ -1217,8 +1274,7 @@ const ClustersMap = (props) => {
             transition_steps = Math.ceil(INITIAL_TRANSITION_STEPS / 2);
             step_x = (final_effective_position_x - effectivePosition.current.x) / transition_steps;
             step_y = (final_effective_position_y - effectivePosition.current.y) / transition_steps;
-        }
-        else if (Math.max(Math.abs(step_x), Math.abs(step_y)) > 0.05) {
+        } else if (Math.max(Math.abs(step_x), Math.abs(step_y)) > 0.05) {
             transition_steps = Math.ceil(INITIAL_TRANSITION_STEPS * 2);
             step_x = (final_effective_position_x - effectivePosition.current.x) / transition_steps;
             step_y = (final_effective_position_y - effectivePosition.current.y) / transition_steps;
@@ -1245,16 +1301,14 @@ const ClustersMap = (props) => {
                     if (Math.sign(step_x) === Math.sign(final_effective_position_x - effectivePosition.current.x)) {
                         shift_x = (step_x * (width.current - maxWidth.current)) / effectiveWidth.current;
                         effectivePosition.current.x += step_x;
-                    }
-                    else {
+                    } else {
                         shift_x = ((final_effective_position_x - effectivePosition.current.x) * (width.current - maxWidth.current)) / effectiveWidth.current;
                         effectivePosition.current.x = final_effective_position_x;
                     }
                     if (Math.sign(step_y) === Math.sign(final_effective_position_y - effectivePosition.current.y)) {
                         shift_y = (step_y * (height.current - maxHeight.current)) / effectiveHeight.current;
                         effectivePosition.current.y += step_y;
-                    }
-                    else {
+                    } else {
                         shift_y = ((final_effective_position_y - effectivePosition.current.y) * (height.current - maxHeight.current)) / effectiveHeight.current;
                         effectivePosition.current.y = final_effective_position_y;
                     }
@@ -1266,6 +1320,17 @@ const ClustersMap = (props) => {
             });
             translation_ticker.start();
         });
+    }
+
+    const changeLimitsOfEmbeddingSpace = () => {
+        // Change the effective size of the stage.
+        effectiveWidth.current = (realMaxX.current - realMinX.current) / (2 ** (zoomLevel.current + depth.current));
+        effectiveHeight.current = (realMaxY.current - realMinY.current) / (2 ** (zoomLevel.current + depth.current));
+        // Change the limits of the embedding space
+        minX.current = realMinX.current - Math.max(overflowX.current * effectiveWidth.current / width.current, 0);
+        maxX.current = realMaxX.current + Math.max(overflowX.current * effectiveWidth.current / width.current, 0);
+        minY.current = realMinY.current - Math.max(overflowY.current * effectiveHeight.current / height.current, 0);
+        maxY.current = realMaxY.current + Math.max(overflowY.current * effectiveHeight.current / height.current, 0);
     }
 
     // Create function for managing zoom ticker
@@ -1337,9 +1402,9 @@ const ClustersMap = (props) => {
     }
 
     const beforeReturnFromMoveToImage = () => {
-        containerForeground.current.interactive = true;
-        containerForeground.current.interactiveChildren = true;
-        // Unblock search bar
+        // Make stage interactive again
+        props.setStageIsInteractive(true);
+        // Unlock search bar
         props.setSearchBarIsBlocked(false);
     }
 
@@ -1364,27 +1429,24 @@ const ClustersMap = (props) => {
                 beforeReturnFromMoveToImage();
                 return;
             }
-            openCarousel(image.index);
+            props.setClickedImageIndex(image.index);
+            props.setShowCarousel(true);
             beforeReturnFromMoveToImage();
         }, DURATION * 1000 + 100);
     }
 
     // Create function for handling click on image or search
     const moveToImage = (tile, image) => {
-        // Save current reference of selected dataset
-        const selectedDatasetInit = selectedDataset.current;
         // Block search bar
         props.setSearchBarIsBlocked(true);
+        // Save current reference of selected dataset
+        const selectedDatasetInit = selectedDataset.current;
         // Stop momentum translation ticker if it is running
         stopMomentumTranslationTicker();
 
         // Close the carousel if it is open
         if (props.showCarousel)
             props.setShowCarousel(false);
-
-        // Make container not interactive.
-        containerForeground.current.interactive = false;
-        containerForeground.current.interactiveChildren = false;
 
         // Compute final position
         const final_effective_position_x = Math.max(
@@ -1394,6 +1456,20 @@ const ClustersMap = (props) => {
         // Define steps
         let step_x = (final_effective_position_x - effectivePosition.current.x) / INITIAL_TRANSITION_STEPS;
         let step_y = (final_effective_position_y - effectivePosition.current.y) / INITIAL_TRANSITION_STEPS;
+
+        // Compute size of image
+        let width = image.width;
+        let height = image.height;
+        const aspect_ratio = width / height;
+        const width_sprite_non_scaled = maxHeight.current * aspect_ratio;
+        // Change size if the width is larger than the maximum width
+        if (width_sprite_non_scaled > maxWidth.current) {
+            width = Math.round(maxWidth.current);
+            height = Math.round((maxWidth.current / aspect_ratio));
+        } else {
+            height = Math.round(maxHeight.current);
+            width = Math.round(maxHeight.current * aspect_ratio);
+        }
 
         if (Math.max(Math.abs(step_x), Math.abs(step_y)) > 0.005) {
             if (selectedDataset.current !== selectedDatasetInit) {
@@ -1416,7 +1492,7 @@ const ClustersMap = (props) => {
                         beforeReturnFromMoveToImage();
                         return;
                     }
-                    awaitTranslationTicker({x: image.x, y: image.y}, selectedDatasetInit).then(() => {
+                    awaitTranslationTicker({x: image.x, y: image.y}, selectedDatasetInit, width, height).then(() => {
                         finalStepsOfMoveToImage(image, selectedDatasetInit);
                     });
                 });
@@ -1428,7 +1504,7 @@ const ClustersMap = (props) => {
                 beforeReturnFromMoveToImage();
                 return;
             }
-            awaitTranslationTicker({x: image.x, y: image.y}, selectedDatasetInit).then(() => {
+            awaitTranslationTicker({x: image.x, y: image.y}, selectedDatasetInit, width, height).then(() => {
                 // 2. Transition to the first zoom level.
                 if (selectedDataset.current !== selectedDatasetInit) {
                     beforeReturnFromMoveToImage();
@@ -1440,7 +1516,7 @@ const ClustersMap = (props) => {
                         beforeReturnFromMoveToImage();
                         return;
                     }
-                    awaitTranslationTicker({x: image.x, y: image.y}, selectedDatasetInit).then(() => {
+                    awaitTranslationTicker({x: image.x, y: image.y}, selectedDatasetInit, width, height).then(() => {
                         finalStepsOfMoveToImage(image, selectedDatasetInit);
                     });
                 });
@@ -1448,7 +1524,70 @@ const ClustersMap = (props) => {
         }
     }
 
-    // Create handler for mouse down
+    // HANDLERS FOR INTERACTION
+    const updateVelocities = (event) => {
+        // Compute velocity
+        const touchCurrPos = event.data.getLocalPosition(containerForeground.current);
+        const touchCurrTime = Date.now();
+        if (touchVelocities.current.length > NUM_OF_VELOCITIES) {
+            // Remove the least recent velocity
+            touchVelocities.current.shift();
+        }
+        // Add the new velocity
+        touchVelocities.current.push({
+            x: (touchCurrPos.x - touchPrevPos.current.x) / Math.max(touchCurrTime - touchPrevTime.current, 1),
+            y: (touchCurrPos.y - touchPrevPos.current.y) / Math.max(touchCurrTime - touchPrevTime.current, 1)
+        });
+        // Increase total movement
+        totalMovement.current += Math.sqrt((touchCurrPos.x - touchPrevPos.current.x) ** 2 +
+            (touchCurrPos.y - touchPrevPos.current.y) ** 2);
+        // Save touch position
+        touchPrevPos.current = touchCurrPos;
+        // Save touch start time
+        touchPrevTime.current = touchCurrTime;
+    }
+
+    const momentumTranslation = (averageVelocityX, averageVelocityY, multiplicativeFactor) => {
+        const frames = 40;
+        // Change multiplicative factor based on width and height of the stage
+        // Transform velocities, which are in pixels per millisecond, to velocities in the embedding space.
+        averageVelocityX *= (effectiveWidth.current * multiplicativeFactor) / width.current;
+        averageVelocityY *= (effectiveHeight.current * multiplicativeFactor) / height.current;
+
+        momentum_translation_ticker.current = new PIXI.Ticker();
+        // Define counter for number of steps
+        let counter = 0;
+        momentum_translation_ticker.current.add(() => {
+            // Check if position is equal to the target position.
+            if (counter === frames) {
+                // Stop ticker
+                if (momentum_translation_ticker.current !== null) {
+                    momentum_translation_ticker.current.stop();
+                    // Update stage
+                    updateStage(0, 0, 0, 0);
+                }
+            } else {
+                const effectivePositionX = effectivePosition.current.x;
+                const effectivePositionY = effectivePosition.current.y;
+                effectivePosition.current.x = Math.max(
+                    Math.min(effectivePosition.current.x - averageVelocityX, maxX.current - effectiveWidth.current), minX.current);
+                effectivePosition.current.y = Math.max(
+                    Math.min(effectivePosition.current.y - averageVelocityY, maxY.current - effectiveHeight.current), minY.current);
+                // Compute shift
+                const shift_x = (effectivePosition.current.x - effectivePositionX) * (width.current - maxWidth.current) / effectiveWidth.current;
+                const shift_y = (effectivePosition.current.y - effectivePositionY) * (height.current - maxHeight.current) / effectiveHeight.current;
+                // Increment counter
+                counter++;
+                // Decrease velocity
+                averageVelocityX *= 0.97;
+                averageVelocityY *= 0.97;
+                // Update stage
+                updateStage(0, 0, -shift_x, -shift_y);
+            }
+        });
+        momentum_translation_ticker.current.start();
+    }
+
     const handleMouseDown = (event) => {
         if (!searchBarIsClickedRef.current)
             return;
@@ -1544,74 +1683,12 @@ const ClustersMap = (props) => {
         touchVelocities.current = [];
     }
 
-    const updateVelocities = (event) => {
-        // Compute velocity
-        const touchCurrPos = event.data.getLocalPosition(containerForeground.current);
-        const touchCurrTime = Date.now();
-        if (touchVelocities.current.length > NUM_OF_VELOCITIES) {
-            // Remove the least recent velocity
-            touchVelocities.current.shift();
-        }
-        // Add the new velocity
-        touchVelocities.current.push({
-            x: (touchCurrPos.x - touchPrevPos.current.x) / Math.max(touchCurrTime - touchPrevTime.current, 1),
-            y: (touchCurrPos.y - touchPrevPos.current.y) / Math.max(touchCurrTime - touchPrevTime.current, 1)
-        });
-        // Increase total movement
-        totalMovement.current += Math.sqrt((touchCurrPos.x - touchPrevPos.current.x) ** 2 +
-            (touchCurrPos.y - touchPrevPos.current.y) ** 2);
-        // Save touch position
-        touchPrevPos.current = touchCurrPos;
-        // Save touch start time
-        touchPrevTime.current = touchCurrTime;
-    }
 
     // Create handler for touch move
     const handleTouchMove = (event) => {
         if (countOfPinching.current > 0) return;
         // console.log("Touch move", " Timestamp: ", Date.now())
         handleMove(event);
-    }
-
-    const momentumTranslation = (averageVelocityX, averageVelocityY, multiplicativeFactor) => {
-        const frames = 40;
-        // Change multiplicative factor based on width and height of the stage
-        // Transform velocities, which are in pixels per millisecond, to velocities in the embedding space.
-        averageVelocityX *= (effectiveWidth.current * multiplicativeFactor) / width.current;
-        averageVelocityY *= (effectiveHeight.current * multiplicativeFactor) / height.current;
-
-        momentum_translation_ticker.current = new PIXI.Ticker();
-        // Define counter for number of steps
-        let counter = 0;
-        momentum_translation_ticker.current.add(() => {
-            // Check if position is equal to the target position.
-            if (counter === frames) {
-                // Stop ticker
-                if (momentum_translation_ticker.current !== null) {
-                    momentum_translation_ticker.current.stop();
-                    // Update stage
-                    updateStage(0, 0, 0, 0);
-                }
-            } else {
-                const effectivePositionX = effectivePosition.current.x;
-                const effectivePositionY = effectivePosition.current.y;
-                effectivePosition.current.x = Math.max(
-                    Math.min(effectivePosition.current.x - averageVelocityX, maxX.current - effectiveWidth.current), minX.current);
-                effectivePosition.current.y = Math.max(
-                    Math.min(effectivePosition.current.y - averageVelocityY, maxY.current - effectiveHeight.current), minY.current);
-                // Compute shift
-                const shift_x = (effectivePosition.current.x - effectivePositionX) * (width.current - maxWidth.current) / effectiveWidth.current;
-                const shift_y = (effectivePosition.current.y - effectivePositionY) * (height.current - maxHeight.current) / effectiveHeight.current;
-                // Increment counter
-                counter++;
-                // Decrease velocity
-                averageVelocityX *= 0.97;
-                averageVelocityY *= 0.97;
-                // Update stage
-                updateStage(0, 0, -shift_x, -shift_y);
-            }
-        });
-        momentum_translation_ticker.current.start();
     }
 
     const handleTouchEnd = async () => {
@@ -1639,6 +1716,51 @@ const ClustersMap = (props) => {
             // Start momentum translation
             const multiplicativeFactor = Math.min(stageWidth.current / 50, 10);
             momentumTranslation(averageVelocityX, averageVelocityY, multiplicativeFactor);
+        }
+    }
+
+    // Handle pinch start. Only reset previous scale.
+    const handlePinchStart = () => {
+        // console.log("Pinch start", " Timestamp: ", Date.now())
+        countOfPinching.current += 1;
+        previousScale.current = 1;
+    };
+
+    // Create handler for pinch. The handler of pinch does the exact same thing as the handler for mouse wheel, but the
+    // delta is computed differently.
+    const handlePinch = (event) => {
+        // Reject pinch if the scale is 0
+        if (event.scale === 0)
+            return;
+        // Delta is the difference between the current scale and the previous scale
+        const delta = event.scale - previousScale.current;
+        // Update previous scale
+        previousScale.current = event.scale;
+        if (!(zoomLevel.current === maxZoomLevel.current && depth.current === 0 && delta > 0) && Math.abs(delta) > 0.0001)
+            handleZoom(delta, event.center);
+    }
+
+    const handleMouseWheel = (event) => {
+        // Define delta
+        let delta = -event.deltaY / 1000;
+        // Get mouse position with respect to container
+        const position = event.data.getLocalPosition(containerForeground.current);
+        if (Math.abs(delta) > 0.01) {
+            // Create zoom ticker to complete the transition by delta in steps of 0.002
+            const zoom_ticker = new PIXI.Ticker();
+            let current_delta = 0;
+            zoom_ticker.add(() => {
+                if (Math.abs(current_delta) >= Math.abs(delta)) {
+                    zoom_ticker.stop();
+                } else {
+                    handleZoom(Math.sign(delta) * 0.004, position);
+                    current_delta += Math.sign(delta) * 0.004;
+                }
+            });
+            zoom_ticker.start();
+        } else {
+            // Handle zoom
+            handleZoom(delta, position);
         }
     }
 
@@ -1673,55 +1795,6 @@ const ClustersMap = (props) => {
         }
         return coordinates_to_return;
     };
-
-    // Handle pinch start. Only reset previous scale.
-    const handlePinchStart = () => {
-        // console.log("Pinch start", " Timestamp: ", Date.now())
-        countOfPinching.current += 1;
-        previousScale.current = 1;
-    };
-
-    // Create handler for pinch. The handler of pinch does the exact same thing as the handler for mouse wheel, but the
-    // delta is computed differently.
-    const handlePinch = (event) => {
-        // Reject pinch if the scale is 0
-        if (event.scale === 0)
-            return;
-        // Delta is the difference between the current scale and the previous scale
-        const delta = event.scale - previousScale.current;
-        // Update previous scale
-        previousScale.current = event.scale;
-        if (!(zoomLevel.current === maxZoomLevel.current && depth.current === 0 && delta > 0) && Math.abs(delta) > 0.0001)
-            handleZoom(delta, event.center);
-    }
-
-    // Create handler for mouse wheel. We change the zoom level only if the user scrolls until a certain value of change in
-    // depth is reached. This is to avoid changing the zoom level too often. We use a transition which depends on the percentage
-    // of the change in depth in order to make the transition smoother. When the new zoom level is reached, we update
-    // everything on the stage.
-    const handleMouseWheel = (event) => {
-        // Define delta
-        let delta = -event.deltaY / 1000;
-        // Get mouse position with respect to container
-        const position = event.data.getLocalPosition(containerForeground.current);
-        if (Math.abs(delta) > 0.01) {
-            // Create zoom ticker to complete the transition by delta in steps of 0.002
-            const zoom_ticker = new PIXI.Ticker();
-            let current_delta = 0;
-            zoom_ticker.add(() => {
-                if (Math.abs(current_delta) >= Math.abs(delta)) {
-                    zoom_ticker.stop();
-                } else {
-                    handleZoom(Math.sign(delta) * 0.004, position);
-                    current_delta += Math.sign(delta) * 0.004;
-                }
-            });
-            zoom_ticker.start();
-        } else {
-            // Handle zoom
-            handleZoom(delta, position);
-        }
-    }
 
     const handleZoom = (delta, mousePosition) => {
         // Deal with border cases

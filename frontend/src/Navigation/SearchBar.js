@@ -1,13 +1,33 @@
-import React, {useRef, useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
+import {createRoot} from "react-dom/client";
 import SearchIcon from '@mui/icons-material/Search';
+import UploadOutlinedIcon from '@mui/icons-material/UploadOutlined';
 import {IconButton, InputBase} from "@mui/material";
+import Preview from "./FileUploader";
+import {getResponsiveSearchBarHeight, getResponsiveSearchBarWidth} from "../utilities";
+
 
 export default function SearchBar(props) {
     const [inputValue, setInputValue] = useState("");
     const host = useRef(props.host);
+    const searchBarIsBlocked = useRef(props.searchBarIsBlocked);
+    const onGoingRequest = useRef(props.onGoingRequest);
+    const root = useRef(null);
+
+    useEffect(() => {
+        searchBarIsBlocked.current = props.searchBarIsBlocked;
+    }, [props.searchBarIsBlocked]);
+
+    useEffect(() => {
+        onGoingRequest.current = props.onGoingRequest;
+    }, [props.onGoingRequest]);
+
 
     const sendText = (text) => {
+        // Close the upload div if it is open
+        props.removeUploadDiv();
         props.setOnGoingRequest(true);
+        props.setStageIsInteractive(false);
         let url = host.current + '/api/image-text?collection=' + props.selectedDataset + '&text=' + text + '&page=1';
         const options = {
             method: 'GET',
@@ -75,27 +95,86 @@ export default function SearchBar(props) {
             document.getElementById("search-bar").blur();
             if (!props.searchBarIsClicked)
                 props.setSearchBarIsClicked(true);
-            if (!props.searchBarIsBlocked && !props.onGoingRequest)
+            if (!searchBarIsBlocked.current && !onGoingRequest.current)
                 // noinspection JSIgnoredPromiseFromCall
                 sendText(inputValue);
         }
     };
 
+    const onUploadClick = () => {
+        if (searchBarIsBlocked.current || onGoingRequest.current) return;
+        if (document.getElementById('upload-div')) return;
+        // Create div for upload
+        const div = document.createElement('div');
+        div.id = 'upload-div';
+        document.body.appendChild(div);
+        root.current = createRoot(div);
+        root.current.render(
+            <Preview
+                host={props.host}
+                setSearchData={props.setSearchData}
+                setShowCarousel={props.setShowCarousel}
+                selectedDataset={props.selectedDataset}
+                onGoingRequest={onGoingRequest.current}
+                searchBarIsBlocked={searchBarIsBlocked.current}
+                setOnGoingRequest={props.setOnGoingRequest}
+                setStageIsInteractive={props.setStageIsInteractive}
+                removeUploadDiv={props.removeUploadDiv}
+            />
+        );
+        // Set upload div open
+        props.setUploadDivOpen(true);
+    }
+
     return (
-        <div id="search-bar" className={`w-searchbar h-searchbar flex justify-between items-center z-10 bg-white rounded-full pointer-events-auto
+        <div id="search-bar" className={`w-searchbar h-searchbar flex justify-evenly items-center z-10 bg-white rounded-full pointer-events-auto
         ${props.searchBarIsClicked ? 'searchBarPositionTransition' : 'searchBarCentered'}`}>
             <InputBase
                 id="search-bar-id"
-                className="w-98 h-full pl-3 font-bar"
+                style={{width: getResponsiveSearchBarWidth().replace("px", "")
+                        - 2.3 * getResponsiveSearchBarHeight().replace("px", ""),
+                    paddingLeft: "1.5%"}}
+                className="h-full font-bar"
                 label={"Search Images by Text"}
                 placeholder={"Search for an image"}
                 value={inputValue}
+                onClick={() => {
+                    props.removeUploadDiv();
+                    props.setUploadDivOpen(false);
+                }}
                 onChange={handleInputChange}
                 onKeyDown={handleEnter}
             />
-            <IconButton type="button" onClick={handleClickSearch} id="search-button">
-                <SearchIcon id="search-button-icon"/>
+            <IconButton type="button" onClick={handleClickSearch} id="search-button" style={
+                {
+                    color: "gray",
+                    height: getResponsiveSearchBarHeight().replace("px", "") * 0.75,
+                    width: getResponsiveSearchBarHeight().replace("px", "") * 0.75
+                }
+            }>
+                <SearchIcon id="search-button-icon" style={
+                    {
+                        height: getResponsiveSearchBarHeight().replace("px", "") * 0.75,
+                        width: getResponsiveSearchBarHeight().replace("px", "") * 0.75,
+                    }
+                }/>
             </IconButton>
+            <div>
+                <IconButton onClick={onUploadClick} type="button" style={
+                    {
+                        color: "gray",
+                        height: getResponsiveSearchBarHeight().replace("px", "") * 0.75,
+                        width: getResponsiveSearchBarHeight().replace("px", "") * 0.75
+                    }
+                }>
+                    <UploadOutlinedIcon style={
+                        {
+                            height: getResponsiveSearchBarHeight().replace("px", "") * 0.75,
+                            width: getResponsiveSearchBarHeight().replace("px", "") * 0.75,
+                        }
+                    }/>
+                </IconButton>
+            </div>
         </div>
     );
 }
