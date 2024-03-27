@@ -481,7 +481,7 @@ const ClustersMap = (props) => {
         sprite.y = artwork_position.y;
 
         // Probably not needed, but leave it here just in case
-        sprite.visible = artwork_position.x > -maxHeight.current * width / height
+        sprite.visible = artwork_position.x > -maxWidth.current
             && artwork_position.x <= stageWidth.current
             && artwork_position.y >= -maxHeight.current
             && artwork_position.y <= stageHeight.current;
@@ -637,7 +637,6 @@ const ClustersMap = (props) => {
                     .on('touchstart', () => closeCarouselAndRemoveUploadDiv())
             }
         } else {
-            console.log('Setting handlers of containerForeground')
             containerForeground.current.cursor = 'grab';
             containerForeground.current.removeAllListeners();
             containerForeground.current
@@ -1109,7 +1108,7 @@ const ClustersMap = (props) => {
 
                         // Make sprite not visible if outside the viewing area
                         const aspect_ratio = spritesGlobalInfo.current.get(index).width / spritesGlobalInfo.current.get(index).height;
-                        sprites.current.get(index).visible = sprites.current.get(index).x > -maxHeight.current * aspect_ratio
+                        sprites.current.get(index).visible = sprites.current.get(index).x > -maxWidth.current
                             && sprites.current.get(index).x <= stageWidth.current
                             && sprites.current.get(index).y >= -maxHeight.current
                             && sprites.current.get(index).y <= stageHeight.current;
