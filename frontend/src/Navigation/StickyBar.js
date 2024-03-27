@@ -35,6 +35,8 @@ const StickyBar = (props) => {
                     }
                 }>
                     <SelectDataset datasets={props.datasets} setSelectedDataset={props.setSelectedDataset}
+                                   setClickedImageIndex={props.setClickedImageIndex}
+                                   setShowCarousel={props.setShowCarousel}
                                    removeUploadDiv={removeUploadDiv}/>
                 </div>
             </div>

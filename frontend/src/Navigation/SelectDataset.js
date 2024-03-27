@@ -43,6 +43,8 @@ const SelectDataset = (props) => {
     const handleChange = (dataset) => {
         props.removeUploadDiv();
         setDataset(dataset);
+        props.setClickedImageIndex(-1);
+        props.setShowCarousel(false);
         props.setSelectedDataset(dataset);
         setOpen(false);
     };

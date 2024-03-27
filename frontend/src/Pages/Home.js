@@ -170,12 +170,6 @@ const Home = (props) => {
     }, []);
 
     useEffect(() => {
-        // Restore initial state for everything related to the carousel
-        setClickedImageIndex(-1);
-        setShowCarousel(false);
-    }, [selectedDataset]);
-
-    useEffect(() => {
         if (props.page === "about" && prevPage.current === "home") {
             setPageHasChanged(true);
             setShowCarousel(false);
@@ -213,6 +207,7 @@ const Home = (props) => {
                                setOnGoingRequest={setOnGoingRequest}
                                setStageIsInteractive={setStageIsInteractive}
                                setUploadDivOpen={setUploadDivOpen}
+                               setClickedImageIndex={setClickedImageIndex}
                     />
                     {/*<HamburgerMenu*/}
                     {/*    menuOpen={menuOpen}*/}
