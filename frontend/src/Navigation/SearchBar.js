@@ -85,14 +85,14 @@ export default function SearchBar(props) {
 
     const handleEnter = (event) => {
         if (event.key === 'Enter') {
-            document.getElementById("search-bar").blur();
+            document.getElementById("search-bar-id").blur();
             handleClickSearch(event);
         }
     }
 
     const handleClickSearch = () => {
         if (inputValue !== "") {
-            document.getElementById("search-bar").blur();
+            document.getElementById("search-bar-id").blur();
             if (!props.searchBarIsClicked)
                 props.setSearchBarIsClicked(true);
             if (!searchBarIsBlocked.current && !onGoingRequest.current)
@@ -145,32 +145,32 @@ export default function SearchBar(props) {
                 onChange={handleInputChange}
                 onKeyDown={handleEnter}
             />
-            <IconButton type="button" onClick={handleClickSearch} id="search-button" style={
+            <IconButton type="button" onClick={handleClickSearch} onTouchStart={handleClickSearch} id="search-button" style={
                 {
                     color: "gray",
-                    height: getResponsiveSearchBarHeight().replace("px", "") * 0.75,
-                    width: getResponsiveSearchBarHeight().replace("px", "") * 0.75
+                    height: getResponsiveSearchBarHeight().replace("px", "") * 0.9,
+                    width: getResponsiveSearchBarHeight().replace("px", "") * 0.9
                 }
             }>
                 <SearchIcon id="search-button-icon" style={
                     {
-                        height: getResponsiveSearchBarHeight().replace("px", "") * 0.75,
-                        width: getResponsiveSearchBarHeight().replace("px", "") * 0.75,
+                        height: getResponsiveSearchBarHeight().replace("px", "") * 0.9,
+                        width: getResponsiveSearchBarHeight().replace("px", "") * 0.9,
                     }
                 }/>
             </IconButton>
             <div>
-                <IconButton onClick={onUploadClick} type="button" style={
+                <IconButton onClick={onUploadClick} onTouchStart={onUploadClick} type="button" style={
                     {
                         color: "gray",
-                        height: getResponsiveSearchBarHeight().replace("px", "") * 0.75,
-                        width: getResponsiveSearchBarHeight().replace("px", "") * 0.75
+                        height: getResponsiveSearchBarHeight().replace("px", "") * 0.9,
+                        width: getResponsiveSearchBarHeight().replace("px", "") * 0.9
                     }
                 }>
                     <UploadOutlinedIcon style={
                         {
-                            height: getResponsiveSearchBarHeight().replace("px", "") * 0.75,
-                            width: getResponsiveSearchBarHeight().replace("px", "") * 0.75,
+                            height: getResponsiveSearchBarHeight().replace("px", "") * 0.9,
+                            width: getResponsiveSearchBarHeight().replace("px", "") * 0.9,
                         }
                     }/>
                 </IconButton>

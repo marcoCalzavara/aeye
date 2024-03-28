@@ -1736,7 +1736,7 @@ const ClustersMap = (props) => {
             averageVelocityX /= touchVelocities.current.length;
             averageVelocityY /= touchVelocities.current.length;
             // Start momentum translation
-            const multiplicativeFactor = Math.min(stageWidth.current / 50, 10);
+            const multiplicativeFactor = Math.min(stageWidth.current / 30, 10);
             momentumTranslation(averageVelocityX, averageVelocityY, multiplicativeFactor);
         }
     }
@@ -1744,7 +1744,7 @@ const ClustersMap = (props) => {
     // Handle pinch start. Only reset previous scale.
     const handlePinchStart = () => {
         // console.log("Pinch start", " Timestamp: ", Date.now())
-        countOfPinching.current += 1;
+        countOfPinching.current = Math.min(countOfPinching.current + 1, 2);
         previousScale.current = 1;
     };
 
@@ -1985,8 +1985,8 @@ const ClustersMap = (props) => {
         minimap.current.addChild(minimapSprite.current);
 
         // Place minimap in the bottom right corner of the stage
-        minimap.current.x = stageWidth.current - minimap.current.width - 5;
-        minimap.current.y = stageHeight.current - minimap.current.height - 5;
+        minimap.current.x = stageWidth.current - minimap.current.width - 10;
+        minimap.current.y = stageHeight.current - minimap.current.height - 10;
 
         // Add rectangle showing the visible part of the stage. Make it yellow.
         minimapRectangle.current = new PIXI.Graphics();
@@ -2006,8 +2006,8 @@ const ClustersMap = (props) => {
         getMinimapSize();
         minimap.current.endFill();
         // Update minimap position
-        minimap.current.x = stageWidth.current - minimap.current.width - 5;
-        minimap.current.y = stageHeight.current - minimap.current.height - 5;
+        minimap.current.x = stageWidth.current - minimap.current.width - 10;
+        minimap.current.y = stageHeight.current - minimap.current.height - 10;
         // Update minimap rectangle
         updateMinimap();
     }
