@@ -14,8 +14,8 @@ const TEMP_ARRAY = Array(NUM_OF_NEIGHBORS).fill({
     path: "",
     index: -1,
     author: "",
-    width: 1,
-    height: 1,
+    width: 1000,
+    height: 1000,
     genre: "",
     title: "",
     date: -1
@@ -163,8 +163,8 @@ const NeighborsCarousel = (props) => {
 
     useEffect(() => {
         selectedDataset.current = props.selectedDataset;
-        setImage(null);
-        setImages([]);
+        setImage(TEMP_ARRAY[0]);
+        setImages(TEMP_ARRAY);
     }, [props.selectedDataset]);
 
 
