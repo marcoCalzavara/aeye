@@ -101,11 +101,6 @@ const NeighborsCarousel = (props) => {
     }, []);
 
     useEffect(() => {
-        if (props.clickedImageIndex === -1){
-            setImage(null);
-            setImages([]);
-            return;
-        }
         // Empty the state images
         setImages(TEMP_ARRAY);
         setImage({

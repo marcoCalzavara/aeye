@@ -72,19 +72,37 @@ def generate_scatter_plot(collection: Collection):
 
     # Create scatter plot
     x = [entity["x"] for entity in entities]
-    y = [entity["y"] for entity in entities]
+    y = [-entity["y"] for entity in entities]
 
     # Create figure
-    fig, ax = plt.subplots(figsize=(15, 15))
+    fig, ax = plt.subplots(figsize=(20, 12))
 
-    # Create scatter plot
-    ax.scatter(x, y, s=2)
+    # Set x and y limits to the minimum and maximum values of your data
+    ax.set_xlim(min(x), max(x))
+    ax.set_ylim(min(y), max(y))
 
-    # Increase font size of axis ticks
-    ax.tick_params(axis="both", which="major", labelsize=14)
-    # Save scatter plot
-    plt.savefig(f"./src/report/{collection.name}_scatter.png")
-    print(f"Scatter plot saved as {collection.name}_scatter.png.")
+    # Create scatter plot with blue dots
+    ax.scatter(x, y, s=3, c="lightblue")
+
+    # Remove all axes
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+
+    # Remove all labels
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    # Make background black
+    ax.set_facecolor("black")
+
+    # Remove all white space on the plot
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+
+    # Save scatter plot at os.getenv(HOME)/minimaps/{collection.name}.png. Create the directory if it does not exist.
+    plt.savefig(f"{os.getenv(HOME)}/{collection.name}/minimap.png")
+    print(f"Scatter plot saved for collection {collection.name} at {os.getenv(HOME)}/{collection.name}/minimap.png.")
 
     # Release collection
     collection.release()

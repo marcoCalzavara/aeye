@@ -139,7 +139,10 @@ const ClustersMap = (props) => {
     // Define ref for upload div open
     const uploadDivOpen = useRef(props.uploadDivOpen);
     const prevUploadDivOpen = useRef(props.uploadDivOpen);
-
+    // Refs for the minimap
+    const minimap = useRef(null);
+    const minimapSprite = useRef(null);
+    const minimapRectangle = useRef(null);
 
     // FETCHING OPERATIONS
     const fetchTiles = (indexes) => {
@@ -598,6 +601,8 @@ const ClustersMap = (props) => {
         touchVelocities.current = [];
         countOfPinching.current = 0;
         totalMovement.current = 0;
+        // Reset minimap
+        minimap.current = null;
     }
 
     const setPropertiesOfContainer = (container, zIndex, isForeground) => {
@@ -796,6 +801,9 @@ const ClustersMap = (props) => {
             hammer.current.on('pinchstart', handlePinchStart);
             hammer.current.on('pinchmove', handlePinch);
 
+            // Add minimap
+            createMiniMap();
+
             // Remove div for loading
             if (document.getElementById("loading-div"))
                 document.getElementById("loading-div").remove();
@@ -870,6 +878,9 @@ const ClustersMap = (props) => {
         maxWidth.current = width.current / 10;
         maxHeight.current = height.current / 11;
 
+        // Update minimap
+        resizeAndPlaceMinimap();
+
         for (let index of sprites.current.keys()) {
             // Update size of sprite
             scaleSprite(index);
@@ -903,6 +914,15 @@ const ClustersMap = (props) => {
         showCarouselRef.current = props.showCarousel;
         if (hammer.current)
             hammer.current.get('pinch').set({enable: !showCarouselRef.current});
+
+        // Hide minimap if carousel is shown
+        if (showCarouselRef.current) {
+            if (minimap.current)
+                app.stage.removeChild(minimap.current);
+        } else {
+            if (minimap.current)
+                app.stage.addChild(minimap.current);
+        }
 
         // Set handlers of containerForeground
         setHandlersOfContainerForeground();
@@ -1185,6 +1205,9 @@ const ClustersMap = (props) => {
 
         // Apply blur
         applyBlur();
+
+        // Update minimap
+        updateMinimap();
 
         // Do asserts to check that everything is correct
         // console.assert(count === sprites.current.size);
@@ -1877,6 +1900,117 @@ const ClustersMap = (props) => {
         // updateStageThrottled();
     }
 
+    const getMinimapSize = () => {
+        // Compute minimap size based on the size of the stage.
+        switch (true) {
+            case stageHeight.current < 320:
+                // Case for phone flipped horizontally
+                minimap.current.drawRect(0, 0, 150, 90);
+                minimapSprite.current.width = 148;
+                minimapSprite.current.height = 88;
+                break;
+            case stageWidth.current >= 320 && stageWidth.current <= 480:
+                minimap.current.drawRect(0, 0, 200, 120);
+                minimapSprite.current.width = 198;
+                minimapSprite.current.height = 118;
+                break;
+            case stageWidth.current > 480 && stageWidth.current <= 768:
+                minimap.current.drawRect(0, 0, 250, 150);
+                minimapSprite.current.width = 248;
+                minimapSprite.current.height = 148;
+                break;
+            case stageWidth.current > 768 && stageWidth.current <= 1024:
+                minimap.current.drawRect(0, 0, 250, 150);
+                minimapSprite.current.width = 248;
+                minimapSprite.current.height = 148;
+                break;
+            case stageWidth.current > 1024 && stageWidth.current <= 1200:
+                minimap.current.drawRect(0, 0, 300, 180);
+                minimapSprite.current.width = 298;
+                minimapSprite.current.height = 178;
+                break;
+            case stageWidth.current > 1200:
+                minimap.current.drawRect(0, 0, 300, 180);
+                minimapSprite.current.width = 298;
+                minimapSprite.current.height = 178;
+                break;
+            default:
+                const width = stageWidth.current * 0.5;
+                const height = 0.6 * width;
+                if (height > stageHeight.current * 0.5) {
+                    minimap.current.drawRect(0, 0, stageHeight.current * 0.5 / 0.6, stageHeight.current * 0.5);
+                    minimapSprite.current.width = stageHeight.current * 0.5 / 0.6 - 2;
+                    minimapSprite.current.height = stageHeight.current * 0.5 - 2;
+                } else {
+                    minimap.current.drawRect(0, 0, stageWidth.current * 0.5, height);
+                    minimapSprite.current.width = stageWidth.current * 0.5 - 2;
+                    minimapSprite.current.height = height - 2;
+                }
+        }
+    }
+
+    const updateMinimap = () => {
+        // Update minimap
+        minimapRectangle.current.clear();
+        minimapRectangle.current.lineStyle(1, 0xFFFF00);
+        // Compute the width and height of the rectangle based on the size of the stage.
+        const width_rect = Math.max(minimapSprite.current.width * effectiveWidth.current / (maxX.current - minX.current), 2);
+        const height_rect = Math.max(minimapSprite.current.height * effectiveHeight.current / (maxY.current - minY.current), 2);
+        // Compute the position of the rectangle based on the effective position of the stage.
+        const x_rect = (effectivePosition.current.x - minX.current) * minimap.current.width / (maxX.current - minX.current);
+        const y_rect = (effectivePosition.current.y - minY.current) * minimap.current.height / (maxY.current - minY.current);
+        minimapRectangle.current.drawRect(x_rect, y_rect, width_rect, height_rect);
+        minimapRectangle.current.endFill();
+    }
+
+    const createMiniMap = () => {
+        // Create minimap
+        minimap.current = new PIXI.Graphics();
+        minimap.current.interactive = false;
+        minimap.current.interactiveChildren = false;
+        minimap.current.zIndex = 100;
+
+        // Define sprite for containing the minimap image
+        minimapSprite.current = new PIXI.Sprite();
+        minimapSprite.current.texture = PIXI.Texture.from(props.host + "/" + selectedDataset.current + "/minimap.png");
+        minimapSprite.current.x = 1;
+        minimapSprite.current.y = 1;
+
+        // Set background color of the minimap to white and set the size of the minimap
+        minimap.current.beginFill(0xFFFFFF);
+        getMinimapSize();
+        minimap.current.endFill();
+
+        // Add sprite to minimap
+        minimap.current.addChild(minimapSprite.current);
+
+        // Place minimap in the bottom right corner of the stage
+        minimap.current.x = stageWidth.current - minimap.current.width - 5;
+        minimap.current.y = stageHeight.current - minimap.current.height - 5;
+
+        // Add rectangle showing the visible part of the stage. Make it yellow.
+        minimapRectangle.current = new PIXI.Graphics();
+        minimapRectangle.current.x = 1;
+        minimapRectangle.current.y = 1;
+        updateMinimap();
+        minimap.current.addChild(minimapRectangle.current);
+
+        // Add minimap to stage and place it in the bottom right corner
+        app.stage.addChild(minimap.current);
+    }
+
+    const resizeAndPlaceMinimap = () => {
+        // Update minimap size
+        minimap.current.clear();
+        minimap.current.beginFill(0xFFFFFF);
+        getMinimapSize();
+        minimap.current.endFill();
+        // Update minimap position
+        minimap.current.x = stageWidth.current - minimap.current.width - 5;
+        minimap.current.y = stageHeight.current - minimap.current.height - 5;
+        // Update minimap rectangle
+        updateMinimap();
+    }
 
     return (
         <></>
