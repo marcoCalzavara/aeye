@@ -1269,17 +1269,37 @@ const ClustersMap = (props) => {
         }
     }
 
-    // Create function for managing translation ticker
-    const awaitTranslationTicker = (targetLocation, selectedDatasetAtCall, image_width, image_height) => {
+    const getFinalPosition = (image) => {
+        // Compute size of image
+        let width_image = image.width;
+        let height_image = image.height;
+        const aspect_ratio = width_image / height_image;
+        const width_sprite_non_scaled = maxHeight.current * aspect_ratio;
+        // Change size if the width is larger than the maximum width
+        if (width_sprite_non_scaled > maxWidth.current) {
+            width_image = Math.round(maxWidth.current);
+            height_image = Math.round(maxWidth.current / aspect_ratio);
+        } else {
+            height_image = Math.round(maxHeight.current);
+            width_image = Math.round(width_sprite_non_scaled);
+        }
+
         // Compute final position
-        const width_image_in_global_coordinates = image_width * effectiveWidth.current / (width.current - maxWidth.current);
-        const height_image_in_global_coordinates = image_height * effectiveHeight.current / (height.current - maxHeight.current);
-        const final_effective_position_x = Math.max(
-            Math.min(targetLocation.x - effectiveWidth.current / 2 - width_image_in_global_coordinates / 4,
-                maxX.current - effectiveWidth.current), minX.current);
-        const final_effective_position_y = Math.max(
-            Math.min(targetLocation.y - effectiveHeight.current / 2 - height_image_in_global_coordinates / 4,
-                maxY.current - effectiveHeight.current), minY.current);
+        let final_effective_position_x = image.x - ((stageWidth.current - width_image) / 2 + overflowX.current)
+            * (effectiveWidth.current / (width.current - maxWidth.current));
+        let final_effective_position_y = image.y - ((stageHeight.current - height_image) / 2 + overflowY.current)
+            * (effectiveHeight.current / (height.current - maxHeight.current));
+        final_effective_position_x = Math.max(Math.min(final_effective_position_x, maxX.current - effectiveWidth.current), minX.current);
+        final_effective_position_y = Math.max(Math.min(final_effective_position_y, maxY.current - effectiveHeight.current), minY.current);
+        return {x: final_effective_position_x, y: final_effective_position_y};
+    }
+
+    // Create function for managing translation ticker
+    const awaitTranslationTicker = (image, selectedDatasetAtCall) => {
+        // Get final position of the image
+        const final_position = getFinalPosition(image);
+        const final_effective_position_x = final_position.x;
+        const final_effective_position_y = final_position.y;
 
         // Define steps
         let step_x = (final_effective_position_x - effectivePosition.current.x) / INITIAL_TRANSITION_STEPS;
@@ -1311,7 +1331,7 @@ const ClustersMap = (props) => {
                 // Check if position is equal to the target position.
                 if ((effectivePosition.current.x === final_effective_position_x
                         && effectivePosition.current.y === final_effective_position_y)
-                    || counter === transition_steps || selectedDataset.current !== selectedDatasetAtCall) {
+                    || counter === transition_steps + 1 || selectedDataset.current !== selectedDatasetAtCall) {
                     // Stop ticker
                     translation_ticker.stop();
                     resolve();
@@ -1320,14 +1340,14 @@ const ClustersMap = (props) => {
                     // target position.
                     let shift_x;
                     let shift_y;
-                    if (Math.sign(step_x) === Math.sign(final_effective_position_x - effectivePosition.current.x)) {
+                    if (Math.sign(step_x) === Math.sign(final_effective_position_x - effectivePosition.current.x - step_x)) {
                         shift_x = (step_x * (width.current - maxWidth.current)) / effectiveWidth.current;
                         effectivePosition.current.x += step_x;
                     } else {
                         shift_x = ((final_effective_position_x - effectivePosition.current.x) * (width.current - maxWidth.current)) / effectiveWidth.current;
                         effectivePosition.current.x = final_effective_position_x;
                     }
-                    if (Math.sign(step_y) === Math.sign(final_effective_position_y - effectivePosition.current.y)) {
+                    if (Math.sign(step_y) === Math.sign(final_effective_position_y - effectivePosition.current.y - step_y)) {
                         shift_y = (step_y * (height.current - maxHeight.current)) / effectiveHeight.current;
                         effectivePosition.current.y += step_y;
                     } else {
@@ -1470,28 +1490,14 @@ const ClustersMap = (props) => {
         if (props.showCarousel)
             props.setShowCarousel(false);
 
-        // Compute final position
-        const final_effective_position_x = Math.max(
-            Math.min(image.x - effectiveWidth.current / 2, maxX.current - effectiveWidth.current), minX.current);
-        const final_effective_position_y = Math.max(
-            Math.min(image.y - effectiveHeight.current / 2, maxY.current - effectiveHeight.current), minY.current);
+        // Get final position of the image
+        const final_position = getFinalPosition(image);
+        const final_effective_position_x = final_position.x;
+        const final_effective_position_y = final_position.y;
+
         // Define steps
         let step_x = (final_effective_position_x - effectivePosition.current.x) / INITIAL_TRANSITION_STEPS;
         let step_y = (final_effective_position_y - effectivePosition.current.y) / INITIAL_TRANSITION_STEPS;
-
-        // Compute size of image
-        let width = image.width;
-        let height = image.height;
-        const aspect_ratio = width / height;
-        const width_sprite_non_scaled = maxHeight.current * aspect_ratio;
-        // Change size if the width is larger than the maximum width
-        if (width_sprite_non_scaled > maxWidth.current) {
-            width = Math.round(maxWidth.current);
-            height = Math.round((maxWidth.current / aspect_ratio));
-        } else {
-            height = Math.round(maxHeight.current);
-            width = Math.round(maxHeight.current * aspect_ratio);
-        }
 
         if (Math.max(Math.abs(step_x), Math.abs(step_y)) > 0.005) {
             if (selectedDataset.current !== selectedDatasetInit) {
@@ -1514,7 +1520,7 @@ const ClustersMap = (props) => {
                         beforeReturnFromMoveToImage();
                         return;
                     }
-                    awaitTranslationTicker({x: image.x, y: image.y}, selectedDatasetInit, width, height).then(() => {
+                    awaitTranslationTicker(image, selectedDatasetInit).then(() => {
                         finalStepsOfMoveToImage(image, selectedDatasetInit);
                     });
                 });
@@ -1526,7 +1532,7 @@ const ClustersMap = (props) => {
                 beforeReturnFromMoveToImage();
                 return;
             }
-            awaitTranslationTicker({x: image.x, y: image.y}, selectedDatasetInit, width, height).then(() => {
+            awaitTranslationTicker(image, selectedDatasetInit).then(() => {
                 // 2. Transition to the first zoom level.
                 if (selectedDataset.current !== selectedDatasetInit) {
                     beforeReturnFromMoveToImage();
@@ -1538,7 +1544,7 @@ const ClustersMap = (props) => {
                         beforeReturnFromMoveToImage();
                         return;
                     }
-                    awaitTranslationTicker({x: image.x, y: image.y}, selectedDatasetInit, width, height).then(() => {
+                    awaitTranslationTicker(image, selectedDatasetInit).then(() => {
                         finalStepsOfMoveToImage(image, selectedDatasetInit);
                     });
                 });
