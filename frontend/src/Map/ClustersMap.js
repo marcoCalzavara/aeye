@@ -28,8 +28,11 @@ const QUALITY = 5;
 // Define constant for transition steps and depth steps
 const INITIAL_TRANSITION_STEPS = 80;
 const DEPTH_STEP = 0.02;
-const NUM_OF_VELOCITIES = 10;
+const NUM_OF_VELOCITIES = 5;
 const UNAVAILABLE_TILES_THRESHOLD = 15;
+const ROUND = false;
+const MAX_VELOCITY = 4;
+const MULTIPLICATIVE_FACTOR = 11;
 
 
 /* function throttle(func, limit) {
@@ -394,11 +397,21 @@ const ClustersMap = (props) => {
         const width_sprite_non_scaled = maxHeight.current * aspect_ratio;
         // Change size if the width is larger than the maximum width
         if (width_sprite_non_scaled > maxWidth.current) {
-            sprites.current.get(index).width = Math.round(maxWidth.current * scale);
-            sprites.current.get(index).height = Math.round((maxWidth.current / aspect_ratio) * scale);
+            if (ROUND) {
+                sprites.current.get(index).width = Math.round(maxWidth.current * scale);
+                sprites.current.get(index).height = Math.round((maxWidth.current / aspect_ratio) * scale);
+            } else {
+                sprites.current.get(index).width = maxWidth.current * scale;
+                sprites.current.get(index).height = (maxWidth.current / aspect_ratio) * scale;
+            }
         } else {
-            sprites.current.get(index).height = Math.round(maxHeight.current * scale);
-            sprites.current.get(index).width = Math.round(maxHeight.current * scale * aspect_ratio);
+            if (ROUND) {
+                sprites.current.get(index).height = Math.round(maxHeight.current * scale);
+                sprites.current.get(index).width = Math.round(maxHeight.current * scale * aspect_ratio);
+            } else {
+                sprites.current.get(index).height = maxHeight.current * scale;
+                sprites.current.get(index).width = maxHeight.current * scale * aspect_ratio;
+            }
         }
     }
 
@@ -479,15 +492,23 @@ const ClustersMap = (props) => {
 
         // Get position of artwork in stage coordinates.
         const artwork_position = mapGlobalCoordinatesToStageCoordinates(global_x, global_y);
+        // Add actual x and y position of the sprite on the stage to the global info of the sprite
+        spritesGlobalInfo.current.get(index).stage_x = artwork_position.x;
+        spritesGlobalInfo.current.get(index).stage_y = artwork_position.y;
         // Set position of sprite
-        sprite.x = artwork_position.x;
-        sprite.y = artwork_position.y;
+        if (ROUND) {
+            sprite.x = Math.round(artwork_position.x);
+            sprite.y = Math.round(artwork_position.y);
+        } else {
+            sprite.x = artwork_position.x;
+            sprite.y = artwork_position.y;
+        }
 
         // Probably not needed, but leave it here just in case
-        sprite.visible = artwork_position.x > -maxWidth.current
-            && artwork_position.x <= stageWidth.current
-            && artwork_position.y >= -maxHeight.current
-            && artwork_position.y <= stageHeight.current;
+        sprite.visible = sprite.x >= -maxWidth.current
+            && sprite.x <= stageWidth.current
+            && sprite.y >= -maxHeight.current
+            && sprite.y <= stageHeight.current;
 
         // Give sprite a gray color
         sprite.texture = PIXI.Texture.WHITE;
@@ -497,8 +518,8 @@ const ClustersMap = (props) => {
         sprite.zIndex = 8;
 
         // Add texture to the sprite if the sprite is either in the visible area or in its immediate vicinity
-        if (artwork_position.x > -3 * maxHeight.current * width / height && artwork_position.x <= stageWidth.current + 3 * maxHeight.current * width / height
-            && artwork_position.y >= -3 * maxHeight.current && artwork_position.y <= stageHeight.current + 3 * maxHeight.current) {
+        if (sprite.x >= -3 * maxWidth.current && sprite.x <= stageWidth.current + 2 * maxWidth.current
+            && sprite.y >= -3 * maxHeight.current && sprite.y <= stageHeight.current + 2 * maxHeight.current) {
             // Set flag that texture has been loaded. This makes sure that the texture is not loaded again.
             textureLoaded.current.set(index, true);
             // Create abort controller for the texture
@@ -521,7 +542,7 @@ const ClustersMap = (props) => {
                     if (sprites.current.has(index)) {
                         sprite.tint = 0xFFFFFF;
                         // noinspection all
-                        sprite.texture = PIXI.Texture.from(URL.createObjectURL(blob));
+                        sprite.texture = PIXI.Texture.from(URL.createObjectURL(blob), {scaleMode: PIXI.SCALE_MODES.LINEAR});
                         sprite.zIndex = 10;
                         containerForeground.current.sortChildren();
                     } else {
@@ -566,8 +587,6 @@ const ClustersMap = (props) => {
     }
 
     const reset = () => {
-        // Set roundPixels to true
-        app.renderer.roundPixels = true;
         // Stop momentum translation ticker if it is active
         stopMomentumTranslationTicker();
         // Remove all children from stage
@@ -608,8 +627,6 @@ const ClustersMap = (props) => {
     const setPropertiesOfContainer = (container, zIndex, isForeground) => {
         // Define container pointer
         container.cursor = isForeground ? 'grab' : 'default';
-        container.x = 0;
-        container.y = 0;
         // noinspection all
         container.hitArea = new PIXI.Rectangle(0, 0, stageWidth.current, stageHeight.current);
         // noinspection all
@@ -889,9 +906,17 @@ const ClustersMap = (props) => {
                 spritesGlobalInfo.current.get(index).x,
                 spritesGlobalInfo.current.get(index).y
             );
+            // Add actual x and y position of the sprite on the stage to the global info of the sprite
+            spritesGlobalInfo.current.get(index).stage_x = artwork_position.x;
+            spritesGlobalInfo.current.get(index).stage_y = artwork_position.y;
             // Set position of sprite
-            sprites.current.get(index).x = artwork_position.x;
-            sprites.current.get(index).y = artwork_position.y;
+            if (ROUND) {
+                sprites.current.get(index).x = Math.round(artwork_position.x);
+                sprites.current.get(index).y = Math.round(artwork_position.y);
+            } else {
+                sprites.current.get(index).x = artwork_position.x;
+                sprites.current.get(index).y = artwork_position.y;
+            }
         }
         // Update stage
         updateStage();
@@ -924,6 +949,8 @@ const ClustersMap = (props) => {
                 app.stage.addChild(minimap.current);
         }
 
+        // Reset velocities
+        touchVelocities.current = [];
         // Set handlers of containerForeground
         setHandlersOfContainerForeground();
         // Set mouse down to false
@@ -1114,12 +1141,28 @@ const ClustersMap = (props) => {
                                 spritesGlobalInfo.current.get(index).x,
                                 spritesGlobalInfo.current.get(index).y
                             );
+                            // Add actual x and y position of the sprite on the stage to the global info of the sprite
+                            spritesGlobalInfo.current.get(index).stage_x = artwork_position.x;
+                            spritesGlobalInfo.current.get(index).stage_y = artwork_position.y;
                             // Update position of sprite if it varies from the current position by more than 1 pixel
-                            sprites.current.get(index).x = artwork_position.x;
-                            sprites.current.get(index).y = artwork_position.y;
+                            if (ROUND) {
+                                sprites.current.get(index).x = Math.round(artwork_position.x);
+                                sprites.current.get(index).y = Math.round(artwork_position.y);
+                            } else {
+                                sprites.current.get(index).x = artwork_position.x;
+                                sprites.current.get(index).y = artwork_position.y;
+                            }
                         } else {
-                            sprites.current.get(index).x += shift_x;
-                            sprites.current.get(index).y += shift_y;
+                            // Update actual x and y position of the sprite on the stage
+                            spritesGlobalInfo.current.get(index).stage_x += shift_x;
+                            spritesGlobalInfo.current.get(index).stage_y += shift_y;
+                            if (ROUND) {
+                                sprites.current.get(index).x = Math.round(spritesGlobalInfo.current.get(index).stage_x);
+                                sprites.current.get(index).y = Math.round(spritesGlobalInfo.current.get(index).stage_y);
+                            } else {
+                                sprites.current.get(index).x = spritesGlobalInfo.current.get(index).stage_x;
+                                sprites.current.get(index).y = spritesGlobalInfo.current.get(index).stage_y;
+                            }
                         }
 
                         // Change size of sprite
@@ -1127,8 +1170,7 @@ const ClustersMap = (props) => {
                             scaleSprite(index);
 
                         // Make sprite not visible if outside the viewing area
-                        const aspect_ratio = spritesGlobalInfo.current.get(index).width / spritesGlobalInfo.current.get(index).height;
-                        sprites.current.get(index).visible = sprites.current.get(index).x > -maxWidth.current
+                        sprites.current.get(index).visible = sprites.current.get(index).x >= -maxWidth.current
                             && sprites.current.get(index).x <= stageWidth.current
                             && sprites.current.get(index).y >= -maxHeight.current
                             && sprites.current.get(index).y <= stageHeight.current;
@@ -1136,8 +1178,8 @@ const ClustersMap = (props) => {
                         count_visible += sprites.current.get(index).visible ? 1 : 0;
 
                         // Add texture to the sprite if the sprite is either in the visible area or in its immediate vicinity
-                        if (sprites.current.get(index).x > -3 * maxHeight.current * aspect_ratio && sprites.current.get(index).x <= stageWidth.current + 3 * maxHeight.current * aspect_ratio
-                            && sprites.current.get(index).y >= -3 * maxHeight.current && sprites.current.get(index).y <= stageHeight.current + 3 * maxHeight.current) {
+                        if (sprites.current.get(index).x >= -3 * maxWidth.current && sprites.current.get(index).x <= stageWidth.current + 2 * maxWidth.current
+                            && sprites.current.get(index).y >= -3 * maxHeight.current && sprites.current.get(index).y <= stageHeight.current + 2 * maxHeight.current) {
                             if (!textureLoaded.current.get(index)) {
                                 // Set flag that texture has been loaded.
                                 textureLoaded.current.set(index, true);
@@ -1161,7 +1203,7 @@ const ClustersMap = (props) => {
                                         if (sprites.current.has(index)) {
                                             sprites.current.get(index).tint = 0xFFFFFF;
                                             // noinspection all
-                                            sprites.current.get(index).texture = PIXI.Texture.from(URL.createObjectURL(blob));
+                                            sprites.current.get(index).texture = PIXI.Texture.from(URL.createObjectURL(blob), {scaleMode: PIXI.SCALE_MODES.LINEAR});
                                             sprites.current.get(index).zIndex = 10;
                                             containerForeground.current.sortChildren();
                                         } else {
@@ -1239,6 +1281,10 @@ const ClustersMap = (props) => {
                     sprite.width = originalWidth;
                 if (sprite.height !== originalHeight)
                     sprite.height = originalHeight;
+                if (sprite.x !== originalX)
+                    sprite.x = originalX;
+                if (sprite.y !== originalY)
+                    sprite.y = originalY;
                 // Stop the ticker
                 ticker.stop();
             } else {
@@ -1249,11 +1295,19 @@ const ClustersMap = (props) => {
                 const diffWidth = originalWidth * scaleFactor - originalWidth;
                 const diffHeight = originalHeight * scaleFactor - originalHeight;
                 // Adjust the x and y coordinates of the sprite by half of the difference in size
-                sprite.x = originalX - diffWidth / 2;
-                sprite.y = originalY - diffHeight / 2;
-                // Increase size of sprite from the center
-                sprite.width = originalWidth * scaleFactor;
-                sprite.height = originalHeight * scaleFactor;
+                if (ROUND) {
+                    sprite.x = Math.round(originalX - diffWidth / 2);
+                    sprite.y = Math.round(originalY - diffHeight / 2);
+                    // Increase size of sprite from the center
+                    sprite.width = Math.round(originalWidth * scaleFactor);
+                    sprite.height = Math.round(originalHeight * scaleFactor);
+                } else {
+                    sprite.x = originalX - diffWidth / 2;
+                    sprite.y = originalY - diffHeight / 2;
+                    // Increase size of sprite from the center
+                    sprite.width = originalWidth * scaleFactor;
+                    sprite.height = originalHeight * scaleFactor;
+                }
             }
         });
         ticker.start();
@@ -1277,11 +1331,21 @@ const ClustersMap = (props) => {
         const width_sprite_non_scaled = maxHeight.current * aspect_ratio;
         // Change size if the width is larger than the maximum width
         if (width_sprite_non_scaled > maxWidth.current) {
-            width_image = Math.round(maxWidth.current);
-            height_image = Math.round(maxWidth.current / aspect_ratio);
+            if (ROUND) {
+                width_image = Math.round(maxWidth.current);
+                height_image = Math.round(maxWidth.current / aspect_ratio);
+            } else {
+                width_image = maxWidth.current;
+                height_image = maxWidth.current / aspect_ratio;
+            }
         } else {
-            height_image = Math.round(maxHeight.current);
-            width_image = Math.round(width_sprite_non_scaled);
+            if (ROUND) {
+                height_image = Math.round(maxHeight.current);
+                width_image = Math.round(width_sprite_non_scaled);
+            } else {
+                height_image = maxHeight.current;
+                width_image = width_sprite_non_scaled;
+            }
         }
 
         // Compute final position
@@ -1557,6 +1621,12 @@ const ClustersMap = (props) => {
         // Compute velocity
         const touchCurrPos = event.data.getLocalPosition(containerForeground.current);
         const touchCurrTime = Date.now();
+        if (touchPrevTime.current === -1) {
+            // Do not save the first touch velocity
+            touchPrevTime.current = touchCurrTime;
+            touchPrevPos.current = touchCurrPos;
+            return;
+        }
         if (touchVelocities.current.length > NUM_OF_VELOCITIES) {
             // Remove the least recent velocity
             touchVelocities.current.shift();
@@ -1577,11 +1647,17 @@ const ClustersMap = (props) => {
 
     const momentumTranslation = (averageVelocityX, averageVelocityY, multiplicativeFactor) => {
         const frames = 40;
-        // Change multiplicative factor based on width and height of the stage
-        // Transform velocities, which are in pixels per millisecond, to velocities in the embedding space.
-        averageVelocityX *= (effectiveWidth.current * multiplicativeFactor) / width.current;
-        averageVelocityY *= (effectiveHeight.current * multiplicativeFactor) / height.current;
+        if (Math.abs(averageVelocityX) < 0.4 && Math.abs(averageVelocityY) < 0.4)
+            return;
 
+        // Cap the average velocity
+        averageVelocityX = Math.min(Math.max(averageVelocityX, -MAX_VELOCITY), MAX_VELOCITY);
+        averageVelocityY = Math.min(Math.max(averageVelocityY, -MAX_VELOCITY), MAX_VELOCITY);
+        // Multiply the average velocity by the multiplicative factor
+        averageVelocityX *= multiplicativeFactor;
+        averageVelocityY *= multiplicativeFactor;
+
+        // Create ticker for momentum translation
         momentum_translation_ticker.current = new PIXI.Ticker();
         // Define counter for number of steps
         let counter = 0;
@@ -1595,15 +1671,35 @@ const ClustersMap = (props) => {
                     updateStage(0, 0, 0, 0);
                 }
             } else {
-                const effectivePositionX = effectivePosition.current.x;
-                const effectivePositionY = effectivePosition.current.y;
-                effectivePosition.current.x = Math.max(
-                    Math.min(effectivePosition.current.x - averageVelocityX, maxX.current - effectiveWidth.current), minX.current);
-                effectivePosition.current.y = Math.max(
-                    Math.min(effectivePosition.current.y - averageVelocityY, maxY.current - effectiveHeight.current), minY.current);
                 // Compute shift
-                const shift_x = (effectivePosition.current.x - effectivePositionX) * (width.current - maxWidth.current) / effectiveWidth.current;
-                const shift_y = (effectivePosition.current.y - effectivePositionY) * (height.current - maxHeight.current) / effectiveHeight.current;
+                let shift_x = Math.round(-averageVelocityX);
+                let shift_y = Math.round(-averageVelocityY);
+                // Compute the new x and y position
+                let new_x = effectivePosition.current.x + (shift_x * effectiveWidth.current) / (width.current - maxWidth.current);
+                let new_y = effectivePosition.current.y + (shift_y * effectiveHeight.current) / (height.current - maxHeight.current);
+
+                // Check if they exceed the limits of the embedding space
+                if (new_x < minX.current || new_x > maxX.current - effectiveWidth.current) {
+                    // Readjust new_x
+                    new_x = Math.max(Math.min(new_x, maxX.current - effectiveWidth.current), minX.current);
+                    // Compute shift_x
+                    shift_x = ((new_x - effectivePosition.current.x) * (width.current - maxWidth.current)) / effectiveWidth.current;
+                }
+                if (new_y < minY.current || new_y > maxY.current - effectiveHeight.current) {
+                    // Readjust new_y
+                    new_y = Math.max(Math.min(new_y, maxY.current - effectiveHeight.current), minY.current);
+                    // Compute shift_y
+                    shift_y = ((new_y - effectivePosition.current.y) * (height.current - maxHeight.current)) / effectiveHeight.current;
+                }
+                // Update the effective position of the stage
+                effectivePosition.current.x = new_x;
+                effectivePosition.current.y = new_y;
+
+                if ((new_x === minX.current || new_x === maxX.current - effectiveWidth.current) &&
+                    (new_y === minY.current || new_y === maxY.current - effectiveHeight.current)) {
+                    // Force stop ticker
+                    counter = frames - 1;
+                }
                 // Increment counter
                 counter++;
                 // Decrease velocity
@@ -1629,14 +1725,14 @@ const ClustersMap = (props) => {
         // Reset total movement
         totalMovement.current = 0;
         // Reset start time
-        touchPrevTime.current = Date.now();
+        touchPrevTime.current = -1;
         // Set mouse position
         touchPrevPos.current = event.data.getLocalPosition(containerForeground.current);
     }
 
     // Create handler for mouse up
     const handleMouseUpOrLeave = () => {
-        if (!mouseDown.current || totalMovement.current < 2) {
+        if (!mouseDown.current || totalMovement.current < 2 || Date.now() - touchPrevTime.current > 100) {
             mouseDown.current = false;
             containerForeground.current.cursor = 'grab';
             return;
@@ -1658,7 +1754,7 @@ const ClustersMap = (props) => {
             averageVelocityX /= touchVelocities.current.length;
             averageVelocityY /= touchVelocities.current.length;
             // Await momentum translation
-            momentumTranslation(averageVelocityX, averageVelocityY, 10);
+            momentumTranslation(averageVelocityX, averageVelocityY, MULTIPLICATIVE_FACTOR);
         }
     }
 
@@ -1668,15 +1764,28 @@ const ClustersMap = (props) => {
         // Get mouse position. Transform movement of the mouse to movement in the embedding space.
         const mouse_x = ((-event.movementX) * effectiveWidth.current) / (width.current - maxWidth.current);
         const mouse_y = ((-event.movementY) * effectiveHeight.current) / (height.current - maxHeight.current);
-        // Change the effective position of the stage. Make sure that it does not exceed the limits of the embedding space.
-        const new_x = Math.max(
-            Math.min(effectivePosition.current.x + mouse_x, maxX.current - effectiveWidth.current), minX.current);
-        const new_y = Math.max(
-            Math.min(effectivePosition.current.y + mouse_y, maxY.current - effectiveHeight.current), minY.current);
 
         // Compute shift
-        const shift_x = ((new_x - effectivePosition.current.x) * (width.current - maxWidth.current)) / effectiveWidth.current;
-        const shift_y = ((new_y - effectivePosition.current.y) * (height.current - maxHeight.current)) / effectiveHeight.current;
+        let shift_x = Math.round((mouse_x * (width.current - maxWidth.current)) / effectiveWidth.current);
+        let shift_y = Math.round((mouse_y * (height.current - maxHeight.current)) / effectiveHeight.current);
+
+        // Compute the new x and y position
+        let new_x = effectivePosition.current.x + (shift_x * effectiveWidth.current) / (width.current - maxWidth.current);
+        let new_y = effectivePosition.current.y + (shift_y * effectiveHeight.current) / (height.current - maxHeight.current);
+
+        // Check if they exceed the limits of the embedding space
+        if (new_x < minX.current || new_x > maxX.current - effectiveWidth.current) {
+            // Readjust new_x
+            new_x = Math.max(Math.min(new_x, maxX.current - effectiveWidth.current), minX.current);
+            // Compute shift_x
+            shift_x = ((new_x - effectivePosition.current.x) * (width.current - maxWidth.current)) / effectiveWidth.current;
+        }
+        if (new_y < minY.current || new_y > maxY.current - effectiveHeight.current) {
+            // Readjust new_y
+            new_y = Math.max(Math.min(new_y, maxY.current - effectiveHeight.current), minY.current);
+            // Compute shift_y
+            shift_y = ((new_y - effectivePosition.current.y) * (height.current - maxHeight.current)) / effectiveHeight.current;
+        }
 
         // Update the effective position of the stage
         effectivePosition.current.x = new_x;
@@ -1704,7 +1813,7 @@ const ClustersMap = (props) => {
         // Save touch position
         touchPrevPos.current = event.data.getLocalPosition(containerForeground.current);
         // Save touch start time
-        touchPrevTime.current = Date.now();
+        touchPrevTime.current = -1;
         // Set total movement to 0
         totalMovement.current = 0;
         // Reset touch velocities
@@ -1726,7 +1835,7 @@ const ClustersMap = (props) => {
             countOfPinching.current -= 1;
             return;
         }
-        if (totalMovement.current < 20)
+        if (totalMovement.current < 20 || Date.now() - touchPrevTime.current > 100)
             return;
 
         // Compute average velocity in both x and y direction
@@ -1742,7 +1851,7 @@ const ClustersMap = (props) => {
             averageVelocityX /= touchVelocities.current.length;
             averageVelocityY /= touchVelocities.current.length;
             // Start momentum translation
-            const multiplicativeFactor = Math.min(stageWidth.current / 30, 10);
+            const multiplicativeFactor = Math.round(Math.min(stageWidth.current / 30, MULTIPLICATIVE_FACTOR));
             momentumTranslation(averageVelocityX, averageVelocityY, multiplicativeFactor);
         }
     }

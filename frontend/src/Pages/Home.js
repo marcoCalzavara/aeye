@@ -222,7 +222,7 @@ const Home = (props) => {
                                height={dimensionsStage.height}
                                raf={true}
                                renderOnComponentChange={false}
-                               options={{backgroundColor: 0x000000, antialias: false}}>
+                               options={{backgroundColor: 0x000000, antialias: true}}>
                             <ClustersMap width={dimensionsEmbeddingState.width}
                                          height={dimensionsEmbeddingState.height}
                                          overflowX={overflowX}
