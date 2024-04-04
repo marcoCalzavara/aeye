@@ -79,6 +79,7 @@ services:
       - ../best_artworks:/best_artworks
       - ../wikiart:/wikiart
       - ../celebahq:/celebahq
+      - ../MNIST:/MNIST
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
@@ -112,6 +113,7 @@ services:
       - ../best_artworks:/usr/share/nginx/best_artworks
       - ../wikiart:/usr/share/nginx/wikiart
       - ../celebahq:/usr/share/nginx/celebahq
+      - ../MNIST:/usr/share/nginx/MNIST
     ports:
       - "80:80"
     depends_on:

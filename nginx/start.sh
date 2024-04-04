@@ -14,6 +14,10 @@ find /usr/share/nginx/wikiart -type f -exec chmod 755 {} \;
 chmod 755 /usr/share/nginx/celebahq
 find /usr/share/nginx/celebahq -type d -exec chmod 755 {} \;
 find /usr/share/nginx/celebahq -type f -exec chmod 755 {} \;
+chmod 755 /usr/share/nginx/MNIST
+find /usr/share/nginx/MNIST -type d -exec chmod 755 {} \;
+find /usr/share/nginx/MNIST -type f -exec chmod 755 {} \;
+
 
 sleep 115
 

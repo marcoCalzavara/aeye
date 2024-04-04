@@ -7,6 +7,7 @@ echo "MILVUS_PORT=$MILVUS_PORT" >> /.env
 echo "WIKIART_DIR=/wikiart" >> /.env
 echo "BEST_ARTWORKS_DIR=/best_artworks" >> /.env
 echo "CELEBAHQ_DIR=/celebahq" >> /.env
+echo "MNIST_DIR=/MNIST" >> /.env
 echo "ROOT=1" >> /.env
 
 # Export .env file location
@@ -48,6 +49,9 @@ find /wikiart -type f -exec chmod 755 {} \;
 chmod 755 /celebahq
 find /celebahq -type d -exec chmod 755 {} \;
 find /celebahq -type f -exec chmod 755 {} \;
+chmod 755 /MNIST
+find /MNIST -type d -exec chmod 755 {} \;
+find /MNIST -type f -exec chmod 755 {} \;
 
 # Create default database
 echo "Creating default database..."
