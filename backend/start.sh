@@ -8,6 +8,7 @@ echo "WIKIART_DIR=/wikiart" >> /.env
 echo "BEST_ARTWORKS_DIR=/best_artworks" >> /.env
 echo "CELEBAHQ_DIR=/celebahq" >> /.env
 echo "MNIST_DIR=/MNIST" >> /.env
+echo "CIFAR_100_DIR=/CIFAR-100" >> /.env
 echo "ROOT=1" >> /.env
 
 # Export .env file location
@@ -52,6 +53,9 @@ find /celebahq -type f -exec chmod 755 {} \;
 chmod 755 /MNIST
 find /MNIST -type d -exec chmod 755 {} \;
 find /MNIST -type f -exec chmod 755 {} \;
+chmod 755 /CIFAR-100
+find /CIFAR-100 -type d -exec chmod 755 {} \;
+find /CIFAR-100 -type f -exec chmod 755 {} \;
 
 # Create default database
 echo "Creating default database..."

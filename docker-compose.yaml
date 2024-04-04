@@ -80,6 +80,7 @@ services:
       - ../wikiart:/wikiart
       - ../celebahq:/celebahq
       - ../MNIST:/MNIST
+      - ../CIFAR-100:/CIFAR-100
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
@@ -114,6 +115,7 @@ services:
       - ../wikiart:/usr/share/nginx/wikiart
       - ../celebahq:/usr/share/nginx/celebahq
       - ../MNIST:/usr/share/nginx/MNIST
+      - ../CIFAR-100:/usr/share/nginx/CIFAR-100
     ports:
       - "80:80"
     depends_on:

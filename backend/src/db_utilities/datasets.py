@@ -149,6 +149,23 @@ def mnist_collate_fn(batch):
         return
 
 
+def cifar_100_collate_fn(batch):
+    try:
+        return {
+            "images": {key: torch.cat([x["images"][key] if isinstance(x["images"][key], torch.Tensor)
+                                       else torch.Tensor(np.array(x["images"][key])) for x in batch], dim=0).detach()
+                       for key in batch[0]["images"].keys()},
+            "index": [x["index"] for x in batch],
+            "path": [x["path"] for x in batch],
+            "width": [x["width"] for x in batch],
+            "height": [x["height"] for x in batch]
+        }
+    except Exception as e:
+        print(e.__str__())
+        print("Error in collate_fn of celebahq.")
+        return
+
+
 # SUPPORT DATASET FOR IMAGES
 
 class SupportDatasetForImages(TorchDataset):
@@ -302,6 +319,27 @@ class SupportDatasetForImagesMNIST(SupportDatasetForImages):
         }
 
 
+class SupportDatasetForImagesCIFAR100(SupportDatasetForImages):
+    def __init__(self, root_dir):
+        super().__init__(root_dir)
+
+    def __getitem__(self, idx):
+        img_name = os.path.join(self.root_dir, self.file_list[idx])
+        # Get image height and width
+        image = Image.open(img_name)
+        width, height = image.size
+        if self.transform:
+            image = self.transform(image)
+
+        return {
+            'images': image,
+            'index': idx,
+            'path': self.file_list[idx],
+            'width': width,
+            'height': height
+        }
+
+
 class SupportSamplerForImages(Sampler):
     def __init__(self, data_source, indices):
         super().__init__(data_source)
@@ -323,6 +361,7 @@ class DatasetOptions(Enum):
                      "directory": BEST_ARTWORKS_DIR}
     CELEBAHQ = {"name": "celebahq", "collate_fn": celebahq_collate_fn, "zoom_levels": 9, "directory": CELEBAHQ_DIR}
     MNIST = {"name": "MNIST", "collate_fn": mnist_collate_fn, "zoom_levels": 10, "directory": MNIST_DIR}
+    CIFAR_100 = {"name": "CIFAR100", "collate_fn": cifar_100_collate_fn, "zoom_levels": 10, "directory": CIFAR_100_DIR}
 
 
 # DATASET ABSTRACT CLASS
@@ -449,6 +488,11 @@ def get_dataset_object(dataset_name) -> Dataset:
         ds = SupportDatasetForImagesMNIST(os.getenv(MNIST_DIR))
         # Create and return dataset object
         return LocalArtworksDataset(ds, DatasetOptions.MNIST.value["collate_fn"])
+    elif dataset_name == DatasetOptions.CIFAR_100.value["name"]:
+        # Create SupportDatasetForImages object
+        ds = SupportDatasetForImagesCIFAR100(os.getenv(CIFAR_100_DIR))
+        # Create and return dataset object
+        return LocalArtworksDataset(ds, DatasetOptions.CIFAR_100.value["collate_fn"])
     else:
         # TODO add support for other datasets
         pass

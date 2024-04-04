@@ -1,6 +1,7 @@
 cd ~ || exit
 
 echo "Downloading best artworks..."
+export PATH=$PATH:~/.local/bin/
 kaggle datasets download ikarus777/best-artworks-of-all-time
 
 echo "Unzipping..."

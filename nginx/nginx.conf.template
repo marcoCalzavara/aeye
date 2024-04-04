@@ -29,8 +29,8 @@ http {
     access_log /logs/access.log time; # Log for every connection to nginx
 
     # Define cache paths.
-    proxy_cache_path /data/nginx/cache levels=1:2 keys_zone=cache:10m max_size=100m;
-    proxy_cache_path /data/nginx/cache_images levels=1:2 keys_zone=cache_images:10m max_size=1g;
+    proxy_cache_path /data/nginx/cache levels=1:2 keys_zone=cache:10m max_size=2g;
+    proxy_cache_path /data/nginx/cache_images levels=1:2 keys_zone=cache_images:10m max_size=100m;
 
     upstream backend_upstream {
     # Other servers can be added for load balancing. See https://nginx.org/en/docs/http/load_balancing.html
@@ -83,6 +83,16 @@ http {
         location /celebahq/ {
             add_header Access-Control-Allow-Origin *;
             alias /usr/share/nginx/celebahq/;
+        }
+
+        location /MNIST/ {
+            add_header Access-Control-Allow-Origin *;
+            alias /usr/share/nginx/MNIST/;
+        }
+
+        location /CIFAR100/ {
+            add_header Access-Control-Allow-Origin *;
+            alias /usr/share/nginx/CIFAR-100/;
         }
     }
 }

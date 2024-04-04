@@ -1,6 +1,7 @@
 cd ~ || exit
 
-echo "Downloading best artworks..."
+echo "Downloading MNIST..."
+export PATH=$PATH:~/.local/bin/
 kaggle datasets download -d hojjatk/mnist-dataset
 
 echo "Unzipping..."
