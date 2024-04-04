@@ -24,7 +24,7 @@ LABELS_MAPPING = {0: 'abstract_expressionism', 1: 'action_painting', 2: 'analyti
 COLORS = ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'cyan', 'magenta', 'lime', 'teal', 'lavender',
           'brown', 'beige', 'maroon', 'olive', 'navy', 'indigo', 'azure', 'coral', 'crimson', 'darkgreen', 'dodgerblue',
           'gold', 'orangered', 'fuchsia', 'darkviolet']
-FILE_MISSING_INDEXES = "missing_indexes.txt"
+FILE_MISSING_INDEXES = "missing_indexes"
 COORDINATES = ["x", "y"]
 
 # Database constants

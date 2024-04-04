@@ -113,7 +113,7 @@ def insert_vectors(collection: Collection, data: dict):
     keys.remove("index")
 
     try:
-        with open(FILE_MISSING_INDEXES, "r") as f:
+        with open(FILE_MISSING_INDEXES + "-" + flags["dataset"] + ".txt", "r") as f:
             first_line = f.readline()
             missing_indexes = list(map(int, first_line.strip().split(", "))) if first_line.strip() else []
             start = f.readline()
@@ -145,7 +145,7 @@ def insert_vectors(collection: Collection, data: dict):
                                                           if j < data["embeddings"].shape[0]]))
             continue
 
-    with open(FILE_MISSING_INDEXES, "w") as f:
+    with open(FILE_MISSING_INDEXES + "-" + flags["dataset"] + ".txt", "w") as f:
         f.write(', '.join(map(str, missing_indexes)) + "\n")
         f.write(start)
 
@@ -263,9 +263,9 @@ if __name__ == "__main__":
     print(f"Using collection {collection_name}. The collection contains {collection.num_entities} entities.")
     missing_indexes = []
     start = 0
-    if os.path.exists(FILE_MISSING_INDEXES):
+    if os.path.exists(FILE_MISSING_INDEXES + "-" + flags["dataset"] + ".txt"):
         # Get information from file
-        with open(FILE_MISSING_INDEXES, "r") as f:
+        with open(FILE_MISSING_INDEXES + "-" + flags["dataset"] + ".txt", "r") as f:
             first_line = f.readline()
             missing_indexes = list(map(int, first_line.strip().split(", "))) if first_line.strip() else []
             start = int(f.readline())
@@ -294,7 +294,7 @@ if __name__ == "__main__":
     # Create an embedding object
     embeddings = ClipEmbeddings(device=DEVICE)
     # Create dataset preprocessor
-    dp = DatasetPreprocessor(embeddings, missing_indexes)
+    dp = DatasetPreprocessor(embeddings, missing_indexes, flags["dataset"])
 
     # If there are no missing_indexes and the start is equal to the size of the dataset, then update the metadata by
     # adding low dimensional embeddings.
