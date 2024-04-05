@@ -288,7 +288,6 @@ if __name__ == "__main__":
         # Check the number of remaining data points
         if dataset.get_size() - start < flags["batch_size"]:
             # We don't have enough remaining samples for a batch.
-            # Set get_missing_indexes to true.
             missing_indexes + list(range(start, dataset.get_size()))
 
     # Create an embedding object

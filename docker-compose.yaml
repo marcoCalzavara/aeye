@@ -81,6 +81,8 @@ services:
       - ../celebahq:/celebahq
       - ../MNIST:/MNIST
       - ../CIFAR-100:/CIFAR-100
+      - ../Fashion-MNIST:/Fashion-MNIST
+      - ../COCO-2017:/COCO-2017
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
@@ -116,6 +118,8 @@ services:
       - ../celebahq:/usr/share/nginx/celebahq
       - ../MNIST:/usr/share/nginx/MNIST
       - ../CIFAR-100:/usr/share/nginx/CIFAR-100
+      - ../Fashion-MNIST:/usr/share/nginx/Fashion-MNIST
+      - ../COCO-2017:/usr/share/nginx/COCO-2017
     ports:
       - "80:80"
     depends_on:

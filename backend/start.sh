@@ -9,6 +9,8 @@ echo "BEST_ARTWORKS_DIR=/best_artworks" >> /.env
 echo "CELEBAHQ_DIR=/celebahq" >> /.env
 echo "MNIST_DIR=/MNIST" >> /.env
 echo "CIFAR_100_DIR=/CIFAR-100" >> /.env
+echo "FASHION_MNIST_DIR=/Fashion-MNIST" >> /.env
+echo "COCO_2017_DIR=/COCO-2017" >> /.env
 echo "ROOT=1" >> /.env
 
 # Export .env file location
@@ -39,23 +41,6 @@ fi
 
 # Sleep for 100 seconds to allow time for the container hosting the milvus service to become healthy
 sleep 100
-
-# Get permissions for the datasets
-chmod 755 /best_artworks
-find /best_artworks -type d -exec chmod 755 {} \;
-find /best_artworks -type f -exec chmod 755 {} \;
-chmod 755 /wikiart
-find /wikiart -type d -exec chmod 755 {} \;
-find /wikiart -type f -exec chmod 755 {} \;
-chmod 755 /celebahq
-find /celebahq -type d -exec chmod 755 {} \;
-find /celebahq -type f -exec chmod 755 {} \;
-chmod 755 /MNIST
-find /MNIST -type d -exec chmod 755 {} \;
-find /MNIST -type f -exec chmod 755 {} \;
-chmod 755 /CIFAR-100
-find /CIFAR-100 -type d -exec chmod 755 {} \;
-find /CIFAR-100 -type f -exec chmod 755 {} \;
 
 # Create default database
 echo "Creating default database..."
