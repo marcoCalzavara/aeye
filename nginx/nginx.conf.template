@@ -41,11 +41,6 @@ http {
         listen 80;
         access_log  /logs/reverse-proxy.log  time; # log for connections on port 80
 
-        # Rewrite directives
-        rewrite ^/CIFAR100/resized_images/(.*)$ /CIFAR100/$1 break;
-        rewrite ^/FashionMNIST/resized_images/(.*)$ /FashionMNIST/$1 break;
-        rewrite ^/MNIST/resized_images/(.*)$ /MNIST/$1 break;
-
         location / {
             proxy_pass http://frontend:3000;
         }
@@ -93,16 +88,19 @@ http {
 
         location /MNIST/ {
             add_header Access-Control-Allow-Origin *;
+            rewrite ^/MNIST/resized_images/(.*)$ /MNIST/$1 break;
             alias /usr/share/nginx/MNIST/;
         }
 
         location /CIFAR100/ {
             add_header Access-Control-Allow-Origin *;
+            rewrite ^/CIFAR100/resized_images/(.*)$ /CIFAR100/$1 break;
             alias /usr/share/nginx/CIFAR-100/;
         }
 
         location /FashionMNIST/ {
             add_header Access-Control-Allow-Origin *;
+            rewrite ^/FashionMNIST/resized_images/(.*)$ /FashionMNIST/$1 break;
             alias /usr/share/nginx/Fashion-MNIST/;
         }
 
