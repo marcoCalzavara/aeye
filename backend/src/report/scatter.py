@@ -107,12 +107,12 @@ def generate_scatter_plot(collection: Collection):
             directory = dataset_option.value["directory"]
             break
 
-    if not os.path.exists(f"{os.getenv(HOME)}/{directory}"):
+    if not os.path.exists(f"{os.getenv(HOME)}/{os.getenv(directory)}"):
         print("We could not find the directory to save the scatter plot.")
         sys.exit(1)
 
     plt.savefig(f"{os.getenv(HOME)}/{directory}/minimap.png")
-    print(f"Scatter plot saved for collection {collection.name} at {os.getenv(HOME)}/{collection.name}/minimap.png.")
+    print(f"Scatter plot saved for collection {collection.name} at {os.getenv(HOME)}/{os.getenv(directory)}/minimap.png.")
 
     # Release collection
     collection.release()
