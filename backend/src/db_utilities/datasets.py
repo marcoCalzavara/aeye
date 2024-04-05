@@ -441,6 +441,16 @@ def get_dataset_object(dataset_name) -> Dataset:
         ds = SupportDatasetForImagesCommon(os.getenv(CIFAR_100_DIR))
         # Create and return dataset object
         return LocalArtworksDataset(ds, DatasetOptions.CIFAR_100.value["collate_fn"])
+    elif dataset_name == DatasetOptions.FASHION_MNIST.value["name"]:
+        # Create SupportDatasetForImages object
+        ds = SupportDatasetForImagesCommon(os.getenv(FASHION_MNIST_DIR))
+        # Create and return dataset object
+        return LocalArtworksDataset(ds, DatasetOptions.FASHION_MNIST.value["collate_fn"])
+    elif dataset_name == DatasetOptions.COCO_2017.value["name"]:
+        # Create SupportDatasetForImages object
+        ds = SupportDatasetForImagesCommon(os.getenv(COCO_2017_DIR))
+        # Create and return dataset object
+        return LocalArtworksDataset(ds, DatasetOptions.COCO_2017.value["collate_fn"])
     else:
         # TODO add support for other datasets
         pass
