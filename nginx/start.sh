@@ -2,17 +2,12 @@
 
 mkdir -p logs
 envsubst < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
-chmod 644 /frontend/build
-find /frontend/build -type d -exec chmod 644 {} \;
-find /frontend/build -type f -exec chmod 644 {} \;
+chmod -R 755 /frontend/build
 
-chmod +rw /usr/share/nginx/best_artworks/
-chmod +rw /usr/share/nginx/celebahq/
-chmod +rw /usr/share/nginx/COCO-2017/
-chmod +rw /usr/share/nginx/Fashion-MNIST/
-chmod +rw /usr/share/nginx/MNIST/
-chmod +rw /usr/share/nginx/wikiart/
-chmod +rw /usr/share/nginx/CIFAR-100/
+for dir in best_artworks celebahq COCO-2017 Fashion-MNIST MNIST wikiart CIFAR-100
+do
+    chmod -R 755 /usr/share/nginx/$dir/
+done
 
 sleep 115
 
