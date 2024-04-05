@@ -7,8 +7,9 @@ from PIL import Image
 from dotenv import load_dotenv
 from pymilvus import db, Collection, utility
 
-from .collections import (clusters_collection, image_to_tile_collection, ZOOM_LEVEL_VECTOR_FIELD_NAME,
-                          EMBEDDING_VECTOR_FIELD_NAME)
+"""from .collections import (clusters_collection, image_to_tile_collection, ZOOM_LEVEL_VECTOR_FIELD_NAME,
+                          EMBEDDING_VECTOR_FIELD_NAME)"""
+from .collections import clusters_collection, image_to_tile_collection, ZOOM_LEVEL_VECTOR_FIELD_NAME
 from .utils import ModifiedKMeans
 # from .datasets import DatasetOptions
 from .utils import create_connection, parsing
@@ -19,7 +20,7 @@ from ..CONSTANTS import *
 # Increase pixel limit
 Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 
-MAX_IMAGES_PER_TILE = 40
+MAX_IMAGES_PER_TILE = 30
 NUMBER_OF_CLUSTERS = 30
 THRESHOLD = 0.8
 
@@ -279,6 +280,7 @@ def save_image(representative_entities, dataset_collection, zoom_level, tile_x_i
                + str(tile_y_index) + ".png")
 
 
+"""
 def split_block(i, window, representative_entities, temp_cluster_representatives_entities,
                 indexes_of_entities_already_in_representative_entities):
     # Calculate the integer portion and the remainder. There are window - 1 elements in the block to distribute among
@@ -382,6 +384,7 @@ def merge_clusters(old_cluster_representatives_in_current_tile, temp_cluster_rep
             window = 1
 
     return representative_entities
+"""
 
 
 def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name,
@@ -460,6 +463,23 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                 representative_entities = []
                 # Check if there are less than MAX_IMAGES_PER_TILE images in the tile.
                 if len(entities_in_tile) <= MAX_IMAGES_PER_TILE:
+                    # START NEW VERSION
+                    for entity in entities_in_tile:
+                        # Check if the entity is in the previous zoom level
+                        in_previous = False
+                        for old_rep in old_cluster_representatives_in_current_tile:
+                            if entity["index"] == old_rep["index"]:
+                                in_previous = True
+                                break
+                        representative_entities.append(
+                            {
+                                "representative": entity,
+                                "number_of_entities": 0,
+                                "in_previous": in_previous
+                            }
+                        )
+                    # END NEW VERSION
+                    """
                     if zoom_level != max_zoom_level and len(entities_in_tile) > 1:
                         # Merge clusters if the embeddings of the representatives are too similar in terms of cosine
                         # similarity
@@ -501,6 +521,7 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                                     "in_previous": in_previous
                                 }
                             )
+                    """
 
                     # Check if the all the element in old_cluster_representatives_in_current_tile have in_previous
                     # set to True.
@@ -602,6 +623,7 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
 
                     # Merge clusters if the embeddings of the representatives are too similar in terms of cosine
                     # similarity. First, get full embedding vectors of the representatives.
+                    """
                     indexes = [cluster["representative"]["index"] for cluster in temp_cluster_representatives_entities]
                     result = dataset_collection.query(
                         expr=f"index in {indexes}",
@@ -619,6 +641,10 @@ def create_zoom_levels(entities, dataset_collection, zoom_levels_collection_name
                     representative_entities = merge_clusters(old_cluster_representatives_in_current_tile,
                                                              temp_cluster_representatives_entities,
                                                              cosine_similarity_matrix)
+                    """
+                    # START NEW VERSION
+                    representative_entities = temp_cluster_representatives_entities
+                    # END NEW VERSION
 
                     # Check if the all the element in old_cluster_representatives_in_current_tile have in_previous
                     # set to True.
