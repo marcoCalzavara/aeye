@@ -21,7 +21,7 @@ echo 'Removing images ...'
 docker rmi $(docker images -a -q)
 
 # Remove all stray volumes if any
-echo 'Revoming docker container volumes (if any)'
+echo 'Removing docker container volumes (if any)'
 # shellcheck disable=SC2046
 docker volume rm $(docker volume ls -q)
 
