@@ -307,9 +307,9 @@ class DatasetOptions(Enum):
     CELEBAHQ = {"name": "CelebAHQ", "collate_fn": common_collate_fn, "zoom_levels": 9, "directory": CELEBAHQ_DIR}
     MNIST = {"name": "MNIST", "collate_fn": common_collate_fn, "zoom_levels": 9, "directory": MNIST_DIR}
     CIFAR_100 = {"name": "CIFAR100", "collate_fn": common_collate_fn, "zoom_levels": 10, "directory": CIFAR_100_DIR}
-    FASHION_MNIST = {"name": "FashionMNIST", "collate_fn": common_collate_fn, "zoom_levels": 10,
+    FASHION_MNIST = {"name": "FashionMNIST", "collate_fn": common_collate_fn, "zoom_levels": 9,
                      "directory": FASHION_MNIST_DIR}
-    COCO_2017 = {"name": "COCO2017", "collate_fn": common_collate_fn, "zoom_levels": 10, "directory": COCO_2017_DIR}
+    # COCO_2017 = {"name": "COCO2017", "collate_fn": common_collate_fn, "zoom_levels": 10, "directory": COCO_2017_DIR}
 
 
 # DATASET ABSTRACT CLASS
