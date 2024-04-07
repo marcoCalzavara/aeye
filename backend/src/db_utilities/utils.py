@@ -20,14 +20,12 @@ def parsing():
     options = "hd:c:r:i:"
 
     # Long options
-    long_options = ["help", "database", "collection", "repopulate", "images"]
+    long_options = ["help", "database", "collection", "repopulate"]
 
     # Prepare flags
     flags = {"database": DEFAULT_DATABASE_NAME,
              "collection": DatasetOptions.BEST_ARTWORKS.value["name"],
-             "repopulate": False,
-             "images": False,
-             "directory": DatasetOptions.BEST_ARTWORKS.value["directory"]}
+             "repopulate": False}
 
     # Parsing argument
     arguments, values = getopt.getopt(arguments, options, long_options)
@@ -37,9 +35,7 @@ def parsing():
         -d or --database: database name (default={flags["database"]}).\n\
         -c or --collection: collection name (default={flags["collection"]}).\n\
         -r or --repopulate: repopulate the collection. Options are y/n (default='
-              f'{"y" if flags["repopulate"] == "y" else "n"}).\n\
-        -i or --images: save images. Options are y/n (default='
-              f'{"y" if flags["images"] else "n"}).')
+              f'{"y" if flags["repopulate"] == "y" else "n"}).')
         sys.exit(0)
 
     # Checking each argument
@@ -64,13 +60,6 @@ def parsing():
                 flags["repopulate"] = False
             else:
                 raise ValueError("The repopulate flag must be either y or n.")
-        elif arg in ("-i", "--images"):
-            if val == "y":
-                flags["images"] = True
-            elif val == "n":
-                flags["images"] = False
-            else:
-                raise ValueError("The images flag must be either y or n.")
 
     return flags
 
