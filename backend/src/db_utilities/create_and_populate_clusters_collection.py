@@ -1,12 +1,12 @@
 import getpass
 import os
 import sys
-from tqdm import tqdm
 
 import numpy as np
 from PIL import Image
 from dotenv import load_dotenv
 from pymilvus import db, Collection, utility
+from tqdm import tqdm
 
 """from .collections import (clusters_collection, image_to_tile_collection, ZOOM_LEVEL_VECTOR_FIELD_NAME,
                           EMBEDDING_VECTOR_FIELD_NAME)"""
@@ -23,8 +23,8 @@ Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 
 MAX_IMAGES_PER_TILE = 30
 NUMBER_OF_CLUSTERS = 30
-THRESHOLD = 0.8
-LIMIT_FOR_INSERT = 10000
+# THRESHOLD = 0.8
+LIMIT_FOR_INSERT = 1000000
 
 
 def load_vectors_from_collection(collection: Collection) -> list | None:
@@ -82,6 +82,9 @@ def insert_vectors_in_clusters_collection(zoom_levels, images_to_tile, collectio
         for zoom_level in zoom_levels.keys():
             for tile_x in zoom_levels[zoom_level].keys():
                 for tile_y in zoom_levels[zoom_level][tile_x].keys():
+                    # Check if the tile has already been inserted
+                    if zoom_levels[zoom_level][tile_x][tile_y]["already_inserted"]:
+                        continue
                     new_representatives = []
                     for representative in zoom_levels[zoom_level][tile_x][tile_y]["representatives"]:
                         new_representative = {
@@ -112,6 +115,8 @@ def insert_vectors_in_clusters_collection(zoom_levels, images_to_tile, collectio
 
                     # Insert entity
                     entities_to_insert.append(entity)
+                    # Mark as inserted
+                    zoom_levels[zoom_level][tile_x][tile_y]["already_inserted"] = True
 
         assert num_tiles == len(entities_to_insert)
 
@@ -686,6 +691,7 @@ def create_zoom_levels(entities, zoom_levels_collection_name, images_to_tile_col
                 # Save information for tile in zoom_levels. Cluster representatives are the entities themselves.
                 zoom_levels[zoom_level][tile_x_index][tile_y_index] = {}
                 zoom_levels[zoom_level][tile_x_index][tile_y_index]["representatives"] = representative_entities
+                zoom_levels[zoom_level][tile_x_index][tile_y_index]["already_inserted"] = False
                 number_of_tiles += 1
                 entities_per_zoom_level[zoom_level] += 1
 
