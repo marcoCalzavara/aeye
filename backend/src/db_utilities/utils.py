@@ -99,7 +99,7 @@ class ModifiedKMeans:
     def _compute_initial_centers(X, fixed_centers, num_remaining_centers, n_init):
         centroids = fixed_centers
 
-        # compute remaining k - 1 centroids
+        # compute remaining centroids
         for _ in range(num_remaining_centers):
             # initialize a list to store distances of data
             # points from nearest centroid
