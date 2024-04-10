@@ -3,12 +3,14 @@ import Hammer from "hammerjs";
 
 
 const ProgressiveImg = ({placeholderSrc, src, width, height, margin, image, host, selectedDataset,
-                            setSearchData, setShowCarousel, onGoingRequest, setOnGoingRequest}) => {
+                            setSearchData, setShowCarousel, onGoingRequest, setOnGoingRequest,
+                            setStageIsInteractive}) => {
     const [imgSrc, setImgSrc] = useState(placeholderSrc);
     const hammer = useRef(null);
 
     const getTileFromIndex = () => {
         setOnGoingRequest(true);
+        setStageIsInteractive(false);
         let url = host + '/api/image-to-tile?index=' + image.index + '&collection=' + selectedDataset + "_image_to_tile";
         const options = {
             method: 'GET',
@@ -48,7 +50,7 @@ const ProgressiveImg = ({placeholderSrc, src, width, height, margin, image, host
     useEffect(() => {
         hammer.current = new Hammer(document.getElementById("main-image"));
         hammer.current.get('swipe').set({direction: Hammer.DIRECTION_ALL});
-        hammer.current.on('swipeup', (event) => {
+        hammer.current.on('swipeup', () => {
             // Send index of main image to the server
             if (!onGoingRequest)
                 // noinspection JSIgnoredPromiseFromCall

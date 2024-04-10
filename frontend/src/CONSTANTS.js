@@ -6,7 +6,7 @@ export const responsive_margins = {
     m_side_1200: getComputedStyle(document.documentElement).getPropertyValue("--m-canvas-side-1200"),
 };
 
-export const responsive_heights = {
+export const stickybar_responsive_heights = {
     h_sticky_320: getComputedStyle(document.documentElement).getPropertyValue("--h-sticky-320"),
     h_sticky_480: getComputedStyle(document.documentElement).getPropertyValue("--h-sticky-480"),
     h_sticky_768: getComputedStyle(document.documentElement).getPropertyValue("--h-sticky-768"),

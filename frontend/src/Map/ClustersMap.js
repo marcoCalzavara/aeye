@@ -1451,6 +1451,7 @@ const ClustersMap = (props) => {
 
         return new Promise((resolve) => {
             const zoom_ticker = new PIXI.Ticker();
+            zoom_ticker.maxFPS = 120;
             // Define counter for number of steps
             let counter = 0;
 
@@ -2065,17 +2066,23 @@ const ClustersMap = (props) => {
     }
 
     const updateMinimap = () => {
-        // Update minimap
-        minimapRectangle.current.clear();
-        minimapRectangle.current.lineStyle(1, 0xFFFF00);
-        // Compute the width and height of the rectangle based on the size of the stage.
-        const width_rect = Math.max(minimapSprite.current.width * effectiveWidth.current / (maxX.current - minX.current), 2);
-        const height_rect = Math.max(minimapSprite.current.height * effectiveHeight.current / (maxY.current - minY.current), 2);
-        // Compute the position of the rectangle based on the effective position of the stage.
-        const x_rect = (effectivePosition.current.x - minX.current) * minimap.current.width / (maxX.current - minX.current);
-        const y_rect = (effectivePosition.current.y - minY.current) * minimap.current.height / (maxY.current - minY.current);
-        minimapRectangle.current.drawRect(x_rect, y_rect, width_rect, height_rect);
-        minimapRectangle.current.endFill();
+        try {
+            // Update minimap
+            minimapRectangle.current.clear();
+            minimapRectangle.current.lineStyle(2, 0xFFFF00);
+            // Compute the width and height of the rectangle based on the size of the stage.
+            const width_rect = Math.max(minimapSprite.current.width * effectiveWidth.current / (maxX.current - minX.current), 4);
+            const height_rect = Math.max(minimapSprite.current.height * effectiveHeight.current / (maxY.current - minY.current), 4);
+            // Compute the position of the rectangle based on the effective position of the stage.
+            const x_rect = (effectivePosition.current.x - minX.current) * minimap.current.width / (maxX.current - minX.current);
+            const y_rect = (effectivePosition.current.y - minY.current) * minimap.current.height / (maxY.current - minY.current);
+            minimapRectangle.current.drawRect(x_rect, y_rect, width_rect, height_rect);
+            minimapRectangle.current.endFill();
+        } catch (e) {
+            if (!(e instanceof TypeError)) {
+                console.log("Error in updateMinimap: ", e);
+            }
+        }
     }
 
     const createMiniMap = () => {

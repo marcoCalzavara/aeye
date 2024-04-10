@@ -1,6 +1,7 @@
 """
 Module to visualize tiles.
 """
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -174,10 +175,16 @@ def plot_tiles(tiles):
 
     # Create two new figures and add a 3D subplot
     fig1 = plt.figure(figsize=(15, 15))
+    fig10 = plt.figure(figsize=(15, 15))
+    fig11 = plt.figure(figsize=(15, 15))
     fig2 = plt.figure(figsize=(25, 15))
     ax1 = fig1.add_subplot(111, projection='3d')
+    ax10 = fig10.add_subplot(111, projection='3d')
+    ax11 = fig11.add_subplot(111, projection='3d')
     ax2 = fig2.add_subplot(111, projection='3d')
     ax1.view_init(18, -60)
+    ax10.view_init(18, -60)
+    ax11.view_init(18, -60)
     ax2.view_init(15, 45)
 
     # Define the color and transparency of the rectangles
@@ -216,10 +223,41 @@ def plot_tiles(tiles):
             else:
                 continue
 
-    # Generate second plot with a representation of what tiles are fetched by the application
+    # Generate partial plots with a representation of the tiling.
+    # The first plot has only the first level of the tiling.
     for tile in tiles:
         x, y, z, dx, dy, dz = tile
-        ax2.bar3d(x, y, z, dx - DIST_STEP_2, dy - DIST_STEP_2, dz, color=color)
+        if z <= 2 * DEPTH_STEP:
+            if (z == DEPTH_STEP and x == 2 and y == 2) or (z == DEPTH_STEP * 2 and x == min_x_3 and y == min_y_3):
+                # Draw the rectangle at the highest zoom level
+                ax10.bar3d(x, y, z, dx - DIST_STEP, dy - DIST_STEP, 0, color=(1, 1, 1, 0), edgecolor=(1, 1, 1, 0))
+            if not ((z == DEPTH_STEP and (x == min_x_2 or x == max_x_2 or y == min_y_2 or y == max_y_2)) or
+                    (z == 0 * 2 and (x == min_x_1 or x == max_x_1 or y == min_y_1 or y == max_y_1)) or
+                    (z == 0 and (x == min_x_1 + 1 or x == max_x_1 - 1 or y == min_y_1 + 1 or y == max_y_1 - 1))):
+                if z == 2 * DEPTH_STEP:
+                    ax10.bar3d(x, y, z, dx - DIST_STEP, dy - DIST_STEP, dz, color=color, edgecolor=edge_color)
+                else:
+                    ax10.bar3d(x, y, z, dx - DIST_STEP, dy - DIST_STEP, dz, color=(1, 1, 1, 0), edgecolor=(1, 1, 1, 0))
+            else:
+                continue
+
+    # The second plot has the first and second levels of the tiling.
+    for tile in tiles:
+        x, y, z, dx, dy, dz = tile
+        if z <= 2 * DEPTH_STEP:
+            if z == DEPTH_STEP * 2 and x == min_x_3 and y == min_y_3:
+                # Draw the rectangle at the highest zoom level
+                ax11.bar3d(x, y, z, dx - DIST_STEP, dy - DIST_STEP, -DEPTH_STEP, color=slightly_stronger_color,
+                           edgecolor=edge_color)
+            elif not ((z == DEPTH_STEP and (x == min_x_2 or x == max_x_2 or y == min_y_2 or y == max_y_2)) or
+                      (z == 0 * 2 and (x == min_x_1 or x == max_x_1 or y == min_y_1 or y == max_y_1)) or
+                      (z == 0 and (x == min_x_1 + 1 or x == max_x_1 - 1 or y == min_y_1 + 1 or y == max_y_1 - 1))):
+                if z == 2 * DEPTH_STEP or z == DEPTH_STEP:
+                    ax11.bar3d(x, y, z, dx - DIST_STEP, dy - DIST_STEP, dz, color=color, edgecolor=edge_color)
+                else:
+                    ax11.bar3d(x, y, z, dx - DIST_STEP, dy - DIST_STEP, dz, color=(1, 1, 1, 0), edgecolor=(1, 1, 1, 0))
+            else:
+                continue
 
     # Find the limits of the plots at all depths
     min_values_x = [1000, 1000, 1000, 1000, 1000]
@@ -259,12 +297,20 @@ def plot_tiles(tiles):
     # Deactivate grid and axis
     ax1.grid(False)
     ax1.axis('off')
+    ax10.grid(False)
+    ax10.axis('off')
+    ax11.grid(False)
+    ax11.axis('off')
     ax2.grid(False)
     ax2.axis('off')
 
     # Save the plots
-    fig1.savefig('tiling1.png', dpi=500)
-    fig2.savefig('tiling2.png', dpi=500)
+    if not os.path.exists('tiling_plots'):
+        os.makedirs('tiling_plots')
+    fig1.savefig('tiling_plots/tiling1.png', dpi=500)
+    fig2.savefig('tiling_plots/tiling2.png', dpi=500)
+    fig10.savefig('tiling_plots/tiling1-0.png', dpi=500)
+    fig11.savefig('tiling_plots/tiling1-1.png', dpi=500)
 
 
 if __name__ == "__main__":

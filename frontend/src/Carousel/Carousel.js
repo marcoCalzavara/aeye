@@ -181,6 +181,7 @@ const NeighborsCarousel = (props) => {
                                setShowCarousel={props.setShowCarousel}
                                onGoingRequest={props.onGoingRequest}
                                setOnGoingRequest={props.setOnGoingRequest}
+                               setStageIsInteractive={props.setStageIsInteractive}
                 />
             }
             {height > 500 &&
@@ -276,7 +277,8 @@ const NeighborsCarousel = (props) => {
                                                setSearchData={props.setSearchData}
                                                setShowCarousel={props.setShowCarousel}
                                                onGoingRequest={props.onGoingRequest}
-                                               setOnGoingRequest={props.setOnGoingRequest}/>
+                                               setOnGoingRequest={props.setOnGoingRequest}
+                                               setStageIsInteractive={props.setStageIsInteractive}/>
                             </div>
                         })}
                     </Carousel>

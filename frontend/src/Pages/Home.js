@@ -284,7 +284,8 @@ const Home = (props) => {
                                                        setSearchData={setSearchData}
                                                        setShowCarousel={setShowCarousel}
                                                        onGoingRequest={onGoingRequest}
-                                                       setOnGoingRequest={setOnGoingRequest}/>}
+                                                       setOnGoingRequest={setOnGoingRequest}
+                                                       setStageIsInteractive={setStageIsInteractive}/>}
                             </div>
                         </div>
                     </div>

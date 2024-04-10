@@ -2,13 +2,13 @@ import {
     button_size,
     carousel_container_margin_bottom,
     carousel_container_margin_top,
-    height_transition,
     margin_between_images_bottom,
     responsive_carousel_heights,
     responsive_margins,
     responsive_menu_item_heights,
     responsive_searchbar_heights,
-    responsive_searchbar_widths
+    responsive_searchbar_widths,
+    stickybar_responsive_heights
 } from "./CONSTANTS";
 
 /* FUNCTION TO GET CONSTANT VALUES */
@@ -30,22 +30,22 @@ export function getResponsiveMargin() {
     }
 }
 
-/* export function getResponsiveHeight() {
+export function getStickyBarResponsiveHeight() {
     switch (true) {
         case document.documentElement.clientWidth >= 320 && document.documentElement.clientWidth <= 480:
-            return responsive_heights.h_sticky_320;
+            return stickybar_responsive_heights.h_sticky_320;
         case document.documentElement.clientWidth > 480 && document.documentElement.clientWidth <= 768:
-            return responsive_heights.h_sticky_480;
+            return stickybar_responsive_heights.h_sticky_480;
         case document.documentElement.clientWidth > 768 && document.documentElement.clientWidth <= 1024:
-            return responsive_heights.h_sticky_768;
+            return stickybar_responsive_heights.h_sticky_768;
         case document.documentElement.clientWidth > 1024 && document.documentElement.clientWidth <= 1200:
-            return responsive_heights.h_sticky_1024;
+            return stickybar_responsive_heights.h_sticky_1024;
         case document.documentElement.clientWidth > 1200:
-            return responsive_heights.h_sticky_1200;
+            return stickybar_responsive_heights.h_sticky_1200;
         default:
-            return responsive_heights.h_sticky_320;
+            return stickybar_responsive_heights.h_sticky_320;
     }
-}*/
+}
 
 export function getButtonSize() {
     return button_size;
@@ -144,10 +144,18 @@ function vhToPixels(vh) {
 
 export function getMaxHeightMainImage() {
     if (window.innerHeight >= 500)
-        return vhToPixels(height_transition.replace('vh', '')) - getResponsiveCarouselHeight().replace("px", "")
-            - margin_between_images_bottom.replace("px", "");
+        return window.innerHeight - getResponsiveCarouselHeight().replace("px", "")
+            - margin_between_images_bottom.replace("px", "") - getStickyBarResponsiveHeight().replace("px", "")
+            - getButtonSize().replace("px", "")
+            - getCarouselContainerMarginTop().replace("px", "")
+            - getCarouselContainerMarginBottom().replace("px", "")
+            - 4;
     else
-        return vhToPixels(height_transition.replace('vh', ''));
+        return window.innerHeight - getStickyBarResponsiveHeight().replace("px", "")
+            - getButtonSize().replace("px", "")
+            - getCarouselContainerMarginTop().replace("px", "")
+            - getCarouselContainerMarginBottom().replace("px", "")
+            - 4;
 }
 
 /* FUNCTION TO GET URLS */
