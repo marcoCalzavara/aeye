@@ -1369,10 +1369,6 @@ const ClustersMap = (props) => {
         let step_x = (final_effective_position_x - effectivePosition.current.x) / INITIAL_TRANSITION_STEPS;
         let step_y = (final_effective_position_y - effectivePosition.current.y) / INITIAL_TRANSITION_STEPS;
 
-        // If both steps are 0, then we do not need to do anything
-        if (Math.abs(step_x) <= 0.0001 && Math.abs(step_y) <= 0.0001)
-            return Promise.resolve();
-
         // Define variable for transition steps
         let transition_steps = INITIAL_TRANSITION_STEPS;
         // If the biggest step size is smaller than 0.005, halve the number of transition steps.
