@@ -1887,8 +1887,8 @@ const ClustersMap = (props) => {
                 if (Math.abs(current_delta) >= Math.abs(delta)) {
                     zoom_ticker.stop();
                 } else {
-                    handleZoom(Math.sign(delta) * 0.004, position);
-                    current_delta += Math.sign(delta) * 0.004;
+                    handleZoom(Math.sign(delta) * 0.006, position);
+                    current_delta += Math.sign(delta) * 0.006;
                 }
             });
             zoom_ticker.start();
