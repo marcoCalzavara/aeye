@@ -150,7 +150,7 @@ if __name__ == "__main__":
         # Drop old collection
         utility.drop_collection(flags["collection"])
         # Rename new collection
-        utility.rename_collection("temp_" + flags["collection"], + flags["collection"], "aiplusart")
+        utility.rename_collection(new_name, flags["collection"], "aiplusart")
     except Exception as e:
         print(e.__str__())
         print("Error in update_metadata. Update failed!")
