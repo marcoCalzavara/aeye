@@ -123,7 +123,7 @@ services:
       - /etc/letsencrypt/live/aeye.ethz.ch/fullchain.pem:/etc/letsencrypt/live/aeye.ethz.ch/fullchain.pem
       - /etc/letsencrypt/live/aeye.ethz.ch/privkey.pem:/etc/letsencrypt/live/aeye.ethz.ch/privkey.pem
     ports:
-      - "80:80"
+      - "443:443"
     depends_on:
       - "backend"
     networks:
