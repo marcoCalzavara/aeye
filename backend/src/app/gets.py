@@ -4,8 +4,8 @@ from typing import List
 import torch
 from pymilvus import Collection
 
-from ...CONSTANTS import *
-from ...db_utilities.collections import EMBEDDING_VECTOR_FIELD_NAME, ZOOM_LEVEL_VECTOR_FIELD_NAME
+from ..CONSTANTS import *
+from ..db_utilities.collections import EMBEDDING_VECTOR_FIELD_NAME, ZOOM_LEVEL_VECTOR_FIELD_NAME
 
 
 # Create decorator for timing functions
@@ -171,7 +171,6 @@ def get_first_tiles(collection: Collection) -> List[dict]:
         )
         i += 16384
 
-    print(f"Number of entities: {len(results)}")
     # Return results
     return results
 

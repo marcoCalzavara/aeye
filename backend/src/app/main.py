@@ -2,12 +2,11 @@ import logging
 from io import BytesIO
 
 from fastapi import FastAPI, Depends, HTTPException, Request, File, UploadFile
-from fastapi.responses import Response
 from fastapi_utils.timing import add_timing_middleware
 from pymilvus import db, MilvusException
 from PIL import Image
 
-from .database import gets
+from . import gets
 from .dependencies import *
 from ..CONSTANTS import *
 from ..db_utilities.utils import create_connection
@@ -30,7 +29,7 @@ updater = Updater(dataset_collection_name_getter,
 embeddings = Embedder(ClipEmbeddings(DEVICE))
 umap_getter = UMAPCollectionGetter()
 
-# Create app1
+# Create app
 app = FastAPI()
 
 # Add timing middleware
@@ -182,22 +181,6 @@ def get_random_image(num: float, collection: Collection = Depends(dataset_collec
     except MilvusException:
         # Milvus error, return code 505
         raise HTTPException(status_code=505, detail="Milvus error")
-
-
-@app.get("/images/compressed-image", responses={200: {"content": {"image/jpg": {}}}}, response_class=Response)
-def get_compressed_image(path: str, quality: int):
-    try:
-        # Get image
-        image = Image.open(path)
-        # Compress image
-        compressed_image = image.convert("RGB")
-        byte_io = BytesIO()
-        compressed_image.save(byte_io, format='JPEG', quality=quality)
-        # Return compressed image
-        return Response(byte_io.getvalue(), media_type="image/jpeg")
-    except Exception:
-        # Error in fetching image
-        raise HTTPException(status_code=404, detail="Image not found")
 
 
 @app.post("/api/image-image")

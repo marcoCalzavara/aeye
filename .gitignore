@@ -6,4 +6,4 @@ milvus/volumes
 .vscode
 .pytest_cache
 frontend/coverage
-backend/src/caption_model/captions
+backend/src/captioning/captions

@@ -42,12 +42,6 @@ fi
 # Sleep for 100 seconds to allow time for the container hosting the milvus service to become healthy
 sleep 100
 
-# Give permission to the directories
-for dir in best_artworks celebahq COCO-2017 Fashion-MNIST MNIST wikiart CIFAR-100
-do
-    chmod -R 755 /usr/share/nginx/$dir/
-done
-
 # Create default database
 echo "Creating default database..."
 python -m src.db_utilities.create_database
