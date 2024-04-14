@@ -36,10 +36,12 @@ http {
         server backend:${BACKEND_PORT} max_fails=3;
     }
 
-    server { # reverse-proxy
-        listen 80;
-        access_log  /logs/reverse-proxy.log  time; # log for connections on port 80
-        server_name aeye aeye.ethz.ch;
+    server {
+        listen 443 ssl;
+        access_log  /logs/reverse-proxy.log  time;
+        server_name aeye.ethz.ch www.aeye.ethz.ch;
+        ssl_certificate /etc/letsencrypt/live/aeye.ethz.ch/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/aeye.ethz.ch/privkey.pem;
 
         location / {
             proxy_pass http://frontend:3000;

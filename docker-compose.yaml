@@ -120,6 +120,8 @@ services:
       - ../CIFAR-100:/usr/share/nginx/CIFAR-100
       - ../Fashion-MNIST:/usr/share/nginx/Fashion-MNIST
       - ../COCO-2017:/usr/share/nginx/COCO-2017
+      - /etc/letsencrypt/live/aeye.ethz.ch/fullchain.pem:/etc/letsencrypt/live/aeye.ethz.ch/fullchain.pem
+      - /etc/letsencrypt/live/aeye.ethz.ch/privkey.pem:/etc/letsencrypt/live/aeye.ethz.ch/privkey.pem
     ports:
       - "80:80"
     depends_on:
