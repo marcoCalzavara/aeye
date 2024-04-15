@@ -136,7 +136,6 @@ def insert_vectors(collection: Collection, data: dict):
                     }
                     for j in range(i, i + INSERT_SIZE) if j < data["embeddings"].shape[0]]
             )
-            collection.flush()
         except Exception as e:
             print(e.__str__())
             print("Error in insert_vectors.")
@@ -144,6 +143,9 @@ def insert_vectors(collection: Collection, data: dict):
             missing_indexes = list(set(missing_indexes + [data["index"][j] for j in range(i, i + INSERT_SIZE)
                                                           if j < data["embeddings"].shape[0]]))
             continue
+
+    # Flush the collection
+    collection.flush()
 
     with open(FILE_MISSING_INDEXES + "-" + flags["dataset"] + ".txt", "w") as f:
         f.write(', '.join(map(str, missing_indexes)) + "\n")
@@ -197,7 +199,9 @@ def update_metadata(collection: Collection, dp: DatasetPreprocessor, upper_value
         # Do for loop to avoid resource exhaustion
         for i in range(0, len(entities), INSERT_SIZE):
             new_collection.insert(data=[entities[j] for j in range(i, i + INSERT_SIZE) if j < len(entities)])
-            new_collection.flush()
+
+        # Flush the collection
+        new_collection.flush()
     except Exception as e:
         print(e.__str__())
         print("Error in update_metadata. Update failed!")

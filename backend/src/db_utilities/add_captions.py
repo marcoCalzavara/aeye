@@ -86,7 +86,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # 1. Create a variable to store the path to the file
-    PATH = f"{os.getenv(HOME)}/image-viz/backend/src/caption_model/captions/captions_{flags['collection']}.csv"
+    PATH = f"{os.getenv(HOME)}/image-viz/backend/src/captioning/captions/captions_{flags['collection']}.csv"
 
     captions = {}
     # 2. Open the file
@@ -138,7 +138,8 @@ if __name__ == "__main__":
         # Do for loop to avoid resource exhaustion
         for i in range(0, len(entities), 16384):
             new_collection.insert(data=[entities[j] for j in range(i, i + 16384) if j < len(entities)])
-            new_collection.flush()
+        # Flush collection
+        new_collection.flush()
     except Exception as e:
         print(e.__str__())
         print("Error in update_metadata. Update failed!")

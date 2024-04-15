@@ -13,7 +13,6 @@ from torch.utils.data import Dataset as TorchDataset
 
 from ..CONSTANTS import *
 
-
 # COLLATE FUNCTIONS
 
 """
@@ -140,7 +139,7 @@ class SupportDatasetForImages(TorchDataset):
         self.file_list = []
 
         for file in os.listdir(root_dir):
-            if not os.path.isdir(os.path.join(self.root_dir, file)):
+            if not os.path.isdir(os.path.join(self.root_dir, file)) and "minimap.png" != file and "minimap.jpg" != file:
                 self.file_list.append(file)
 
         # Check that filenames start with a number
@@ -151,7 +150,7 @@ class SupportDatasetForImages(TorchDataset):
                 raise Exception("Filenames must start with a number.")
 
         # Sort file list by index
-        self.file_list.sort(key=lambda x: int(".".join(x.split(".")[0:-1])))
+        self.file_list.sort(key=lambda x: int(x.split(separator)[0]))
         self.transform = None
 
     def append_transform(self, transform):

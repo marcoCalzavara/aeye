@@ -125,11 +125,13 @@ def insert_vectors_in_clusters_collection(zoom_levels, images_to_tile, collectio
             try:
                 collection.insert(data=[entities_to_insert[j] for j in range(i, i + INSERT_SIZE)
                                         if j < len(entities_to_insert)])
-                collection.flush()
             except Exception as e:
                 print("Error in create_collection_with_zoom_levels.")
                 print(e.__str__())
                 return False
+
+        # Flush collection
+        collection.flush()
 
         # Free up zoom_levels dictionary. Keep some of the second to last level.
         max_level = max(zoom_levels.keys())
@@ -215,13 +217,15 @@ def create_image_to_tile_collection(images_to_tile: dict, collection_name: str, 
         try:
             collection.insert(data=[entities_to_insert[j] for j in range(i, i + INSERT_SIZE)
                                     if j < len(entities_to_insert)])
-            collection.flush()
         except Exception as e:
             print(e.__str__())
             print("Error in create_collection_with_zoom_levels.")
             # Drop collection to avoid inconsistencies
             utility.drop_collection(collection_name)
             return
+
+    # Flush collection
+    collection.flush()
 
     # Success
     print(f"Successfully created collection {collection_name}.")

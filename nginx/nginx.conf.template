@@ -37,6 +37,12 @@ http {
     }
 
     server {
+        listen 80;
+        server_name aeye.ethz.ch www.aeye.ethz.ch;
+        return 301 https://$host$request_uri;
+    }
+
+    server {
         listen 443 ssl;
         access_log  /logs/reverse-proxy.log  time;
         server_name aeye.ethz.ch www.aeye.ethz.ch;

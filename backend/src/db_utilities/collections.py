@@ -170,7 +170,7 @@ def umap_collection(collection_name: str, dim: int):
     data = FieldSchema(
         name="data",
         dtype=DataType.FLOAT_VECTOR,
-        dim=dim*2
+        dim=dim * 2
     )
 
     # Create collection schema
