@@ -7,9 +7,8 @@ import time
 from dotenv import load_dotenv
 from pymilvus import db, Collection
 
-from .datasets import DatasetOptions
-
 from .collections import ZOOM_LEVEL_VECTOR_FIELD_NAME
+from .datasets import DatasetOptions
 from .utils import create_connection
 from ..CONSTANTS import *
 
@@ -110,22 +109,25 @@ if __name__ == "__main__":
 
     # Check that collection has 100000 entities
     collection = Collection(flags["collection"] + "_zoom_levels_clusters")
-    if collection.num_entities != 100000:
+    if collection.num_entities < 100000:
         print(f"Collection {flags['collection']} must have 100000 entities.")
         sys.exit(1)
 
     # Now test query of 100000 entities and 100000 queries of 1 entity
     print("Testing query of 100000 entities.")
-    time_start = time.time()
     results = []
-    collection.query(
-        expr="index in [" + str(list(range(100000))) + "]",
-        output_fields=[ZOOM_LEVEL_VECTOR_FIELD_NAME, "data"],
-        limit=100000
-    )
+    time_start = time.time()
+    for i in range(0, 100000, SEARCH_LIMIT):
+        results += collection.query(
+            expr=f"index in {list(range(i, min(i + SEARCH_LIMIT, 100000)))}",
+            output_fields=[ZOOM_LEVEL_VECTOR_FIELD_NAME, "data"]
+        )
     time_end = time.time()
+    assert len(results) == 100000
     print(f"Time taken for single query: {time_end - time_start}")
+
     print("Testing 100000 queries of 1 entity.")
+    results = []
     time_start = time.time()
     for i in range(100000):
         results += collection.query(
@@ -134,30 +136,36 @@ if __name__ == "__main__":
             limit=1
         )
     time_end = time.time()
+    assert len(results) == 100000
     print(f"Time taken for 100000 queries: {time_end - time_start}")
+
     # Now try with search
+    print("Testing search of 100000 entities.")
     # Collect all tiles in a list to get to 100000 entities
     tiles = []
     for i in range(100000):
         tiles.append(convert_index_to_tile(i))
-    print("Testing search of 100000 entities.")
-    time_start = time.time()
     results = []
     search_params = {
         "metric_type": L2_METRIC,
         "offset": 0
     }
-    result = collection.search(
-        data=tiles,
-        anns_field=ZOOM_LEVEL_VECTOR_FIELD_NAME,
-        param=search_params,
-        limit=1,
-        expr=None,
-        output_fields=[ZOOM_LEVEL_VECTOR_FIELD_NAME, "data"]
-    )
+    time_start = time.time()
+    for i in range(0, 100000, SEARCH_LIMIT):
+        results += collection.search(
+            data=tiles[i:i + min(SEARCH_LIMIT, 100000 - i)],
+            anns_field=ZOOM_LEVEL_VECTOR_FIELD_NAME,
+            param=search_params,
+            expr=None,
+            limit=SEARCH_LIMIT,
+            output_fields=[ZOOM_LEVEL_VECTOR_FIELD_NAME, "data"]
+        )
     time_end = time.time()
+    assert len(results) == 100000
     print(f"Time taken for single search: {time_end - time_start}")
+
     print("Testing 100000 searches of 1 entity.")
+    results = []
     time_start = time.time()
     for i in range(100000):
         results += collection.search(
@@ -169,4 +177,5 @@ if __name__ == "__main__":
             output_fields=[ZOOM_LEVEL_VECTOR_FIELD_NAME, "data"]
         )
     time_end = time.time()
+    assert len(results) == 100000
     print(f"Time taken for 100000 searches: {time_end - time_start}")
