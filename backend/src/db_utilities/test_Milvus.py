@@ -62,7 +62,7 @@ def convert_index_to_tile(index):
         tot += 4 ** i
         i += 1
     if tot == index:
-        return {'x': 0, 'y': 0, 'zoom': i}
+        return [i, 0, 0]
     tot -= 4 ** (i - 1)
     zoom_level = i - 1
     tile_x = (index - tot) // (2 ** zoom_level)
