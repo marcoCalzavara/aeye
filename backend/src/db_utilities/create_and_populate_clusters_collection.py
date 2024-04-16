@@ -24,7 +24,9 @@ Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 MAX_IMAGES_PER_TILE = 30
 NUMBER_OF_CLUSTERS = 30
 # THRESHOLD = 0.8
-LIMIT_FOR_INSERT = 1000000
+LIMIT_FOR_TOTAL = 8000000
+LIMIT_FOR_KEEP = 4000000
+LIMIT_FOR_FETCH = 200000
 
 
 def load_vectors_from_collection(collection: Collection) -> list | None:
@@ -73,20 +75,20 @@ def get_index_from_tile(zoom_level, tile_x, tile_y):
     return index
 
 
-def insert_vectors_in_clusters_collection(zoom_levels, images_to_tile, collection: Collection, num_tiles,
-                                          entities_per_zoom_level) -> bool:
+def insert_vectors_in_clusters_collection(zoom_levels, images_to_tile, collection: Collection, entities_per_zoom_level,
+                                          zoom_level, current_tile_x, current_tile_y, last_call=False) -> bool:
     try:
         # Define list of entities to insert in the collection
         entities_to_insert = []
         # Iterate over elements in zoom_levels
-        for zoom_level in zoom_levels.keys():
-            for tile_x in zoom_levels[zoom_level].keys():
-                for tile_y in zoom_levels[zoom_level][tile_x].keys():
+        for zoom in zoom_levels.keys():
+            for tile_x in zoom_levels[zoom].keys():
+                for tile_y in zoom_levels[zoom][tile_x].keys():
                     # Check if the tile has already been inserted
-                    if zoom_levels[zoom_level][tile_x][tile_y]["already_inserted"]:
+                    if zoom_levels[zoom][tile_x][tile_y]["already_inserted"]:
                         continue
                     new_representatives = []
-                    for representative in zoom_levels[zoom_level][tile_x][tile_y]["representatives"]:
+                    for representative in zoom_levels[zoom][tile_x][tile_y]["representatives"]:
                         new_representative = {
                             "index": int(representative["representative"]["index"]),
                             "path": str(representative["representative"]["path"]),
@@ -100,87 +102,135 @@ def insert_vectors_in_clusters_collection(zoom_levels, images_to_tile, collectio
 
                     # Create entity
                     entity = {
-                        "index": get_index_from_tile(zoom_level, tile_x, tile_y),
-                        ZOOM_LEVEL_VECTOR_FIELD_NAME: [zoom_level, tile_x, tile_y],
+                        "index": get_index_from_tile(zoom, tile_x, tile_y),
+                        ZOOM_LEVEL_VECTOR_FIELD_NAME: [zoom, tile_x, tile_y],
                         "data": new_representatives
                     }
 
-                    if zoom_level == 0:
+                    if zoom == 0:
                         entity["range"] = {
-                            "x_min": float(zoom_levels[zoom_level][tile_x][tile_y]["range"]["x_min"]),
-                            "x_max": float(zoom_levels[zoom_level][tile_x][tile_y]["range"]["x_max"]),
-                            "y_min": float(zoom_levels[zoom_level][tile_x][tile_y]["range"]["y_min"]),
-                            "y_max": float(zoom_levels[zoom_level][tile_x][tile_y]["range"]["y_max"])
+                            "x_min": float(zoom_levels[zoom][tile_x][tile_y]["range"]["x_min"]),
+                            "x_max": float(zoom_levels[zoom][tile_x][tile_y]["range"]["x_max"]),
+                            "y_min": float(zoom_levels[zoom][tile_x][tile_y]["range"]["y_min"]),
+                            "y_max": float(zoom_levels[zoom][tile_x][tile_y]["range"]["y_max"])
                         }
 
                     # Insert entity
                     entities_to_insert.append(entity)
                     # Mark as inserted
-                    zoom_levels[zoom_level][tile_x][tile_y]["already_inserted"] = True
-
-        assert num_tiles == len(entities_to_insert)
+                    zoom_levels[zoom][tile_x][tile_y]["already_inserted"] = True
 
         # Insert entities in the collection
         for i in range(0, len(entities_to_insert), INSERT_SIZE):
-            try:
-                collection.insert(data=[entities_to_insert[j] for j in range(i, i + INSERT_SIZE)
-                                        if j < len(entities_to_insert)])
-            except Exception as e:
-                print("Error in create_collection_with_zoom_levels.")
-                print(e.__str__())
-                return False
+            collection.insert(data=entities_to_insert[i:i + INSERT_SIZE])
 
         # Flush collection
         collection.flush()
-
-        # Free up zoom_levels dictionary. Keep some of the second to last level.
-        max_level = max(zoom_levels.keys())
-        # If the max zoom level is full, then increase the max zoom level by 1 so that some is kept for the next level.
-        if entities_per_zoom_level[max_level] == 4 ** max_level:
-            max_level += 1
-
-        for zoom_level in list(zoom_levels.keys()):
-            if not zoom_level == max_level - 1:
-                del zoom_levels[zoom_level]
-                entities_per_zoom_level[zoom_level] = 0
-            else:
-                if not entities_per_zoom_level[zoom_level] <= MAX_IMAGES_PER_TILE:
-                    for tile_x in list(zoom_levels[zoom_level].keys()):
-                        entities_per_zoom_level[zoom_level] -= len(zoom_levels[zoom_level][tile_x])
-                        del zoom_levels[zoom_level][tile_x]
-                        if entities_per_zoom_level[zoom_level] <= MAX_IMAGES_PER_TILE:
-                            break
-
-        return True
 
     except Exception as e:
         print(e.__str__())
         print("Error in insert_vectors_in_clusters_collection.")
         return False
 
+    if last_call:
+        return True
 
-def get_previously_inserted_tile(collection: Collection, zoom_level: int, tile_x_index: int, tile_y_index: int):
-    search_params = {
-        "metric_type": L2_METRIC,
-        "offset": 0
-    }
+    # FREE UP ZOOM LEVELS DICTIONARY. KEEP AT MOST LIMIT_FOR_KEEP ENTITIES FROM THE LAST TWO ZOOM LEVELS.
+    assert max(zoom_levels.keys()) == zoom_level
+    # Compute the tile at the previous zoom which corresponds to the current tile
+    prev_x = current_tile_x // 2
+    prev_y = current_tile_y // 2
+    # Get keys of zoom_levels in order
+    zoom_levels_keys = sorted(list(zoom_levels.keys()))
+    for zoom in zoom_levels_keys:
+        if zoom < zoom_level - 1:
+            del zoom_levels[zoom]
+            entities_per_zoom_level[zoom] = 0
+        else:
+            if zoom == zoom_level - 1:
+                # Get keys of tile_x in order
+                tile_x_keys = sorted(list(zoom_levels[zoom].keys()))
+                for tile_x in tile_x_keys:
+                    if tile_x < prev_x:
+                        entities_per_zoom_level[zoom] -= len(zoom_levels[zoom][tile_x].keys())
+                        del zoom_levels[zoom][tile_x]
+                    elif tile_x == prev_x:
+                        tile_y_keys = sorted(list(zoom_levels[zoom][tile_x].keys()))
+                        for tile_y in tile_y_keys:
+                            if tile_y < prev_y:
+                                entities_per_zoom_level[zoom] -= 1
+                                del zoom_levels[zoom][tile_x][tile_y]
+                            else:
+                                break
+                    else:
+                        break
+            else:
+                # Remove tiles from current zoom level until we have at most LIMIT_FOR_KEEP entities
+                if entities_per_zoom_level[zoom] <= LIMIT_FOR_KEEP - entities_per_zoom_level[zoom - 1]:
+                    break
+                # Get keys of tile_x in order
+                tile_x_keys = sorted(list(zoom_levels[zoom].keys()))
+                for tile_x in tile_x_keys:
+                    entities_per_zoom_level[zoom] -= len(zoom_levels[zoom][tile_x].keys())
+                    del zoom_levels[zoom][tile_x]
+                    if (entities_per_zoom_level[zoom] <= LIMIT_FOR_KEEP
+                            - entities_per_zoom_level[zoom - 1]):
+                        break
+
+    # If the number of entities kept is still greater than LIMIT_FOR_KEEP, then remove entities from the second to
+    # last zoom level until we have at most LIMIT_FOR_KEEP entities
+    if entities_per_zoom_level[zoom_level - 1] > LIMIT_FOR_KEEP:
+        # Get keys of tile_x in order
+        tile_x_keys = sorted(list(zoom_levels[zoom_level - 1].keys()), reverse=True)
+        for tile_x in tile_x_keys:
+            entities_per_zoom_level[zoom_level - 1] -= len(zoom_levels[zoom_level - 1][tile_x].keys())
+            del zoom_levels[zoom_level - 1][tile_x]
+            if entities_per_zoom_level[zoom_level - 1] <= LIMIT_FOR_KEEP:
+                break
+
+    return True
+
+
+def get_previously_inserted_tile(collection: Collection, prev_zoom_level: int, prev_tile_x: int, prev_tile_y: int,
+                                 zoom_levels: dict, entities_per_zoom_level: dict) -> bool:
+    # Get LIMIT_FOR_FETCH tiles
+    # Loop over tiles in the previous zoom level, and add index of tile if the tile is not in zoom_levels
+    indexes = []
+    for tile_x in range(prev_tile_x, 2 ** prev_zoom_level):
+        for tile_y in range(prev_tile_y, 2 ** prev_zoom_level):
+            if (prev_zoom_level in zoom_levels.keys() and tile_x in zoom_levels[prev_zoom_level].keys()
+                    and tile_y in zoom_levels[prev_zoom_level][tile_x].keys()):
+                continue
+            indexes.append(get_index_from_tile(prev_zoom_level, tile_x, tile_y))
+            if len(indexes) == LIMIT_FOR_FETCH:
+                break
+
     # Get previously inserted tile
-    result = collection.search(
-        data=[[zoom_level, tile_x_index, tile_y_index]],
-        anns_field=ZOOM_LEVEL_VECTOR_FIELD_NAME,
-        param=search_params,
-        limit=1,
-        expr=None,
-        output_fields=[ZOOM_LEVEL_VECTOR_FIELD_NAME, "data"]
-    )
+    try:
+        for i in range(0, len(indexes), SEARCH_LIMIT):
+            entities = collection.query(
+                expr=f"index in {indexes[i:i + SEARCH_LIMIT]}",
+                output_fields=[ZOOM_LEVEL_VECTOR_FIELD_NAME, "data"]
+            )
+            # Add entities to zoom_levels. Use original format with representatives
+            for entity in entities:
+                tile = entity[ZOOM_LEVEL_VECTOR_FIELD_NAME]
+                data = entity["data"]
+                if prev_zoom_level not in zoom_levels.keys():
+                    zoom_levels[prev_zoom_level] = {}
+                if int(tile[1]) not in zoom_levels[prev_zoom_level].keys():
+                    zoom_levels[prev_zoom_level][int(tile[1])] = {}
+                zoom_levels[prev_zoom_level][int(tile[1])][int(tile[2])] = {
+                    "already_inserted": True,
+                    "representatives": [{"representative": representative} for representative in data]
+                }
+                entities_per_zoom_level[prev_zoom_level] += 1
 
-    if len(result) == 0:
-        return None
-    else:
-        return {
-            ZOOM_LEVEL_VECTOR_FIELD_NAME: result[0][0].entity.get(ZOOM_LEVEL_VECTOR_FIELD_NAME),
-            "data": result[0][0].entity.get("data"),
-        }
+        return True
+
+    except Exception as e:
+        print(e.__str__())
+        return False
 
 
 def create_image_to_tile_collection(images_to_tile: dict, collection_name: str, repopulate: bool) -> None:
@@ -423,8 +473,6 @@ def create_zoom_levels(entities, zoom_levels_collection_name, images_to_tile_col
     zoom_levels = {}
     # Define dictionary for number of entities in zoom level
     entities_per_zoom_level = {}
-    # Define number of tiles
-    number_of_tiles = 0
     # Define dictionary for mapping from images to coarser zoom level (and tile)
     images_to_tile = {}
 
@@ -447,17 +495,17 @@ def create_zoom_levels(entities, zoom_levels_collection_name, images_to_tile_col
                 # Get index of tile along y-axis
                 tile_y_index = int(tile_y // 2 ** (max_zoom_level - zoom_level))
                 # Flush if necessary
-                if number_of_tiles >= LIMIT_FOR_INSERT:
+                if sum([entities_per_zoom_level[zoom] for zoom in entities_per_zoom_level.keys()]) >= LIMIT_FOR_TOTAL:
                     # Insert data in collection
                     result = insert_vectors_in_clusters_collection(
-                        zoom_levels, images_to_tile, zoom_levels_collection, number_of_tiles, entities_per_zoom_level
+                        zoom_levels, images_to_tile, zoom_levels_collection, entities_per_zoom_level,
+                        zoom_level, tile_x_index, tile_y_index
                     )
                     if result:
-                        # Adjust zoom_levels dictionary and number_of_tiles
+                        # Adjust zoom_levels dictionary
                         zoom_levels[zoom_level] = {}
                         if tile_x_index not in zoom_levels[zoom_level].keys():
                             zoom_levels[zoom_level][tile_x_index] = {}
-                        number_of_tiles = 0
                     else:
                         # Shut down application
                         graceful_application_shutdown(None, zoom_levels_collection)
@@ -482,24 +530,21 @@ def create_zoom_levels(entities, zoom_levels_collection_name, images_to_tile_col
                 # Get cluster representatives from previous zoom level
                 old_cluster_representatives_in_current_tile = []
                 if zoom_level != 0:
-                    previous_zoom_level_cluster_representatives = []
-                    if (zoom_level - 1 in zoom_levels and prev_level_x in zoom_levels[zoom_level - 1].keys()
+                    if not (zoom_level - 1 in zoom_levels and prev_level_x in zoom_levels[zoom_level - 1].keys()
                             and prev_level_y in zoom_levels[zoom_level - 1][prev_level_x].keys()):
-                        # Get cluster representatives from the zoom_levels dictionary directly
-                        previous_zoom_level_cluster_representatives = [representative["representative"] for
-                                                                       representative in zoom_levels[zoom_level - 1]
-                                                                       [prev_level_x][prev_level_y]["representatives"]]
-                    else:
                         # Get cluster representatives from the collection
                         result = get_previously_inserted_tile(
-                            zoom_levels_collection, zoom_level - 1, prev_level_x, prev_level_y
+                            zoom_levels_collection, zoom_level - 1, prev_level_x, prev_level_y, zoom_levels,
+                            entities_per_zoom_level
                         )
-                        if result:
-                            previous_zoom_level_cluster_representatives = result["data"]
-                        else:
+                        if not result:
                             # Shut down application
                             graceful_application_shutdown(Exception("Could not find tile in previous zoom level."),
                                                           zoom_levels_collection)
+
+                    previous_zoom_level_cluster_representatives = [representative["representative"] for
+                                                                   representative in zoom_levels[zoom_level - 1]
+                                                                   [prev_level_x][prev_level_y]["representatives"]]
 
                     # Get cluster representatives that are in the current tile.
                     # old_cluster_representatives_in_current_tile must be cluster representatives in the current tile.
@@ -696,7 +741,6 @@ def create_zoom_levels(entities, zoom_levels_collection_name, images_to_tile_col
                 zoom_levels[zoom_level][tile_x_index][tile_y_index] = {}
                 zoom_levels[zoom_level][tile_x_index][tile_y_index]["representatives"] = representative_entities
                 zoom_levels[zoom_level][tile_x_index][tile_y_index]["already_inserted"] = False
-                number_of_tiles += 1
                 entities_per_zoom_level[zoom_level] += 1
 
                 if zoom_level == 0:
@@ -714,14 +758,13 @@ def create_zoom_levels(entities, zoom_levels_collection_name, images_to_tile_col
                             zoom_level, tile_x_index, tile_y_index
                         ]
 
-    if number_of_tiles > 0:
-        # Insert data in collection
-        result = insert_vectors_in_clusters_collection(
-            zoom_levels, images_to_tile, zoom_levels_collection, number_of_tiles, entities_per_zoom_level
-        )
-        if not result:
-            # Shut down application
-            graceful_application_shutdown(None, zoom_levels_collection)
+    # Do a final insert in the collection
+    result = insert_vectors_in_clusters_collection(
+        zoom_levels, images_to_tile, zoom_levels_collection, entities_per_zoom_level, -1, -1, -1, True
+    )
+    if not result:
+        # Shut down application
+        graceful_application_shutdown(None, zoom_levels_collection)
 
     create_image_to_tile_collection(images_to_tile, images_to_tile_collection_name, repopulate)
 

@@ -109,6 +109,7 @@ if __name__ == "__main__":
 
     # Check that collection has 100000 entities
     collection = Collection(flags["collection"] + "_zoom_levels_clusters")
+    collection.load()
     if collection.num_entities < 100000:
         print(f"Collection {flags['collection']} must have 100000 entities.")
         sys.exit(1)
@@ -153,11 +154,11 @@ if __name__ == "__main__":
     time_start = time.time()
     for i in range(0, 100000, SEARCH_LIMIT):
         results += collection.search(
-            data=tiles[i:i + min(SEARCH_LIMIT, 100000 - i)],
+            data=tiles[i:i + SEARCH_LIMIT],
             anns_field=ZOOM_LEVEL_VECTOR_FIELD_NAME,
             param=search_params,
             expr=None,
-            limit=SEARCH_LIMIT,
+            limit=1,
             output_fields=[ZOOM_LEVEL_VECTOR_FIELD_NAME, "data"]
         )
     time_end = time.time()
