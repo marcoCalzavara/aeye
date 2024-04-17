@@ -51,8 +51,17 @@ def resize_images(dataset_name):
             # Load image
             image = PIL.Image.open(os.path.join(directory_path, filename))
             # Compute height and width using resizing factor
+            aspect_ratio = image.width / image.height
+            # Get width and height
+            if image.width > image.height:
+                width = max(image.width, RESIZING_WIDTH)
+                height = int(width / aspect_ratio)
+            else:
+                height = max(image.height, RESIZING_HEIGHT)
+                width = int(height * aspect_ratio)
+
             # Resize image
-            image.thumbnail((RESIZING_WIDTH, RESIZING_HEIGHT), PIL.Image.ANTIALIAS)
+            image.thumbnail((width, height), PIL.Image.ANTIALIAS)
             # Save image
             image.save(os.path.join(resized_images_dir, filename))
         except Exception as e:
