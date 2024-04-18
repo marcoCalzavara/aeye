@@ -31,9 +31,6 @@ else
   echo "Milvus service is available at $MILVUS_IP:$MILVUS_PORT."
 fi
 
-# Sleep for 100 seconds to allow time for the container hosting the milvus service to become healthy
-sleep 100
-
 # Create default database
 echo "Creating default database..."
 python -m src.db_utilities.create_database

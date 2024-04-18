@@ -14,4 +14,3 @@ uvicorn[standard]
 python-dotenv
 fastapi-utils
 python-multipart
-ruamel.yaml

@@ -9,6 +9,4 @@ do
     chmod -R 755 /usr/share/nginx/$dir/
 done
 
-sleep 115
-
 nginx -g 'daemon off;'
