@@ -6,7 +6,7 @@ chmod -R 755 /frontend/build
 
 for dir in /usr/share/nginx/*;
 do
-    chmod -R 755 /usr/share/nginx/"$dir"/
+    chmod -R 755 "$dir"/
 done
 
 nginx -g 'daemon off;'
