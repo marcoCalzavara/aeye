@@ -78,4 +78,4 @@ python3 -m src.dataset_creation.generate_nginx_conf > "$HOME"/image-viz/nginx/ng
 # Then, update the docker-compose.yml file
 python3 -m src.dataset_creation.add_volume_to_nginx_service -d "$directory"
 # Finally, recreate the nginx service
-docker compose up -d --force-recreate --no-deps nginx
+sudo docker compose up -d --force-recreate --no-deps nginx

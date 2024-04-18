@@ -1,3 +1,4 @@
+import json
 import threading
 from typing import List
 
@@ -148,18 +149,20 @@ class Updater:
 
     def __init__(self, dataset_collection_name_getter: DatasetCollectionNameGetter,
                  clusters_collection_name_getter: ClustersCollectionNameGetter,
-                 image_to_tile_collection_name_getter: ImageToTileCollectionNameGetter,
-                 datasets: List):
+                 image_to_tile_collection_name_getter: ImageToTileCollectionNameGetter):
         self.dataset_collection_name_getter = dataset_collection_name_getter
         self.clusters_collection_name_getter = clusters_collection_name_getter
         self.image_to_tile_collection_name_getter = image_to_tile_collection_name_getter
         # Define variable to store the list of datasets
-        self.datasets = datasets
+        self.datasets = None
         # Define lock for the updater
         self.lock = threading.Lock()
 
     def __call__(self):
         print("Updater called")
+        with open(DATASETS_JSON_PATH, "r") as f:
+            self.datasets = json.load(f)["datasets"]
+
         # Acquire lock
         self.lock.acquire()
         try:

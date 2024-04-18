@@ -1,11 +1,10 @@
-import json
 import logging
 from io import BytesIO
 
+from PIL import Image
 from fastapi import FastAPI, Depends, HTTPException, Request, File, UploadFile
 from fastapi_utils.timing import add_timing_middleware
 from pymilvus import db, MilvusException
-from PIL import Image
 
 from . import gets
 from .dependencies import *
@@ -31,8 +30,7 @@ dataset_collection_info_getter = DatasetCollectionInfoGetter(datasets)
 updater = Updater(
     dataset_collection_name_getter,
     clusters_collection_name_getter,
-    image_to_tile_collection_name_getter,
-    datasets
+    image_to_tile_collection_name_getter
 )
 
 embeddings = Embedder(ClipEmbeddings(DEVICE))
