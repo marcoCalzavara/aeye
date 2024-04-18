@@ -1,6 +1,6 @@
 cd ~ || exit
 
-echo "Downloading COCO-2017..."
+echo "Downloading CUB-200-2011 dataset..."
 export PATH=$PATH:~/.local/bin/
 kaggle datasets download -d wenewone/cub2002011
 
