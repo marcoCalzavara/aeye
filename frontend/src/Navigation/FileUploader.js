@@ -111,7 +111,7 @@ export default function Previews(props) {
             // Create a form data object for the payload of the POST request
             const formData = new FormData();
             formData.append('file', file);
-            const url = host.current + '/api/image-image' + '?collection=' + props.selectedDataset;
+            const url = host.current + '/api/image-image' + '?collection=' + props.selectedDataset["name"];
             fetch(url, {
                 method: 'POST',
                 body: formData
@@ -122,7 +122,7 @@ export default function Previews(props) {
                     return response.json();
                 })
                 .then(firstGet => {
-                    const url = host.current + '/api/image-to-tile?index=' + firstGet.index + '&collection=' + props.selectedDataset + "_image_to_tile";
+                    const url = host.current + '/api/image-to-tile?index=' + firstGet.index + '&collection=' + props.selectedDataset["name"] + "_image_to_tile";
                     return fetch(url, {
                         method: 'GET'
                     })

@@ -88,7 +88,7 @@ const NeighborsCarousel = (props) => {
     const [images, setImages] = useState(TEMP_ARRAY);
     const [image, setImage] = useState(TEMP_ARRAY[0]);
     const [height, setHeight] = useState(window.innerHeight);
-    const selectedDataset = useRef(props.selectedDataset);
+    const selectedDataset = useRef(props.selectedDataset["name"]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -162,7 +162,7 @@ const NeighborsCarousel = (props) => {
     }, [props.clickedImageIndex]);
 
     useEffect(() => {
-        selectedDataset.current = props.selectedDataset;
+        selectedDataset.current = props.selectedDataset["name"];
         setImage(TEMP_ARRAY[0]);
         setImages(TEMP_ARRAY);
     }, [props.selectedDataset]);

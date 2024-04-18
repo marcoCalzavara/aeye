@@ -11,7 +11,7 @@ const ProgressiveImg = ({placeholderSrc, src, width, height, margin, image, host
     const getTileFromIndex = () => {
         setOnGoingRequest(true);
         setStageIsInteractive(false);
-        let url = host + '/api/image-to-tile?index=' + image.index + '&collection=' + selectedDataset + "_image_to_tile";
+        let url = host + '/api/image-to-tile?index=' + image.index + '&collection=' + selectedDataset["name"] + "_image_to_tile";
         const options = {
             method: 'GET',
         };

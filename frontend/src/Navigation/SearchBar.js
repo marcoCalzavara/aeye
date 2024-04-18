@@ -28,7 +28,7 @@ export default function SearchBar(props) {
         props.removeUploadDiv();
         props.setOnGoingRequest(true);
         props.setStageIsInteractive(false);
-        let url = host.current + '/api/image-text?collection=' + props.selectedDataset + '&text=' + text + '&page=1';
+        let url = host.current + '/api/image-text?collection=' + props.selectedDataset["name"] + '&text=' + text + '&page=1';
         const options = {
             method: 'GET',
         };
@@ -39,7 +39,7 @@ export default function SearchBar(props) {
                 return response.json();
             })
             .then(firstGet => {
-                url = host.current + '/api/image-to-tile?index=' + firstGet.index + '&collection=' + props.selectedDataset + "_image_to_tile";
+                url = host.current + '/api/image-to-tile?index=' + firstGet.index + '&collection=' + props.selectedDataset["name"] + "_image_to_tile";
                 return fetch(url, options)
                     .then(response => {
                         if (!response.ok)
