@@ -4,19 +4,6 @@ import {GoDatabase} from "react-icons/go";
 import {iconStyle, itemsStyle} from "../styles";
 import {Unstable_Popup as BasePopup} from '@mui/base/Unstable_Popup';
 
-function cleanText(text) {
-    // Split text on underscore
-    let split_text = text.split('_');
-    // Create a new string with the first letter of each word capitalized
-    let cleaned_text = '';
-    for (let i = 0; i < split_text.length; i++) {
-        cleaned_text += split_text[i].charAt(0).toUpperCase() + split_text[i].slice(1) + ' ';
-    }
-    // Remove last space
-    cleaned_text = cleaned_text.slice(0, -1);
-    return cleaned_text;
-}
-
 
 const SelectDataset = (props) => {
     const [dataset, setDataset] = React.useState(props.datasets !== undefined ? props.datasets[0] : undefined);
@@ -79,7 +66,7 @@ const SelectDataset = (props) => {
                                     color: "white",
                                     textDecoration: d === dataset ? 'underline' : 'none'
                                 }
-                            }> {cleanText(d)}
+                            }> {d["website_name"]}
                             </button>
                         );
                     })}

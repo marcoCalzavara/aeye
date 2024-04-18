@@ -4,14 +4,6 @@
 echo "MILVUS_IP=$MILVUS_IP" > /.env
 # shellcheck disable=SC2129
 echo "MILVUS_PORT=$MILVUS_PORT" >> /.env
-echo "WIKIART_DIR=/wikiart" >> /.env
-echo "BEST_ARTWORKS_DIR=/best_artworks" >> /.env
-echo "CELEBAHQ_DIR=/celebahq" >> /.env
-echo "MNIST_DIR=/MNIST" >> /.env
-echo "CIFAR_100_DIR=/CIFAR-100" >> /.env
-echo "FASHION_MNIST_DIR=/Fashion-MNIST" >> /.env
-echo "COCO_2017_DIR=/COCO-2017" >> /.env
-echo "ROOT=1" >> /.env
 
 # Export .env file location
 export ENV_FILE_LOCATION=/.env
@@ -45,8 +37,6 @@ sleep 100
 # Create default database
 echo "Creating default database..."
 python -m src.db_utilities.create_database
-# Remove ROOT from .env
-sed -i '/ROOT/d' /.env
 
 echo "Starting backend..."
 

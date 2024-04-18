@@ -1,13 +1,6 @@
 # IMPORTANT. All containers are accessible within the default network
 # using their name. If the name of the container changes, change this file.
 
-# Note: In the case of a request to the Nginx server on port 80, the worker process is responsible for handling it
-# directly. The worker process will process the request according to the configuration file. If the location in the
-# server block with port 80 corresponds to a proxy_pass directive or another directive that requires upstream
-# communication, the worker process will forward the request to the specified upstream server without blocking.
-# If the server block contains directives that need local file system access, like serving static files,
-# the worker process will handle these tasks directly without the need for communication with an upstream server.
-
 worker_processes  auto;
 error_log  /logs/error.log warn;
 
@@ -54,7 +47,7 @@ http {
         }
 
         location /api {
-        #  if a request is made to http://${proxy-server}/api/some/path, Nginx will forward the request
+        #  if a request is made to http(s)://${proxy-server}/api/some/path, Nginx will forward the request
         # to http://${back-end}/api/some/path (see upstream above) on the backend server.
             proxy_cache cache;
             proxy_cache_valid 200 302 12h;

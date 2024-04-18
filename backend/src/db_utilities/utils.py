@@ -1,4 +1,3 @@
-import getopt
 import os
 import sys
 
@@ -8,74 +7,22 @@ from pymilvus import connections
 from sklearn.cluster import KMeans
 from sklearn.metrics import euclidean_distances
 
-from .datasets import DatasetOptions
 from ..CONSTANTS import *
 
 
-def parsing():
-    # Remove 1st argument from the list of command line arguments
-    arguments = sys.argv[1:]
-
-    # Options
-    options = "hd:c:r:i:"
-
-    # Long options
-    long_options = ["help", "database", "collection", "repopulate"]
-
-    # Prepare flags
-    flags = {"database": DEFAULT_DATABASE_NAME,
-             "collection": DatasetOptions.BEST_ARTWORKS.value["name"],
-             "repopulate": False}
-
-    # Parsing argument
-    arguments, values = getopt.getopt(arguments, options, long_options)
-
-    if len(arguments) > 0 and arguments[0][0] in ("-h", "--help"):
-        print(f'This script generates zoom levels.\n\
-        -d or --database: database name (default={flags["database"]}).\n\
-        -c or --collection: collection name (default={flags["collection"]}).\n\
-        -r or --repopulate: repopulate the collection. Options are y/n (default='
-              f'{"y" if flags["repopulate"] == "y" else "n"}).')
-        sys.exit(0)
-
-    # Checking each argument
-    for arg, val in arguments:
-        if arg in ("-d", "--database"):
-            flags["database"] = val
-        elif arg in ("-c", "--collection"):
-            if val in [dataset.value["name"] for dataset in DatasetOptions]:
-                flags["collection"] = val
-                # Get directory name
-                for dataset in DatasetOptions:
-                    if dataset.value["name"] == val:
-                        flags["directory"] = dataset.value["directory"]
-                        break
+def create_connection(user, passwd, load_vars=True):
+    if load_vars:
+        if ENV_FILE_LOCATION not in os.environ:
+            # Try to load /.env file
+            if os.path.exists("/.env"):
+                dotenv.load_dotenv("/.env")
             else:
-                raise ValueError("The collection must have one of the following names: "
-                                 + str([dataset.value["name"] for dataset in DatasetOptions]))
-        elif arg in ("-r", "--repopulate"):
-            if val == "y":
-                flags["repopulate"] = True
-            elif val == "n":
-                flags["repopulate"] = False
-            else:
-                raise ValueError("The repopulate flag must be either y or n.")
-
-    return flags
-
-
-def create_connection(user, passwd):
-    if ENV_FILE_LOCATION not in os.environ:
-        # Try to load /.env file
-        if os.path.exists("/.env"):
-            dotenv.load_dotenv("/.env")
+                print("export .env file location as ENV_FILE_LOCATION. Export $HOME/image-viz/.env if running outside "
+                      "of docker container, export /.env if running inside docker container backend.")
+                sys.exit(1)
         else:
-            print("export .env file location as ENV_FILE_LOCATION. Export $HOME/image-viz/.env if running outside "
-                  "of docker container, export /.env if running inside docker container backend.")
-            sys.exit(1)
-    else:
-        # Load environment variables
-        dotenv.load_dotenv(os.getenv(ENV_FILE_LOCATION))
+            # Load environment variables
+            dotenv.load_dotenv(os.getenv(ENV_FILE_LOCATION))
 
     connections.connect(
         host=os.getenv(MILVUS_IP),

@@ -25,7 +25,7 @@ function extractHost() {
         in_host += ':';
         i++;
     }
-    return in_host.substring(0, i) + '443';
+    return in_host.substring(0, i) + '80';
 }
 
 function App() {

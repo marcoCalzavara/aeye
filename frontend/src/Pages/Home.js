@@ -37,7 +37,7 @@ function fetchAvailableDatasets(host) {
         .then(data => {
             // Fetch dataset info for each dataset
             let fetchPromises = data.collections.map(collection => {
-                let url = host + '/api/collection-info?collection=' + collection;
+                let url = host + '/api/collection-info?collection=' + collection["name"];
                 return fetch(url, {
                     method: 'GET'
                 })

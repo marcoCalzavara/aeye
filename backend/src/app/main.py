@@ -1,3 +1,4 @@
+import json
 import logging
 from io import BytesIO
 
@@ -15,17 +16,25 @@ from ..embeddings_model.CLIPEmbeddings import ClipEmbeddings
 # Create connection
 create_connection(ROOT_USER, ROOT_PASSWD)
 
+# Load dataset options from datasets.json. The environment variables are loaded in the create_connection function.
+with open(DATASETS_JSON_PATH, "r") as f:
+    datasets = json.load(f)["datasets"]
+
 # Set database
 db.using_database(DEFAULT_DATABASE_NAME)
 
 # Create dependency objects
-dataset_collection_name_getter = DatasetCollectionNameGetter()
-clusters_collection_name_getter = ClustersCollectionNameGetter()
-image_to_tile_collection_name_getter = ImageToTileCollectionNameGetter()
-dataset_collection_info_getter = DatasetCollectionInfoGetter()
-updater = Updater(dataset_collection_name_getter,
-                  clusters_collection_name_getter,
-                  image_to_tile_collection_name_getter)
+dataset_collection_name_getter = DatasetCollectionNameGetter(datasets)
+clusters_collection_name_getter = ClustersCollectionNameGetter(datasets)
+image_to_tile_collection_name_getter = ImageToTileCollectionNameGetter(datasets)
+dataset_collection_info_getter = DatasetCollectionInfoGetter(datasets)
+updater = Updater(
+    dataset_collection_name_getter,
+    clusters_collection_name_getter,
+    image_to_tile_collection_name_getter,
+    datasets
+)
+
 embeddings = Embedder(ClipEmbeddings(DEVICE))
 umap_getter = UMAPCollectionGetter()
 

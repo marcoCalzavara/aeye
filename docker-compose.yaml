@@ -43,7 +43,7 @@ services:
     image: milvusdb/milvus:v2.3.2
     command: ["milvus", "run", "standalone"]
     security_opt:
-    - seccomp:unconfined
+      - seccomp:unconfined
     environment:
       ETCD_ENDPOINTS: etcd:2379
       MINIO_ADDRESS: minio:9000
@@ -76,13 +76,7 @@ services:
       - MILVUS_PORT=${MILVUS_PORT}
     volumes:
       - ./backend/src:/code/src
-      - ../best_artworks:/best_artworks
-      - ../wikiart:/wikiart
-      - ../celebahq:/celebahq
-      - ../MNIST:/MNIST
-      - ../CIFAR-100:/CIFAR-100
-      - ../Fashion-MNIST:/Fashion-MNIST
-      - ../COCO-2017:/COCO-2017
+      - ./backend/datasets.json:/datasets.json
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
@@ -113,6 +107,8 @@ services:
     volumes:
       - ./frontend/build:/frontend/build
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template
+      - /etc/letsencrypt/live/aeye.ethz.ch/fullchain.pem:/etc/letsencrypt/live/aeye.ethz.ch/fullchain.pem
+      - /etc/letsencrypt/live/aeye.ethz.ch/privkey.pem:/etc/letsencrypt/live/aeye.ethz.ch/privkey.pem
       - ../best_artworks:/usr/share/nginx/best_artworks
       - ../wikiart:/usr/share/nginx/wikiart
       - ../celebahq:/usr/share/nginx/celebahq
@@ -120,8 +116,6 @@ services:
       - ../CIFAR-100:/usr/share/nginx/CIFAR-100
       - ../Fashion-MNIST:/usr/share/nginx/Fashion-MNIST
       - ../COCO-2017:/usr/share/nginx/COCO-2017
-      - /etc/letsencrypt/live/aeye.ethz.ch/fullchain.pem:/etc/letsencrypt/live/aeye.ethz.ch/fullchain.pem
-      - /etc/letsencrypt/live/aeye.ethz.ch/privkey.pem:/etc/letsencrypt/live/aeye.ethz.ch/privkey.pem
     ports:
       - "443:443"
       - "80:80"

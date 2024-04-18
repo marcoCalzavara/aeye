@@ -9,5 +9,5 @@ docker rm -f "$service_name"
 
 docker compose build "$service_name"
 
-# Recreate the backend container
+# Recreate the container
 docker compose up -d --no-deps "$service_name"

@@ -52,7 +52,7 @@ const MULTIPLICATIVE_FACTOR = 11;
 
 const ClustersMap = (props) => {
     // Define state for the selected dataset
-    const selectedDataset = useRef(props.selectedDataset);
+    const selectedDataset = useRef(props.selectedDataset["name"]);
     // Define ref for max zoom level
     const maxZoomLevel = useRef(2);
     // Define state for the effective position of the stage. The change of the effective position of the stage does not
@@ -432,7 +432,7 @@ const ClustersMap = (props) => {
             // Deactivate blur filter
             if (searchBarIsClickedRef.current && spriteIsInForeground.current.get(index) && showCarouselRef.current) {
                 sprite.filters[0].enabled = false;
-                sprite.zIndex = 11;
+                sprite.zIndex = 10 + maxZoomLevel.current + 1;
                 containerForeground.current.sortChildren();
             }
         });
@@ -441,7 +441,7 @@ const ClustersMap = (props) => {
             // Activate blur filter
             if (showCarouselRef.current && spriteIsInForeground.current.get(index)) {
                 sprite.filters[0].enabled = true;
-                sprite.zIndex = 10;
+                sprite.zIndex = 10 + (maxZoomLevel.current - spritesGlobalInfo.current.get(index).zoom);
                 containerForeground.current.sortChildren();
             }
         });
@@ -515,7 +515,7 @@ const ClustersMap = (props) => {
         sprite.tint = 0x404040
         // Set flag that texture has not been loaded
         textureLoaded.current.set(index, false);
-        sprite.zIndex = 8;
+        sprite.zIndex = 10 + (maxZoomLevel.current - zoom);
 
         // Add texture to the sprite if the sprite is either in the visible area or in its immediate vicinity
         if (sprite.x >= -3 * maxWidth.current && sprite.x <= stageWidth.current + 2 * maxWidth.current
@@ -543,7 +543,6 @@ const ClustersMap = (props) => {
                         sprite.tint = 0xFFFFFF;
                         // noinspection all
                         sprite.texture = PIXI.Texture.from(URL.createObjectURL(blob), {scaleMode: PIXI.SCALE_MODES.LINEAR});
-                        sprite.zIndex = 10;
                         containerForeground.current.sortChildren();
                     } else {
                         // Do this as a safety measure.
@@ -691,7 +690,7 @@ const ClustersMap = (props) => {
             controller.abort();
 
         // Change selected dataset
-        selectedDataset.current = props.selectedDataset;
+        selectedDataset.current = props.selectedDataset["name"];
         // Reset everything at the initial state
         reset();
 
@@ -1204,7 +1203,7 @@ const ClustersMap = (props) => {
                                             sprites.current.get(index).tint = 0xFFFFFF;
                                             // noinspection all
                                             sprites.current.get(index).texture = PIXI.Texture.from(URL.createObjectURL(blob), {scaleMode: PIXI.SCALE_MODES.LINEAR});
-                                            sprites.current.get(index).zIndex = 10;
+                                            sprites.current.get(index).zIndex = 10 + (maxZoomLevel.current - spritesGlobalInfo.current.get(index).zoom);
                                             containerForeground.current.sortChildren();
                                         } else {
                                             // Do this as a safety measure.
@@ -1261,7 +1260,7 @@ const ClustersMap = (props) => {
 
     // const updateStageThrottled = throttle(updateStage, 50);
 
-    const makeSpritePulse = (sprite, selectedDatasetAtCall) => {
+    const makeSpritePulse = (sprite, selectedDatasetAtCall, index) => {
         // Make the image pulse for 4 seconds
         const ticker = new PIXI.Ticker();
         const originalWidth = sprite.width;
@@ -1276,7 +1275,7 @@ const ClustersMap = (props) => {
 
             if (elapsed > DURATION || selectedDatasetAtCall !== selectedDataset.current) {
                 // Decrease z-index of sprite
-                sprite.zIndex = 10;
+                sprite.zIndex = 10 + (maxZoomLevel.current - spritesGlobalInfo.current.get(index).zoom);
                 if (sprite.width !== originalWidth)
                     sprite.width = originalWidth;
                 if (sprite.height !== originalHeight)
@@ -1318,8 +1317,8 @@ const ClustersMap = (props) => {
         const sprite = sprites.current.get(spriteIndex);
         if (sprite) {
             // Put sprite in front
-            sprite.zIndex = 11;
-            makeSpritePulse(sprite, selectedDatasetAtCall);
+            sprite.zIndex = 10 + maxZoomLevel.current + 1;
+            makeSpritePulse(sprite, selectedDatasetAtCall, spriteIndex);
         }
     }
 
