@@ -101,6 +101,9 @@ if [ "$condition_resize" == "y" ]; then
   fi
 fi
 
+echo "Creating minimap..."
+export ENV_FILE_LOCATION=$HOME/image-viz/.env && python3 -m src.report.scatter -c "$dataset_name"
+
 # Add location to the nginx.conf.template file
 echo "Adding location to nginx.conf.template..."
 # First, update the nginx.conf.json file

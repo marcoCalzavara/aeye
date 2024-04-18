@@ -1,6 +1,6 @@
 import csv
 import getopt
-import getpass
+import json
 import os
 import sys
 
@@ -8,29 +8,30 @@ from dotenv import load_dotenv
 from pymilvus import db, Collection, utility
 
 from .collections import embeddings_collection
-from .datasets import DatasetOptions
 from .utils import create_connection
 from ..CONSTANTS import *
 
 
 def parsing():
+    with open(os.path.join(os.getenv(HOME), DATASETS_JSON_NAME), "r") as f:
+        datasets = json.load(f)["datasets"]
+
     # Remove 1st argument from the list of command line arguments
     arguments = sys.argv[1:]
 
     # Options
     options = "hd:c:"
-
     # Long options
     long_options = ["help", "database", "collection"]
 
     # Prepare flags
-    flags = {"database": DEFAULT_DATABASE_NAME, "collection": DatasetOptions.BEST_ARTWORKS.value["name"]}
+    flags = {"database": DEFAULT_DATABASE_NAME, "collection": datasets[0]["name"]}
 
     # Parsing argument
     arguments, values = getopt.getopt(arguments, options, long_options)
 
     if len(arguments) > 0 and arguments[0][0] in ("-h", "--help"):
-        print(f'This script generates zoom levels.\n\
+        print(f'This script adds captions to the entities in the collection.\n\
         -d or --database: database name (default={flags["database"]}).\n\
         -c or --collection: collection name (default={flags["collection"]}).')
         sys.exit(0)
@@ -40,11 +41,12 @@ def parsing():
         if arg in ("-d", "--database"):
             flags["database"] = val
         elif arg in ("-c", "--collection"):
-            if val in [dataset.value["name"] for dataset in DatasetOptions]:
+            if val in [dataset["name"] for dataset in datasets]:
                 flags["collection"] = val
             else:
-                raise ValueError("The collection must have one of the following names: "
-                                 + str([dataset.value["name"] for dataset in DatasetOptions]))
+                print("The collection must have one of the following names: " + str([dataset["name"]
+                                                                                     for dataset in datasets]))
+                sys.exit(1)
 
     return flags
 
@@ -65,20 +67,9 @@ if __name__ == "__main__":
 
     flags = parsing()
 
-    choice = input("Use root user? (y/n) ")
-    if choice == "y":
-        user = ROOT_USER
-        passwd = ROOT_PASSWD
-    elif choice.lower() == "n":
-        user = input("Username: ")
-        passwd = getpass.getpass("Password: ")
-    else:
-        print("Wrong choice.")
-        sys.exit(1)
-
     # Try creating a connection and selecting a database. If it fails, exit.
     try:
-        create_connection(user, passwd)
+        create_connection(ROOT_USER, ROOT_PASSWD, False)
         db.using_database(flags["database"])
     except Exception as e:
         print(e.__str__())

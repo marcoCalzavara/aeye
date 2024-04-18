@@ -1,4 +1,3 @@
-import getpass
 import os
 import sys
 
@@ -13,16 +12,7 @@ from ..CONSTANTS import *
 def delete_collection(connection=False, collection_name=None):
     try:
         if not connection:
-            choice = input("Use root user? (y/n) ")
-            if choice.lower() == "y":
-                create_connection(ROOT_USER, ROOT_PASSWD)
-            elif choice.lower() == "n":
-                user = input("Username: ")
-                passwd = getpass.getpass("Password: ")
-                create_connection(user, passwd)
-            else:
-                print("Wrong choice.")
-                sys.exit(1)
+            create_connection(ROOT_USER, ROOT_PASSWD)
 
         # Choose a database and switch to the newly created database
         db_name = input("Database name: (enter for default database): ")

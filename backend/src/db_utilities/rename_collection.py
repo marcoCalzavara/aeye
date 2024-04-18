@@ -5,7 +5,6 @@ from pymilvus import utility, db
 from .utils import create_connection
 from ..CONSTANTS import *
 
-
 if __name__ == "__main__":
     # Get arguments
     database = DEFAULT_DATABASE_NAME

@@ -1,8 +1,5 @@
-import getpass
-import os
 import sys
 
-from dotenv import dotenv_values
 from pymilvus import db
 
 from .utils import create_connection

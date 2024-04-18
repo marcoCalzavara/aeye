@@ -41,7 +41,7 @@ def parsing():
     arguments, values = getopt.getopt(arguments, options, long_options)
 
     if len(arguments) > 0 and arguments[0][0] in ("-h", "--help"):
-        print(f'This script populates a vector store with embeddings.\n\
+        print(f'This script populates a collection with embeddings.\n\
         -d or --database: database name (default={flags["database"]}).\n\
         -c or --dataset: dataset (default={flags["dataset"]}).\n\
         -b or --batch_size: batch size used for loading the dataset (default={BATCH_SIZE}).\n\

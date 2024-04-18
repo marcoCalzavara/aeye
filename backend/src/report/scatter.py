@@ -1,29 +1,31 @@
 import getopt
-import getpass
+import json
 import os
 import sys
-from matplotlib import pyplot as plt
 
 from dotenv import load_dotenv
+from matplotlib import pyplot as plt
 from pymilvus import db, Collection
 
-from ..db_utilities.datasets import DatasetOptions
-from ..db_utilities.utils import create_connection
 from ..CONSTANTS import *
+from ..db_utilities.utils import create_connection
 
 
 def parsing():
+    with open(os.path.join(os.getenv(HOME), DATASETS_JSON_NAME), "r") as f:
+        datasets = json.load(f)["datasets"]
+
     # Remove 1st argument from the list of command line arguments
     arguments = sys.argv[1:]
 
     # Options
-    options = "hd:c:b:r:s:"
+    options = "hd:c:"
 
     # Long options
-    long_options = ["help", "database", "dataset", "batch_size", "repopulate", "early_stop"]
+    long_options = ["help", "database", "dataset"]
 
     # Prepare flags
-    flags = {"database": DEFAULT_DATABASE_NAME, "dataset": DatasetOptions.BEST_ARTWORKS.value["name"]}
+    flags = {"database": DEFAULT_DATABASE_NAME, "dataset": datasets[0]["name"], "directory": datasets[0]["dir_name"]}
 
     # Parsing argument
     arguments, values = getopt.getopt(arguments, options, long_options)
@@ -39,15 +41,23 @@ def parsing():
         if arg in ("-d", "--database"):
             flags["database"] = val
         elif arg in ("-c", "--dataset"):
-            if val in [dataset.value["name"] for dataset in DatasetOptions]:
+            if val in [dataset["name"] for dataset in datasets]:
                 flags["dataset"] = val
+                for dataset in datasets:
+                    if dataset["name"] == val:
+                        flags["directory"] = dataset["dir_name"]
+                        break
             else:
-                raise ValueError("Dataset not supported.")
+                print("Dataset not supported.")
+                sys.exit(1)
 
     return flags
 
 
-def generate_scatter_plot(collection: Collection):
+def generate_scatter_plot(flags: dict):
+    # Get the collection object
+    collection = Collection(flags["dataset"])
+
     print("Generating scatter plot...")
     # Load collection in memory
     collection.load()
@@ -100,19 +110,14 @@ def generate_scatter_plot(collection: Collection):
     # Remove all white space on the plot
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
-    # Save scatter plot at os.getenv(HOME)/minimaps/{collection.name}.png. Create the directory if it does not exist.
-    directory = ""
-    for dataset_option in DatasetOptions:
-        if dataset_option.value["name"] == collection.name:
-            directory = dataset_option.value["directory"]
-            break
-
-    if not os.path.exists(f"{os.getenv(directory)}"):
+    # Save scatter plot
+    directory = os.path.join(os.getenv(HOME), flags["directory"])
+    if not os.path.exists(directory):
         print("We could not find the directory to save the scatter plot.")
         sys.exit(1)
 
-    plt.savefig(f"{os.getenv(directory)}/minimap.png")
-    print(f"Scatter plot saved for collection {collection.name} at {os.getenv(directory)}/minimap.png.")
+    plt.savefig(os.path.join(directory, "minimap.png"))
+    print(f"Minimap saved for collection {collection.name} at {os.path.join(directory, 'minimap.png')}.")
 
     # Release collection
     collection.release()
@@ -135,31 +140,14 @@ if __name__ == "__main__":
     # Get arguments
     flags = parsing()
 
-    choice = input("Use root user? (y/n) ")
-    if choice == "y":
-        user = ROOT_USER
-        passwd = ROOT_PASSWD
-    elif choice.lower() == "n":
-        user = input("Username: ")
-        passwd = getpass.getpass("Password: ")
-    else:
-        print("Wrong choice.")
-        sys.exit(1)
-
     # Try creating a connection and selecting a database. If it fails, exit.
     try:
-        create_connection(user, passwd)
+        create_connection(ROOT_USER, ROOT_PASSWD, False)
         db.using_database(flags["database"])
     except Exception as e:
         print(e.__str__())
         print("Error in main. Connection failed!")
         sys.exit(1)
 
-    # Get the collection object
-    collection_name = flags["dataset"]
-    collection = Collection(collection_name)
-
-    print(f"Using collection {collection_name}. The collection contains {collection.num_entities} entities.")
-
-    generate_scatter_plot(collection)
+    generate_scatter_plot(flags)
     sys.exit(0)

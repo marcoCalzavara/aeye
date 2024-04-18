@@ -9,8 +9,6 @@ from dotenv import load_dotenv
 from pymilvus import db, Collection, utility
 from tqdm import tqdm
 
-"""from .collections import (clusters_collection, image_to_tile_collection, ZOOM_LEVEL_VECTOR_FIELD_NAME,
-                          EMBEDDING_VECTOR_FIELD_NAME)"""
 from .collections import clusters_collection, image_to_tile_collection, ZOOM_LEVEL_VECTOR_FIELD_NAME
 from .utils import ModifiedKMeans
 from .utils import create_connection
@@ -36,7 +34,7 @@ def parsing():
     arguments = sys.argv[1:]
 
     # Options
-    options = "hd:c:r:i:"
+    options = "hd:c:r:"
 
     # Long options
     long_options = ["help", "database", "collection", "repopulate"]
