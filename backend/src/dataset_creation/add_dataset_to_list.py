@@ -13,9 +13,9 @@ def parsing():
     arguments = sys.argv[1:]
 
     # Options
-    options = "hd:c:l:f:s:"
+    options = "hd:c:l:f:s:w:"
     # Long options
-    long_options = ["help", "database", "dataset", "dir_name", "collate_fn", "dataset_class"]
+    long_options = ["help", "database", "dataset", "dir_name", "collate_fn", "dataset_class", "website_name"]
 
     # Parsing argument
     arguments, values = getopt.getopt(arguments, options, long_options)
@@ -28,7 +28,8 @@ def parsing():
         -c or --dataset: dataset.\n\
         -l or --dir_name: directory name.\n\
         -f or --collate_fn: collate function.\n\
-        -s or --dataset_class: dataset class.')
+        -s or --dataset_class: dataset class.\n\
+        -w or --website_name: website name.')
         sys.exit(0)
 
     # Checking each argument
@@ -43,6 +44,8 @@ def parsing():
             flags["collate_fn"] = val
         elif arg in ("-s", "--dataset_class"):
             flags["dataset_class"] = val
+        elif arg in ("-w", "--website_name"):
+            flags["website_name"] = val
 
     return flags
 
@@ -75,6 +78,7 @@ if __name__ == "__main__":
                 dataset["collate_fn"] = flags["collate_fn"]
                 dataset["dataset_class"] = flags["dataset_class"]
                 dataset["dir_name"] = flags["dir_name"]
+                dataset["website_name"] = flags["website_name"]
                 break
     else:
         # Add dataset to list
@@ -84,7 +88,8 @@ if __name__ == "__main__":
                 "collate_fn": flags["collate_fn"],
                 "zoom_levels": -1,
                 "dataset_class": flags["dataset_class"],
-                "dir_name": flags["dir_name"]
+                "dir_name": flags["dir_name"],
+                "website_name": flags["website_name"]
             }
         )
 

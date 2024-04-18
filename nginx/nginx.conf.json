@@ -22,7 +22,7 @@
         "1server": {
             "listen": "80",
             "server_name": "aeye.ethz.ch www.aeye.ethz.ch",
-            "return": "301 https://${DOLLAR}host${DOLLAR}request_uri"
+            "return": "301 https://${DOLLAR}server_name${DOLLAR}request_uri"
         },
         "2server": {
             "listen": "443 ssl",

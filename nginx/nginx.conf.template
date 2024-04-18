@@ -1,54 +1,34 @@
-# IMPORTANT. All containers are accessible within the default network
-# using their name. If the name of the container changes, change this file.
-
-worker_processes  auto;
-error_log  /logs/error.log warn;
-
-# The events section specifies parameters that affect how Nginx handles connections
+worker_processes auto;
+error_log /logs/error.log warn;
 events {
     worker_connections 1024;
 }
-
 http {
     resolver 127.0.0.11 ipv6=off;
     resolver_timeout 10s;
     sendfile on;
     tcp_nopush on;
-    log_format time '${DOLLAR}remote_addr - ${DOLLAR}remote_user [${DOLLAR}time_local] '
-                             '"${DOLLAR}request" ${DOLLAR}status ${DOLLAR}body_bytes_sent '
-                             '"${DOLLAR}http_referer" "${DOLLAR}http_user_agent"'
-                             'rt=${DOLLAR}request_time uct="${DOLLAR}upstream_connect_time" uht="${DOLLAR}upstream_header_time"'
-                              'urt="${DOLLAR}upstream_response_time"';
-    access_log /logs/access.log time; # Log for every connection to nginx
-
-    # Define cache paths.
+    log_format time '${DOLLAR}remote_addr - ${DOLLAR}remote_user [${DOLLAR}time_local] "${DOLLAR}request" ${DOLLAR}status ${DOLLAR}body_bytes_sent "${DOLLAR}http_referer" "${DOLLAR}http_user_agent" rt=${DOLLAR}request_time uct="${DOLLAR}upstream_connect_time" uht="${DOLLAR}upstream_header_time" urt="${DOLLAR}upstream_response_time"';
+    access_log /logs/access.log time;
     proxy_cache_path /data/nginx/cache levels=1:2 keys_zone=cache:10m max_size=2g;
-
     upstream backend_upstream {
-    # Other servers can be added for load balancing. See https://nginx.org/en/docs/http/load_balancing.html
         server backend:${BACKEND_PORT} max_fails=3;
     }
-
     server {
         listen 80;
         server_name aeye.ethz.ch www.aeye.ethz.ch;
         return 301 https://${DOLLAR}server_name${DOLLAR}request_uri;
     }
-
     server {
         listen 443 ssl;
-        access_log  /logs/reverse-proxy.log  time;
+        access_log /logs/reverse-proxy.log  time;
         server_name aeye.ethz.ch www.aeye.ethz.ch;
         ssl_certificate /etc/letsencrypt/live/aeye.ethz.ch/fullchain.pem;
         ssl_certificate_key /etc/letsencrypt/live/aeye.ethz.ch/privkey.pem;
-
         location / {
             proxy_pass http://frontend:3000;
         }
-
         location /api {
-        #  if a request is made to http(s)://${proxy-server}/api/some/path, Nginx will forward the request
-        # to http://${back-end}/api/some/path (see upstream above) on the backend server.
             proxy_cache cache;
             proxy_cache_valid 200 302 12h;
             proxy_cache_valid 404 1m;
@@ -58,40 +38,33 @@ http {
             proxy_set_header X-Forwarded-For ${DOLLAR}proxy_add_x_forwarded_for;
             proxy_buffers 32 4k;
         }
-
         location /best_artworks/ {
             add_header Access-Control-Allow-Origin *;
             alias /usr/share/nginx/best_artworks/;
         }
-
         location /wikiart/ {
             add_header Access-Control-Allow-Origin *;
             alias /usr/share/nginx/wikiart/;
         }
-
         location /CelebAHQ/ {
             add_header Access-Control-Allow-Origin *;
             alias /usr/share/nginx/celebahq/;
         }
-
         location /MNIST/ {
             add_header Access-Control-Allow-Origin *;
             rewrite (.*)/MNIST/resized_images/(.*)$ $1/MNIST/$2;
             alias /usr/share/nginx/MNIST/;
         }
-
         location /CIFAR100/ {
             add_header Access-Control-Allow-Origin *;
             rewrite (.*)/CIFAR100/resized_images/(.*)$ $1/CIFAR100/$2;
             alias /usr/share/nginx/CIFAR-100/;
         }
-
         location /FashionMNIST/ {
             add_header Access-Control-Allow-Origin *;
             rewrite (.*)/FashionMNIST/resized_images/(.*)$ $1/FashionMNIST/$2;
             alias /usr/share/nginx/Fashion-MNIST/;
         }
-
         location /COCO2017/ {
             add_header Access-Control-Allow-Origin *;
             alias /usr/share/nginx/COCO-2017/;

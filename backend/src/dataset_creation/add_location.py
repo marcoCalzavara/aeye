@@ -55,15 +55,15 @@ def recursive_search_of_locations(nginx_config, new_location):
         if isinstance(value, dict):
             if key == "locations":
                 if not new_location["resized"]:
-                    value[new_location["name"]] = {
+                    value["/" + new_location["name"] + "/"] = {
                       "add_header": "Access-Control-Allow-Origin *",
                       "rewrite": f"(.*)/{new_location['name']}/resized_images/(.*)$ $1/{new_location['name']}/$2",
                       "alias": f"/usr/share/nginx/{new_location['directory']}/"
                     }
                 else:
-                    value[new_location["name"]] = {
+                    value["/" + new_location["name"] + "/"] = {
                       "add_header": "Access-Control-Allow-Origin *",
-                      "alias": f"/usr/share/nginx/{new_location['directory']}/resized_images/"
+                      "alias": f"/usr/share/nginx/{new_location['directory']}/"
                     }
             else:
                 recursive_search_of_locations(value, new_location)
