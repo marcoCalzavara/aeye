@@ -136,6 +136,14 @@ class DatasetCollectionInfoGetter:
 
     def __call__(self, collection: str = Query(...)):
         if collection in self.collections.keys():
+            # Update info if necessary
+            with open(DATASETS_JSON_PATH, "r") as f:
+                datasets = json.load(f)["datasets"]
+            for dataset in datasets:
+                if dataset["name"] == collection:
+                    self.collections[collection]["zoom_levels"] = dataset["zoom_levels"]
+                    break
+
             return self.collections[collection]
         else:
             return None
