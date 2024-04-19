@@ -1,18 +1,20 @@
+sudo echo "Starting adding dataset..."
+
 # Check that the script is being run from the backend directory using pwd
 if [ "$(pwd)" != "$HOME/image-viz/backend" ]; then
   echo "Please run this script from the backend directory."
   exit
 fi
 
-# Read variables from dataset-info.env
-directory=$(grep "DIRECTORY=" ./dataset-info.env | cut -d '=' -f2)
-dataset_name=$(grep "DATASET_NAME=" ./dataset-info.env | cut -d '=' -f2)
-website_name=$(grep "WEBSITE_NAME=" ./dataset-info.env | cut -d '=' -f2)
-overwrite=$(grep "OVERWRITE_IF_EXISTS=" ./dataset-info.env | cut -d '=' -f2)
-class_name=$(grep "CLASS_NAME=" ./dataset-info.env | cut -d '=' -f2)
-collate_fn=$(grep "COLLATE_FN=" ./dataset-info.env | cut -d '=' -f2)
-batch_size=$(grep "BATCH_SIZE=" ./dataset-info.env | cut -d '=' -f2)
-resize=$(grep "RESIZE=" ./dataset-info.env | cut -d '=' -f2)
+# Read variables from new-dataset-info.env
+directory=$(grep "DIRECTORY=" ./new-dataset-info.env | cut -d '=' -f2)
+dataset_name=$(grep "DATASET_NAME=" ./new-dataset-info.env | cut -d '=' -f2)
+website_name=$(grep "WEBSITE_NAME=" ./new-dataset-info.env | cut -d '=' -f2)
+overwrite=$(grep "OVERWRITE_IF_EXISTS=" ./new-dataset-info.env | cut -d '=' -f2)
+class_name=$(grep "CLASS_NAME=" ./new-dataset-info.env | cut -d '=' -f2)
+collate_fn=$(grep "COLLATE_FN=" ./new-dataset-info.env | cut -d '=' -f2)
+batch_size=$(grep "BATCH_SIZE=" ./new-dataset-info.env | cut -d '=' -f2)
+resize=$(grep "RESIZE=" ./new-dataset-info.env | cut -d '=' -f2)
 
 # Check if the directory exists
 if [ ! -d "$HOME/$directory" ]; then
@@ -35,8 +37,8 @@ if [ $? -ne 0 ]; then
 fi
 
 if [ "$result" != "All good." ]; then
-  echo "The dataset already exists."
   if [ "$overwrite" != "y" ]; then
+    echo "The dataset already exists. If you want to overwrite it, set OVERWRITE_IF_EXISTS=y in new-dataset-info.env."
     exit
   fi
 fi

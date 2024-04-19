@@ -35,7 +35,6 @@ def parsing():
 
     # Options
     options = "hd:c:r:"
-
     # Long options
     long_options = ["help", "database", "collection", "repopulate"]
 
@@ -63,20 +62,22 @@ def parsing():
             if val in [d["name"] for d in datasets]:
                 flags["collection"] = val
             else:
-                raise ValueError("The collection must have one of the following names: "
-                                 + str([d["name"] for d in datasets]))
+                print("The collection must have one of the following names: "
+                      + str([d["name"] for d in datasets]))
+                sys.exit(1)
         elif arg in ("-r", "--repopulate"):
-            if val == "y":
+            if val.lower() == "y":
                 flags["repopulate"] = True
-            elif val == "n":
+            elif val.lower() == "n":
                 flags["repopulate"] = False
             else:
-                raise ValueError("The repopulate flag must be either y or n.")
+                print("Repopulate must be either y or n.")
+                sys.exit(1)
 
     return flags
 
 
-def load_vectors_from_collection(collection: Collection) -> list | None:
+def load_vectors_from_collection(collection: Collection) -> list:
     # Load collection in memory
     collection.load()
     # Get attributes
@@ -95,23 +96,13 @@ def load_vectors_from_collection(collection: Collection) -> list | None:
                 # Add entities to the list of entities
                 entities += query_result
     except Exception as e:
-        print(e.__str__())
-        print("Error in load_vectors_from_collection.")
-        return None
+        print("Error in load_vectors_from_collection. Error message: ", e)
+        collection.release()
+        sys.exit(1)
 
+    collection.release()
     # Now entities contains all the entities in the collection, with fields 'index' and 'low_dimensional_embedding_*'
     return entities
-
-
-def create_clusters_collection(collection_name: str, repopulate: bool) -> Collection:
-    if utility.has_collection(collection_name) and repopulate:
-        # Get number of entities in the collection
-        num_entities = Collection(collection_name).num_entities
-        print(f"Found collection {collection_name}. It has {num_entities} entities. Dropping it.")
-        utility.drop_collection(collection_name)
-
-    # Create collection and index
-    return clusters_collection(collection_name)
 
 
 def get_index_from_tile(zoom_level, tile_x, tile_y):
@@ -175,8 +166,7 @@ def insert_vectors_in_clusters_collection(zoom_levels, images_to_tile, collectio
         collection.flush()
 
     except Exception as e:
-        print(e.__str__())
-        print("Error in insert_vectors_in_clusters_collection.")
+        print("Error in insert_vectors_in_clusters_collection. Error message: ", e)
         return False
 
     if last_call:
@@ -276,25 +266,14 @@ def get_previously_inserted_tile(collection: Collection, prev_zoom_level: int, p
         return True
 
     except Exception as e:
-        print(e.__str__())
+        print("Error in get_previously_inserted_tile. Error message: ", e)
         return False
 
 
-def create_image_to_tile_collection(images_to_tile: dict, collection_name: str, repopulate: bool) -> None:
-    if utility.has_collection(collection_name) and repopulate:
-        # Get number of entities in the collection
-        num_entities = Collection(collection_name).num_entities
-        print(f"Found collection {collection_name}. It has {num_entities} entities. Dropping it.")
-        utility.drop_collection(collection_name)
-    elif utility.has_collection(collection_name) and not repopulate:
-        # Get number of entities in the collection
-        num_entities = Collection(collection_name).num_entities
-        print(f"Found collection {collection_name}. It has {num_entities} entities."
-              f" Not dropping it. Set repopulate to True to drop it.")
-        return
-
+def create_image_to_tile_collection(images_to_tile: dict, zoom_levels_collection_name: str,
+                                    images_to_tile_collection_name: str):
     # Create collection and index
-    collection = image_to_tile_collection(collection_name)
+    collection = image_to_tile_collection(images_to_tile_collection_name)
 
     # Populate collection
     entities_to_insert = []
@@ -309,23 +288,17 @@ def create_image_to_tile_collection(images_to_tile: dict, collection_name: str, 
         entities_to_insert.append(entity)
 
     # Insert entities in the collection
-    # Insert entities in batches of INSERT_SIZE
-    for i in range(0, len(entities_to_insert), INSERT_SIZE):
-        try:
-            collection.insert(data=[entities_to_insert[j] for j in range(i, i + INSERT_SIZE)
-                                    if j < len(entities_to_insert)])
-        except Exception as e:
-            print(e.__str__())
-            print("Error in create_collection_with_zoom_levels.")
-            # Drop collection to avoid inconsistencies
-            utility.drop_collection(collection_name)
-            return
-
-    # Flush collection
-    collection.flush()
-
-    # Success
-    print(f"Successfully created collection {collection_name}.")
+    try:
+        for i in range(0, len(entities_to_insert), INSERT_SIZE):
+            collection.insert(data=entities_to_insert[i:i + INSERT_SIZE])
+        # Flush collection
+        collection.flush()
+    except Exception as e:
+        graceful_application_shutdown(
+            f"Error in create_image_to_tile_collection. Error message: {e}",
+            zoom_levels_collection_name,
+            images_to_tile_collection_name
+        )
 
 
 def create_tiling(entities) -> tuple[list[list[list[dict]]], int]:
@@ -335,11 +308,6 @@ def create_tiling(entities) -> tuple[list[list[list[dict]]], int]:
     # Find the maximum and minimum values for each dimension
     max_values = {"x": max([entity["x"] for entity in entities]), "y": max([entity["y"] for entity in entities])}
     min_values = {"x": min([entity["x"] for entity in entities]), "y": min([entity["y"] for entity in entities])}
-
-    # For reference, a tile is a list of dictionaries, each dictionary containing the following keys:
-    # "index": index of the entity in the collection
-    # "x": x coordinate of the entity in the embedding space
-    # "y": y coordinate of the entity in the embedding space
 
     # Find zoom level that allows to have tiles with at most MAX_IMAGES_PER_TILE images.
     max_zoom_level = 0
@@ -379,29 +347,26 @@ def create_tiling(entities) -> tuple[list[list[list[dict]]], int]:
         else:
             max_zoom_level += 1
 
-    # Plot heat map of the grid
-    # plot_heat_map(grid, number_of_tiles, max_zoom_level)
     # Return grid
     return grid, max_zoom_level
 
 
-def graceful_application_shutdown(exception: Exception | None, collection: Collection):
-    if exception:
-        print(f"Error: {exception.__str__()}.")
-    print(f"Dropping collection {collection.name} with {collection.num_entities} entities.")
-    # Drop collection
-    utility.drop_collection(collection.name)
+def graceful_application_shutdown(message: str, zoom_levels_collection_name: str, images_to_tile_collection_name: str):
+    print(message)
+    # Drop collections
+    if utility.has_collection(zoom_levels_collection_name):
+        utility.drop_collection(zoom_levels_collection_name)
+    if utility.has_collection(images_to_tile_collection_name):
+        utility.drop_collection(images_to_tile_collection_name)
     sys.exit(1)
 
 
-def create_zoom_levels(entities, zoom_levels_collection_name, images_to_tile_collection_name, repopulate):
+def create_zoom_levels(entities, zoom_levels_collection_name, images_to_tile_collection_name):
     # Take entire embedding space for zoom level 0, then divide each dimension into 2^zoom_levels intervals.
     # Each interval is a tile. For each tile, find clusters and cluster representatives. Keep track of
     # the number of entities in each cluster. For the last zoom level, show all the entities in each tile.
     # First, get tiling
     tiling, max_zoom_level = create_tiling(entities)
-
-    print(f"The max zoom level is {max_zoom_level}.")
 
     # Save max_zoom_level to the entry in datasets.json
     with open(os.path.join(os.getenv(HOME), DATASETS_JSON_NAME), "r") as f:
@@ -414,7 +379,7 @@ def create_zoom_levels(entities, zoom_levels_collection_name, images_to_tile_col
         json.dump({"datasets": datasets}, f, indent=4)
 
     # Create clusters collection
-    zoom_levels_collection = create_clusters_collection(zoom_levels_collection_name, repopulate)
+    zoom_levels_collection = clusters_collection(zoom_levels_collection_name)
 
     # Define dictionary for zoom levels
     zoom_levels = {}
@@ -455,7 +420,11 @@ def create_zoom_levels(entities, zoom_levels_collection_name, images_to_tile_col
                             zoom_levels[zoom_level][tile_x_index] = {}
                     else:
                         # Shut down application
-                        graceful_application_shutdown(None, zoom_levels_collection)
+                        graceful_application_shutdown(
+                            "Could not insert data in collection.",
+                            zoom_levels_collection_name,
+                            images_to_tile_collection_name
+                        )
 
                 # Get all entities in the current tile.
                 entities_in_tile = []
@@ -486,8 +455,11 @@ def create_zoom_levels(entities, zoom_levels_collection_name, images_to_tile_col
                         )
                         if not result:
                             # Shut down application
-                            graceful_application_shutdown(Exception("Could not find tile in previous zoom level."),
-                                                          zoom_levels_collection)
+                            graceful_application_shutdown(
+                                "Could not get previously inserted tile.",
+                                zoom_levels_collection_name,
+                                images_to_tile_collection_name
+                            )
 
                     previous_zoom_level_cluster_representatives = [representative["representative"] for
                                                                    representative in zoom_levels[zoom_level - 1]
@@ -548,7 +520,14 @@ def create_zoom_levels(entities, zoom_levels_collection_name, images_to_tile_col
                     else:
                         fixed_centers = None
 
-                    kmeans.fit(coordinates, fixed_centers=fixed_centers)
+                    try:
+                        kmeans.fit(coordinates, fixed_centers=fixed_centers)
+                    except Exception as e:
+                        graceful_application_shutdown(
+                            f"Error in kmeans.fit. Error message: {e}",
+                            zoom_levels_collection_name,
+                            images_to_tile_collection_name
+                        )
 
                     # Get the coordinates of the cluster representatives
                     cluster_representatives = kmeans.cluster_centers_
@@ -642,20 +621,31 @@ def create_zoom_levels(entities, zoom_levels_collection_name, images_to_tile_col
     )
     if not result:
         # Shut down application
-        graceful_application_shutdown(None, zoom_levels_collection)
+        graceful_application_shutdown(
+            "Could not insert data in collection.",
+            zoom_levels_collection_name,
+            images_to_tile_collection_name
+        )
 
-    create_image_to_tile_collection(images_to_tile, images_to_tile_collection_name, repopulate)
+    zoom_levels_collection.release()
+    create_image_to_tile_collection(images_to_tile, zoom_levels_collection_name, images_to_tile_collection_name)
+
+
+def check_if_collection_exists(collection_name: str, repopulate: bool):
+    if utility.has_collection(collection_name) and (repopulate or Collection(collection_name).num_entities == 0):
+        utility.drop_collection(collection_name)
+    elif utility.has_collection(collection_name) and not (repopulate or Collection(collection_name).num_entities == 0):
+        print(f"Found collection {collection_name}. It has more than 0 entities. Set repopulate to True to drop it.")
+        sys.exit(0)
 
 
 if __name__ == "__main__":
     if ENV_FILE_LOCATION not in os.environ:
         # Try to load /.env file
-        choice = input("Do you want to load /.env file? (y/n) ")
-        if choice.lower() == "y" and os.path.exists("/.env"):
+        if os.path.exists("/.env"):
             load_dotenv("/.env")
         else:
-            print("export .env file location as ENV_FILE_LOCATION. Export $HOME/image-viz/.env if running outside "
-                  "of docker container, export /.env if running inside docker container backend.")
+            print("export .env file location as ENV_FILE_LOCATION.")
             sys.exit(1)
     else:
         # Load environment variables
@@ -669,18 +659,17 @@ if __name__ == "__main__":
         create_connection(ROOT_USER, ROOT_PASSWD, False)
         db.using_database(flags["database"])
     except Exception as e:
-        print(e.__str__())
-        print("Error in main. Connection failed!")
+        print("Error in main. Connection failed. Error: ", e)
         sys.exit(1)
 
-    if utility.has_collection(flags["collection"] + "_zoom_levels_clusters") and not flags["repopulate"]:
-        # Get number of entities in the collection
-        num_entities = Collection(flags["collection"] + "_zoom_levels_clusters").num_entities
-        print(f"Found collection {flags['collection']}_zoom_levels_clusters'. It has {num_entities} entities."
-              f" Not dropping it. Set repopulate to True to drop it.")
-        sys.exit(1)
+    # Define collection names
+    zoom_levels_collection_name = flags["collection"] + "_zoom_levels_clusters"
+    images_to_tile_collection_name = flags["collection"] + "_image_to_tile"
+    # Check if collections exist
+    check_if_collection_exists(zoom_levels_collection_name, flags["repopulate"])
+    check_if_collection_exists(images_to_tile_collection_name, flags["repopulate"])
 
-    # Choose a collection. If the collection does not exist, return.
+    # Check that embeddings collection exists. If the collection does not exist, return.
     if flags["collection"] not in utility.list_collections():
         print(f"The collection {flags['collection']}, which is needed for creating zoom levels, does not exist.")
         sys.exit(1)
@@ -692,5 +681,7 @@ if __name__ == "__main__":
 
     # Create zoom levels
     if entities is not None:
-        create_zoom_levels(entities, flags["collection"] + "_zoom_levels_clusters",
-                           flags["collection"] + "_image_to_tile", flags["repopulate"])
+        create_zoom_levels(entities, zoom_levels_collection_name, images_to_tile_collection_name)
+    else:
+        print(f"No entities found in the collection {flags['collection']}.")
+        sys.exit(1)

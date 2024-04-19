@@ -31,7 +31,7 @@ def parsing():
     options = "hd:c:b:r:"
 
     # Long options
-    long_options = ["help", "database", "dataset", "batch_size", "repopulate"]
+    long_options = ["help", "database", "collection", "batch_size", "repopulate"]
 
     # Prepare flags
     flags = {"database": DEFAULT_DATABASE_NAME, "dataset": datasets[0]["name"],
@@ -43,7 +43,7 @@ def parsing():
     if len(arguments) > 0 and arguments[0][0] in ("-h", "--help"):
         print(f'This script populates a collection with embeddings.\n\
         -d or --database: database name (default={flags["database"]}).\n\
-        -c or --dataset: dataset (default={flags["dataset"]}).\n\
+        -c or --collection: dataset (default={flags["dataset"]}).\n\
         -b or --batch_size: batch size used for loading the dataset (default={BATCH_SIZE}).\n\
         -r or --repopulate: whether to empty the database and repopulate. Type y for repopulating the store, '
               f'n otherwise (default={"n" if not flags["repopulate"] else "y"}).')
@@ -53,36 +53,28 @@ def parsing():
     for arg, val in arguments:
         if arg in ("-d", "--database"):
             flags["database"] = val
-        elif arg in ("-c", "--dataset"):
+        elif arg in ("-c", "--collection"):
             if val in [d["name"] for d in datasets]:
                 flags["dataset"] = val
             else:
-                raise ValueError("Dataset not supported.")
+                print("Dataset not found.")
+                sys.exit(1)
         elif arg in ("-b", "--batch_size"):
             if int(val) >= 1:
                 flags["batch_size"] = int(val)
             else:
-                raise ValueError("Batch size must be at least 1.")
+                print("Batch size must be greater than 0.")
+                sys.exit(1)
         elif arg in ("-r", "--repopulate"):
-            if val == "y":
+            if val.lower() == "y":
                 flags["repopulate"] = True
-            elif val == "n":
+            elif val.lower() == "n":
                 flags["repopulate"] = False
             else:
-                raise ValueError("repopulate must be y or n.")
+                print("Repopulate must be either y or n.")
+                sys.exit(1)
 
     return flags
-
-
-def create_embeddings_collection(collection_name) -> Collection:
-    try:
-        collection = embeddings_collection(collection_name)
-        print(f"Collection {collection_name} created.")
-        return collection
-
-    except Exception as e:
-        print("Error in create_embeddings_collection. Error message: ", e)
-        sys.exit(1)
 
 
 def modify_data(data: dict) -> list:
@@ -124,9 +116,7 @@ def modify_data(data: dict) -> list:
     return new_data
 
 
-def generate_low_dimensional_embeddings(entities: list, dp: DatasetPreprocessor, collection: Collection):
-    print("Generating low dimensional embeddings...")
-
+def generate_low_dimensional_embeddings(entities: list, dp: DatasetPreprocessor, collection_name: str):
     # Process records
     embeddings = torch.tensor([entities[i][EMBEDDING_VECTOR_FIELD_NAME] for i in range(len(entities))]).detach()
 
@@ -142,17 +132,21 @@ def generate_low_dimensional_embeddings(entities: list, dp: DatasetPreprocessor,
         entities[i]["x"] = data["low_dim_embeddings"][i][0]
         entities[i]["y"] = data["low_dim_embeddings"][i][1]
 
-    print("Inserting data...")
+    # Create collection
+    try:
+        collection = embeddings_collection(collection_name)
+    except Exception as e:
+        print("Error in creation of embeddings collection. Error message: ", e)
+        sys.exit(1)
+
     try:
         # Do for loop to avoid resource exhaustion
         for i in range(0, len(entities), INSERT_SIZE):
             collection.insert(data=entities[i:i + INSERT_SIZE])
-
         # Flush the collection
         collection.flush()
     except Exception as e:
-        print(e.__str__())
-        print("Error in generate_low_dimensional_embeddings.")
+        print("Error in generate_low_dimensional_embeddings. Error message: ", e)
         sys.exit(1)
 
     # Release collection
@@ -162,12 +156,10 @@ def generate_low_dimensional_embeddings(entities: list, dp: DatasetPreprocessor,
 if __name__ == "__main__":
     if ENV_FILE_LOCATION not in os.environ:
         # Try to load /.env file
-        choice = input("Do you want to load /.env file? (y/n) ")
-        if choice.lower() == "y" and os.path.exists("/.env"):
+        if os.path.exists("/.env"):
             load_dotenv("/.env")
         else:
-            print("export .env file location as ENV_FILE_LOCATION. Export $HOME/image-viz/.env if running outside "
-                  "of docker container, export /.env if running inside docker container backend.")
+            print("export .env file location as ENV_FILE_LOCATION.")
             sys.exit(1)
     else:
         # Load environment variables
@@ -181,41 +173,26 @@ if __name__ == "__main__":
         create_connection(ROOT_USER, ROOT_PASSWD, False)
         db.using_database(flags["database"])
     except Exception as e:
-        print(e.__str__())
-        print("Error in main. Connection failed!")
+        print("Error in main. Connection failed. Error: ", e)
         sys.exit(1)
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
-        if utility.has_collection(flags["dataset"]) and not flags["repopulate"]:
-            # Get number of entities in the collection
-            num_entities = Collection(flags["dataset"]).num_entities
-            print(f"Found collection {flags['dataset']}'. It has {num_entities} entities."
-                  f" Not dropping it. Set repopulate to True to drop it.")
-            sys.exit(1)
-        elif utility.has_collection(flags["dataset"]) and flags["repopulate"]:
-            print(f"Dropping collection {flags['dataset']}...")
+        if utility.has_collection(flags["dataset"]) and (flags["repopulate"]
+                                                         or Collection(flags["dataset"]).num_entities == 0):
             utility.drop_collection(flags["dataset"])
-
-        # Create collection
-        collection = create_embeddings_collection(collection_name=flags["dataset"])
+        elif utility.has_collection(flags["dataset"]) and not (flags["repopulate"]
+                                                               or Collection(flags["dataset"]).num_entities == 0):
+            print(f"Found collection {flags['dataset']}. It has more than 0 entities."
+                  f" Set repopulate to True to drop it.")
+            sys.exit(0)
 
         # Get dataset object
-        print(f"Getting dataset {flags['dataset']}...")
         dataset = get_dataset_object(flags["dataset"])
-
-        if not flags["repopulate"] and collection.num_entities > 0:
-            print(f"The collection {flags['dataset']} already has {collection.num_entities} entities. Set repopulate to"
-                  " y if you want to repopulate the collection.")
-            sys.exit(1)
-
         # Create an embedding object
         embeddings = ClipEmbeddings(device=DEVICE)
         # Create dataset preprocessor
         dp = DatasetPreprocessor(embeddings)
-
-        # Get data and populate database
-        print("Starting processing data...")
         # Get dataloader
         dataloader = dataset.get_dataloader(flags["batch_size"], NUM_WORKERS, embeddings.processData)
         # Generate data
@@ -223,7 +200,7 @@ if __name__ == "__main__":
         # Get entities
         entities = modify_data(data)
         # Generate low dimensional embeddings
-        generate_low_dimensional_embeddings(entities, dp, collection)
+        generate_low_dimensional_embeddings(entities, dp, flags["dataset"])
 
-        print("Process finished!")
+        print(f"Embeddings collection created and populated for dataset {flags['dataset']}.")
         sys.exit(0)

@@ -229,7 +229,7 @@ class LocalArtworksDataset(Dataset):
         self.dataset.append_transform(data_processor)
         return DataLoader(self.dataset,
                           batch_size=batch_size,
-                          num_workers=1,
+                          num_workers=num_workers,
                           collate_fn=self.collate_fn,
                           sampler=sampler)
 

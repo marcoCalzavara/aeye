@@ -6,7 +6,7 @@ from .utils import create_connection
 from ..CONSTANTS import *
 
 
-def create_database(create_default=True) -> str:
+def create_database(create_default=True):
     try:
         # Ask user for database name
         if create_default:
@@ -15,13 +15,13 @@ def create_database(create_default=True) -> str:
             db_name = input("Choose database (enter to use default): ")
             if db_name == "":
                 db_name = DEFAULT_DATABASE_NAME
-        # Create a database and switch to the newly created database if it does not exist
+        # Create a database if it does not exist
         if db_name not in db.list_database():
-            db.create_database(DEFAULT_DATABASE_NAME)
-            return db_name
+            db.create_database(db_name)
+            return
         else:
             print("Database already exists.")
-            sys.exit(0)
+            return
 
     except Exception as e:
         print(e.__str__())

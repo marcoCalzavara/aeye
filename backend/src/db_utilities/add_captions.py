@@ -54,12 +54,10 @@ def parsing():
 if __name__ == "__main__":
     if ENV_FILE_LOCATION not in os.environ:
         # Try to load /.env file
-        choice = input("Do you want to load /.env file? (y/n) ")
-        if choice.lower() == "y" and os.path.exists("/.env"):
+        if os.path.exists("/.env"):
             load_dotenv("/.env")
         else:
-            print("export .env file location as ENV_FILE_LOCATION. Export $HOME/image-viz/.env if running outside "
-                  "of docker container, export /.env if running inside docker container backend.")
+            print("export .env file location as ENV_FILE_LOCATION.")
             sys.exit(1)
     else:
         # Load environment variables
@@ -72,8 +70,7 @@ if __name__ == "__main__":
         create_connection(ROOT_USER, ROOT_PASSWD, False)
         db.using_database(flags["database"])
     except Exception as e:
-        print(e.__str__())
-        print("Error in main. Connection failed!")
+        print("Error in main. Connection failed. Error: ", e)
         sys.exit(1)
 
     # 1. Create a variable to store the path to the file
@@ -96,18 +93,17 @@ if __name__ == "__main__":
     # Fetch vectors
     entities = []
     try:
-        for i in range(0, collection.num_entities, 16384):
+        for i in range(0, collection.num_entities, SEARCH_LIMIT):
             if collection.num_entities > 0:
                 # Get SEARCH_LIMIT entities
                 query_result = collection.query(
-                    expr=f"index in {list(range(i, i + 16384))}",
+                    expr=f"index in {list(range(i, i + SEARCH_LIMIT))}",
                     output_fields=["*"]
                 )
                 # Add entities to the list of entities
                 entities += query_result
     except Exception as e:
-        print(e.__str__())
-        print("Error in update_metadata. Update failed!")
+        print("Error in update_metadata. Update failed. Error message: ", e)
         sys.exit(1)
 
     # Order entities by index
@@ -127,13 +123,12 @@ if __name__ == "__main__":
         # Create cluster collection
         new_collection = embeddings_collection(new_name)
         # Do for loop to avoid resource exhaustion
-        for i in range(0, len(entities), 16384):
-            new_collection.insert(data=[entities[j] for j in range(i, i + 16384) if j < len(entities)])
+        for i in range(0, len(entities), INSERT_SIZE):
+            new_collection.insert(data=entities[i:i + INSERT_SIZE])
         # Flush collection
         new_collection.flush()
     except Exception as e:
-        print(e.__str__())
-        print("Error in update_metadata. Update failed!")
+        print("Error in update_metadata. Update failed. Error message: ", e)
         utility.drop_collection(new_name)
         sys.exit(1)
 
@@ -142,8 +137,7 @@ if __name__ == "__main__":
         # Drop old collection
         utility.drop_collection(flags["collection"])
         # Rename new collection
-        utility.rename_collection(new_name, flags["collection"], "aiplusart")
+        utility.rename_collection(new_name, flags["collection"], new_db_name=flags["database"])
     except Exception as e:
-        print(e.__str__())
-        print("Error in update_metadata. Update failed!")
+        print("Error in update_metadata. Update failed. Error message: ", e)
         sys.exit(1)

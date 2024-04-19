@@ -6,9 +6,7 @@ from .utils import create_connection
 from ..CONSTANTS import *
 
 if __name__ == "__main__":
-    # Get arguments
     database = DEFAULT_DATABASE_NAME
-
     # Try creating a connection and selecting a database. If it fails, exit.
     choice = input("Select database (enter to keep default): ")
     if choice != "":
@@ -17,8 +15,7 @@ if __name__ == "__main__":
         create_connection(ROOT_USER, ROOT_PASSWD)
         db.using_database(database)
     except Exception as e:
-        print(e.__str__())
-        print("Error in main. Connection failed!")
+        print("Error in main. Connection failed. Error: ", e)
         sys.exit(1)
 
     # Get the collection object

@@ -1,7 +1,7 @@
 import os
 import sys
 
-import dotenv
+from dotenv import load_dotenv
 import numpy as np
 from pymilvus import connections
 from sklearn.cluster import KMeans
@@ -15,14 +15,13 @@ def create_connection(user, passwd, load_vars=True):
         if ENV_FILE_LOCATION not in os.environ:
             # Try to load /.env file
             if os.path.exists("/.env"):
-                dotenv.load_dotenv("/.env")
+                load_dotenv("/.env")
             else:
-                print("export .env file location as ENV_FILE_LOCATION. Export $HOME/image-viz/.env if running outside "
-                      "of docker container, export /.env if running inside docker container backend.")
+                print("export .env file location as ENV_FILE_LOCATION.")
                 sys.exit(1)
         else:
             # Load environment variables
-            dotenv.load_dotenv(os.getenv(ENV_FILE_LOCATION))
+            load_dotenv(os.getenv(ENV_FILE_LOCATION))
 
     connections.connect(
         host=os.getenv(MILVUS_IP),

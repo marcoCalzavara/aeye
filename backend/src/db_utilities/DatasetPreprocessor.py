@@ -46,10 +46,15 @@ class DatasetPreprocessor:
             self._attributes[attribute] = self._attributes[attribute] + data[attribute]
 
     def _generateLowDimensionalEmbeddings(self, projection_method):
-        assert self._embeddings is not None
-
-        if projection_method == UMAP_PROJ:
-            self._low_dim_embeddings = project_embeddings_UMAP(self._embeddings)
+        try:
+            assert self._embeddings is not None
+            if projection_method == UMAP_PROJ:
+                self._low_dim_embeddings = project_embeddings_UMAP(self._embeddings)
+            else:
+                raise Exception("Unknown projection method.")
+        except Exception as e:
+            print("Error in _generateLowDimensionalEmbeddings. Error: ", e)
+            sys.exit(1)
 
     def generateRecordsMetadata(self, projection_method=DEFAULT_PROJECTION_METHOD) -> Dict[str, np.ndarray]:
         # Generate low dimensional embeddings
@@ -82,13 +87,10 @@ class DatasetPreprocessor:
                 else:
                     print("Data is empty...moving on to next batch.")
 
-            print("Processing finished!")
-
             # Pack results in dictionary and return it to caller
             return {'embeddings': self._embeddings, **self._attributes}
 
         except Exception as e:
             # Print exception information
-            print(e.__str__())
-            print("Error in generateDatabaseEmbeddings.")
+            print("Error in generateDatabaseEmbeddings. Error: ", e)
             sys.exit(1)
