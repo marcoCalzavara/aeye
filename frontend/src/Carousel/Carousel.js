@@ -278,7 +278,10 @@ const NeighborsCarousel = (props) => {
                                                setShowCarousel={props.setShowCarousel}
                                                onGoingRequest={props.onGoingRequest}
                                                setOnGoingRequest={props.setOnGoingRequest}
-                                               setStageIsInteractive={props.setStageIsInteractive}/>
+                                               setStageIsInteractive={props.setStageIsInteractive}
+                                               noText={true}
+                                               marginFactor={0.5}
+                                />
                             </div>
                         })}
                     </Carousel>

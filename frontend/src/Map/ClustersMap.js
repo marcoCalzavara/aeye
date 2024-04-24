@@ -26,8 +26,8 @@ const BLUR_RADIUS_CAROUSEL = 3;
 // const BLUR_RADII = Array.from({length: NUM_BLUR_RADII}, (_, i) => BLUR_RADIUS_MIN + i * (BLUR_RADIUS_MAX - BLUR_RADIUS_MIN) / (NUM_BLUR_RADII - 1));
 const QUALITY = 5;
 // Define constant for transition steps and depth steps
-const INITIAL_TRANSITION_STEPS = 80;
-const DEPTH_STEP = 0.02;
+const PIXEL_STEP = 20;
+const DEPTH_STEP = 0.025;
 const NUM_OF_VELOCITIES = 5;
 const UNAVAILABLE_TILES_THRESHOLD = 15;
 const ROUND = false;
@@ -95,7 +95,7 @@ const ClustersMap = (props) => {
     const mouseDown = useRef(false);
     // Define least recently used cache for tiles. Use fetchTileData to fetch tiles.
     const tilesCache = useRef(new LRUCache({
-        max: 15000,
+        max: 12000,
         updateAgeOnHas: true,
         updateAgeOnGet: true
     }));
@@ -517,47 +517,7 @@ const ClustersMap = (props) => {
         textureLoaded.current.set(index, false);
         sprite.zIndex = 10 + (maxZoomLevel.current - zoom);
 
-        // Add texture to the sprite if the sprite is either in the visible area or in its immediate vicinity
-        if (sprite.x >= -3 * maxWidth.current && sprite.x <= stageWidth.current + 2 * maxWidth.current
-            && sprite.y >= -3 * maxHeight.current && sprite.y <= stageHeight.current + 2 * maxHeight.current) {
-            // Set flag that texture has been loaded. This makes sure that the texture is not loaded again.
-            textureLoaded.current.set(index, true);
-            // Create abort controller for the texture
-            const controller = new AbortController();
-            textureAbortController.current.set(index, controller);
-            // Load main texture
-            const options = {
-                signal: controller.signal,
-                method: 'GET',
-                priority: 'low'
-            }
-            fetch(getUrlForImage(path, selectedDataset.current, props.host), options)
-                .then((response) => {
-                    // Remove abort controller from the map
-                    textureAbortController.current.delete(index);
-                    return response.blob()
-                })
-                .then((blob) => {
-                    // The fetching is successful. Set the texture of the sprite to the fetched texture.
-                    if (sprites.current.has(index)) {
-                        sprite.tint = 0xFFFFFF;
-                        // noinspection all
-                        sprite.texture = PIXI.Texture.from(URL.createObjectURL(blob), {scaleMode: PIXI.SCALE_MODES.LINEAR});
-                        containerForeground.current.sortChildren();
-                    } else {
-                        // Do this as a safety measure.
-                        if (textureLoaded.current.has(index))
-                            textureLoaded.current.delete(index);
-                        if (textureAbortController.current.has(index))
-                            textureAbortController.current.delete(index);
-                    }
-                })
-                .catch((error) => {
-                    if (error.name !== 'AbortError')
-                        console.error('Error loading texture:', error);
-                });
-        }
-
+        // Add sprite to foreground or background container
         const zoom_level = Math.min(depth.current >= 0 ? zoomLevel.current + 1 : zoomLevel.current, maxZoomLevel.current);
         if (zoom >= zoom_level && !(zoomLevel.current === maxZoomLevel.current && depth.current === 0)) {
             // Add sprite to background container
@@ -575,6 +535,46 @@ const ClustersMap = (props) => {
         sprite.interactive = true;
         sprite.interactiveChildren = false;
         sprite.cursor = 'pointer';
+
+        // Add texture to the sprite if the sprite is either in the visible area or in its immediate vicinity
+        if (sprite.x >= -2 * maxWidth.current && sprite.x <= stageWidth.current + maxWidth.current
+            && sprite.y >= -2 * maxHeight.current && sprite.y <= stageHeight.current + maxHeight.current) {
+            // Set flag that texture has been loaded. This makes sure that the texture is not loaded again.
+            textureLoaded.current.set(index, true);
+            // Create abort controller for the texture
+            const controller = new AbortController();
+            textureAbortController.current.set(index, controller);
+            // Load main texture
+            const options = {
+                signal: controller.signal,
+                method: 'GET',
+                priority: "low"
+            }
+            fetch(getUrlForImage(path, selectedDataset.current, props.host), options)
+                .then((response) => {
+                    // Remove abort controller from the map
+                    textureAbortController.current.delete(index);
+                    return response.blob()
+                })
+                .then((blob) => {
+                    // The fetching is successful. Set the texture of the sprite to the fetched texture.
+                    if (sprites.current.has(index)) {
+                        sprite.tint = 0xFFFFFF;
+                        // noinspection all
+                        sprite.texture = PIXI.Texture.from(URL.createObjectURL(blob), {scaleMode: PIXI.SCALE_MODES.LINEAR});
+                    } else {
+                        // Do this as a safety measure.
+                        if (textureLoaded.current.has(index))
+                            textureLoaded.current.delete(index);
+                        if (textureAbortController.current.has(index))
+                            textureAbortController.current.delete(index);
+                    }
+                })
+                .catch((error) => {
+                    if (error.name !== 'AbortError')
+                        console.error('Error loading texture:', error);
+                });
+        }
     }
 
     const stopMomentumTranslationTicker = () => {
@@ -1099,7 +1099,7 @@ const ClustersMap = (props) => {
         let count = 0;
         let count_visible = 0;
         let count_unavailable_tiles = 0;
-        visible_tiles.map(async tile => {
+        visible_tiles.map(tile => {
             // Get data from tilesCache
             const data = tilesCache.current.get(next_zoom_level + "-" + tile.x + "-" + tile.y);
             // Loop over artworks in tile and add them to the stage.
@@ -1177,8 +1177,8 @@ const ClustersMap = (props) => {
                         count_visible += sprites.current.get(index).visible ? 1 : 0;
 
                         // Add texture to the sprite if the sprite is either in the visible area or in its immediate vicinity
-                        if (sprites.current.get(index).x >= -3 * maxWidth.current && sprites.current.get(index).x <= stageWidth.current + 2 * maxWidth.current
-                            && sprites.current.get(index).y >= -3 * maxHeight.current && sprites.current.get(index).y <= stageHeight.current + 2 * maxHeight.current) {
+                        if (sprites.current.get(index).x >= -2 * maxWidth.current && sprites.current.get(index).x <= stageWidth.current + maxWidth.current
+                            && sprites.current.get(index).y >= -2 * maxHeight.current && sprites.current.get(index).y <= stageHeight.current + maxHeight.current) {
                             if (!textureLoaded.current.get(index)) {
                                 // Set flag that texture has been loaded.
                                 textureLoaded.current.set(index, true);
@@ -1197,14 +1197,13 @@ const ClustersMap = (props) => {
                                         textureAbortController.current.delete(index);
                                         return response.blob()
                                     })
-                                    .then(async (blob) => {
+                                    .then((blob) => {
                                         // The fetching is successful. Set the texture of the sprite to the fetched texture.
                                         if (sprites.current.has(index)) {
                                             sprites.current.get(index).tint = 0xFFFFFF;
                                             // noinspection all
                                             sprites.current.get(index).texture = PIXI.Texture.from(URL.createObjectURL(blob), {scaleMode: PIXI.SCALE_MODES.LINEAR});
                                             sprites.current.get(index).zIndex = 10 + (maxZoomLevel.current - spritesGlobalInfo.current.get(index).zoom);
-                                            containerForeground.current.sortChildren();
                                         } else {
                                             // Do this as a safety measure.
                                             if (textureLoaded.current.has(index))
@@ -1238,6 +1237,9 @@ const ClustersMap = (props) => {
             } else
                 count_unavailable_tiles += 1;
         });
+
+        // Sort children in the foreground container
+        containerForeground.current.sortChildren();
 
         // Log for debugging
         // console.log("Count: ", count, "Count visible: ", count_visible);
@@ -1364,25 +1366,25 @@ const ClustersMap = (props) => {
         const final_effective_position_x = final_position.x;
         const final_effective_position_y = final_position.y;
 
-        // Define steps
-        let step_x = (final_effective_position_x - effectivePosition.current.x) / INITIAL_TRANSITION_STEPS;
-        let step_y = (final_effective_position_y - effectivePosition.current.y) / INITIAL_TRANSITION_STEPS;
+        // Compute the pixel translation
+        const shift_x_pixel = (((final_effective_position_x - effectivePosition.current.x) * (width.current - maxWidth.current)) / effectiveWidth.current);
+        const shift_y_pixel = (((final_effective_position_y - effectivePosition.current.y) * (height.current - maxHeight.current)) / effectiveHeight.current);
+        const max_pixel_shift = Math.max(Math.abs(shift_x_pixel), Math.abs(shift_y_pixel));
 
-        // Define variable for transition steps
-        let transition_steps = INITIAL_TRANSITION_STEPS;
-        // If the biggest step size is smaller than 0.005, halve the number of transition steps.
-        if (Math.max(Math.abs(step_x), Math.abs(step_y)) < 0.005) {
-            transition_steps = Math.ceil(INITIAL_TRANSITION_STEPS / 2);
-            step_x = (final_effective_position_x - effectivePosition.current.x) / transition_steps;
-            step_y = (final_effective_position_y - effectivePosition.current.y) / transition_steps;
-        } else if (Math.max(Math.abs(step_x), Math.abs(step_y)) > 0.05) {
-            transition_steps = Math.ceil(INITIAL_TRANSITION_STEPS * 2);
-            step_x = (final_effective_position_x - effectivePosition.current.x) / transition_steps;
-            step_y = (final_effective_position_y - effectivePosition.current.y) / transition_steps;
-        }
+        // Modify the number of transition steps based on the maximum pixel shift
+        let transition_steps = 1;
+        if (max_pixel_shift < 1)
+            return Promise.resolve();
+        else
+            transition_steps = Math.ceil(max_pixel_shift / PIXEL_STEP);
+
+        // Compute steps
+        const step_x = (final_effective_position_x - effectivePosition.current.x) / transition_steps;
+        const step_y = (final_effective_position_y - effectivePosition.current.y) / transition_steps;
 
         return new Promise((resolve) => {
             const translation_ticker = new PIXI.Ticker();
+            translation_ticker.maxFPS = 90;
             // Define counter for number of steps
             let counter = 0;
 
@@ -1446,7 +1448,7 @@ const ClustersMap = (props) => {
 
         return new Promise((resolve) => {
             const zoom_ticker = new PIXI.Ticker();
-            zoom_ticker.maxFPS = 120;
+            zoom_ticker.maxFPS = 90;
             // Define counter for number of steps
             let counter = 0;
 
@@ -1555,11 +1557,13 @@ const ClustersMap = (props) => {
         const final_effective_position_x = final_position.x;
         const final_effective_position_y = final_position.y;
 
-        // Define steps
-        let step_x = (final_effective_position_x - effectivePosition.current.x) / INITIAL_TRANSITION_STEPS;
-        let step_y = (final_effective_position_y - effectivePosition.current.y) / INITIAL_TRANSITION_STEPS;
+        // Get shift in pixels
+        const shift_x_pixel = (((final_effective_position_x - effectivePosition.current.x) * (width.current - maxWidth.current)) / effectiveWidth.current);
+        const shift_y_pixel = (((final_effective_position_y - effectivePosition.current.y) * (height.current - maxHeight.current)) / effectiveHeight.current);
+        const max_pixel_shift = Math.max(Math.abs(shift_x_pixel), Math.abs(shift_y_pixel));
 
-        if (Math.max(Math.abs(step_x), Math.abs(step_y)) > 0.005) {
+        // noinspection all
+        if (max_pixel_shift > 2.5 * Math.max(stageWidth.current, stageHeight.current)) {
             if (selectedDataset.current !== selectedDatasetInit) {
                 beforeReturnFromMoveToImage();
                 return;
@@ -1873,24 +1877,23 @@ const ClustersMap = (props) => {
             handleZoom(delta, event.center);
     }
 
-    const handleMouseWheel = (event) => {
+    const handleMouseWheel = async (event) => {
+        // Check if the event is a trackpad event
+        const trackPadEvent = event.deltaY % 1 !== 0;
         // Define delta
         let delta = -event.deltaY / 1000;
         // Get mouse position with respect to container
         const position = event.data.getLocalPosition(containerForeground.current);
-        if (Math.abs(delta) > 0.01) {
-            // Create zoom ticker to complete the transition by delta in steps of 0.002
-            const zoom_ticker = new PIXI.Ticker();
+        // Zoom in/out
+        if (Math.abs(delta) > 0.1 && !trackPadEvent) {
             let current_delta = 0;
-            zoom_ticker.add(() => {
-                if (Math.abs(current_delta) >= Math.abs(delta)) {
-                    zoom_ticker.stop();
-                } else {
-                    handleZoom(Math.sign(delta) * 0.006, position);
-                    current_delta += Math.sign(delta) * 0.006;
-                }
-            });
-            zoom_ticker.start();
+            while (Math.abs(current_delta) < Math.abs(delta)) {
+                // Handle zoom
+                handleZoom(Math.sign(delta) * 0.01, position);
+                current_delta += Math.sign(delta) * 0.01;
+                // Stop for a short time
+                await new Promise(resolve => setTimeout(resolve, 6));
+            }
         } else {
             // Handle zoom
             handleZoom(delta, position);

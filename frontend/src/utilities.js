@@ -138,10 +138,6 @@ export function getResponsiveSearchBarWidth() {
 
 }
 
-function vhToPixels(vh) {
-    return (window.innerHeight * parseFloat(vh)) / 100;
-}
-
 export function getMaxHeightMainImage() {
     if (window.innerHeight >= 500)
         return window.innerHeight - getResponsiveCarouselHeight().replace("px", "")

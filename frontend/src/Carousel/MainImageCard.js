@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {useEffect} from 'react';
+import {useEffect, useRef} from 'react';
 import ProgressiveImage from './ProgressiveImage';
 import './carousel.css';
 import {getMaxHeightMainImage} from "../utilities";
@@ -8,16 +8,16 @@ import TextArea from "./TextArea";
 const MARGIN = 10;
 const LINE_HEIGHT = 1.3;
 
-const getHeightAndWidthOfMainImage = (height, width, has_text) => {
+const getHeightAndWidthOfMainImage = (height, width, has_text, marginFactor) => {
     // Get aspect ratio of the image
     const aspectRatio = height / width;
     // Get multiplicative factor
     const factor = has_text ? 0.9 : 1;
     const num_of_margins = has_text ? 3 : 2;
     // Get the maximum height of the main image
-    const maxHeight = getMaxHeightMainImage() * factor - MARGIN * num_of_margins;
+    const maxHeight = getMaxHeightMainImage() * factor - MARGIN * num_of_margins * marginFactor;
     // Get the maximum width of the main image
-    const maxWidth = document.getElementById("carousel-id").offsetWidth * 0.9 - MARGIN * 2;
+    const maxWidth = document.getElementById("carousel-id").offsetWidth * 0.9 - MARGIN * 2 * marginFactor;
 
     // Get aspect ratio of maximum height and width
     const aspectRatioMax = maxHeight / maxWidth;
@@ -92,31 +92,46 @@ function getFontSize(height) {
     }
 }
 
-function getStyle(expanded, heightAndWidth, factor) {
+function getStyle(heightAndWidth, factor, marginFactor) {
     return {
         backgroundColor: "transparent",
         color: 'white',
         cursor: 'pointer',
-        maxHeight: factor !== 1 ? (getMaxHeightMainImage() - heightAndWidth.height * factor - 3 * MARGIN) + 'px' : 0,
+        maxHeight: factor !== 1 ? (getMaxHeightMainImage() - heightAndWidth.height * factor - 3 * MARGIN * marginFactor) + 'px' : 0,
+        marginBottom: MARGIN * marginFactor + 'px',
     }
 }
 
 
 export default function MainImageCard({image, placeholderSrc, src, host, selectedDataset,setSearchData, setShowCarousel,
-                                          onGoingRequest, setOnGoingRequest, setStageIsInteractive}) {
+                                          onGoingRequest, setOnGoingRequest, setStageIsInteractive, noText=false,
+                                          marginFactor=1}) {
     const [heightAndWidth, setHeightAndWidth] = React.useState({height: 0, width: 0});
     const [height, setHeight] = React.useState(window.innerHeight);
+    const noTextRef = useRef(noText);
+    const marginFactorRef = useRef(marginFactor);
     const [text, setText] = React.useState("");
     const [factor, setFactor] = React.useState(1);
 
     useEffect(() => {
+        noTextRef.current = noText;
+    }, [noText]);
+
+    useEffect(() => {
+        marginFactorRef.current = marginFactor;
+    }, [marginFactor]);
+
+    useEffect(() => {
         // Generate text for the image
-        const text = generateText(image);
-        setText(text);
+        let t = "";
+        if (!noTextRef.current) {
+            t = generateText(image);
+        }
+        setText(t);
         // Check if there is text
-        const has_text = text !== "";
+        const has_text = t !== "";
         // Get height and width of the main image
-        const {height, width} = getHeightAndWidthOfMainImage(image.height, image.width, has_text);
+        const {height, width} = getHeightAndWidthOfMainImage(image.height, image.width, has_text, marginFactorRef.current);
         setHeightAndWidth({height: height, width: width});
         // Set factor to 1 if there is no text, otherwise set it to 0.9
         setFactor(has_text ? 0.9 : 1);
@@ -140,7 +155,10 @@ export default function MainImageCard({image, placeholderSrc, src, host, selecte
                 justifyContent: 'start',
                 alignItems: 'center',
                 borderRadius: '10px',
-                maxHeight: factor === 1 ? heightAndWidth.height + 2 * MARGIN : getMaxHeightMainImage(),
+                minHeight: (heightAndWidth.height * factor + 2 * MARGIN * marginFactorRef.current)  + "px",
+                maxHeight: factor === 1 ? (heightAndWidth.height + 2 * MARGIN * marginFactorRef.current) + "px" : getMaxHeightMainImage() + "px",
+                overflowY: "auto",
+                scrollbarWidth: "none",
                 width: heightAndWidth.width,
                 backgroundColor: "rgb(49 49 52 / 1)",
                 zIndex: 100,
@@ -157,9 +175,9 @@ export default function MainImageCard({image, placeholderSrc, src, host, selecte
                     <ProgressiveImage
                         placeholderSrc={placeholderSrc}
                         src={src}
-                        width={(heightAndWidth.width - MARGIN * 2) + 'px'}
+                        width={(heightAndWidth.width - MARGIN * 2 * marginFactorRef.current) + 'px'}
                         height={(heightAndWidth.height * factor) + 'px'}
-                        margin={MARGIN}
+                        margin={MARGIN * marginFactorRef.current}
                         image={image}
                         host={host}
                         selectedDataset={selectedDataset}
@@ -169,14 +187,13 @@ export default function MainImageCard({image, placeholderSrc, src, host, selecte
                         setOnGoingRequest={setOnGoingRequest}
                         setStageIsInteractive={setStageIsInteractive}
                     />
-                    <div style={getStyle(heightAndWidth, factor)}>
+                    <div style={getStyle(heightAndWidth, factor, marginFactorRef.current)}>
                         <TextArea
                             text={text}
-                            width={heightAndWidth.width - 2 * MARGIN}
-                            height={factor !== 1 ? (getMaxHeightMainImage() - heightAndWidth.height * factor - 3 * MARGIN) + 'px' : 0}
-                            fontsize={getFontSize(factor !== 1 ? (getMaxHeightMainImage() - heightAndWidth.height * factor - MARGIN) : 0)}
-                            line_height={LINE_HEIGHT}
-                            marginBottom={MARGIN}/>
+                            width={heightAndWidth.width - 2 * MARGIN * marginFactorRef.current}
+                            height={factor !== 1 ? (getMaxHeightMainImage() - heightAndWidth.height * factor - 3 * MARGIN * marginFactorRef.current) : 0}
+                            fontsize={getFontSize(factor !== 1 ? (getMaxHeightMainImage() - heightAndWidth.height * factor - MARGIN * marginFactorRef.current) : 0)}
+                            line_height={LINE_HEIGHT}/>
                     </div>
                 </>}
         </div>

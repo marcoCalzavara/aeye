@@ -1,19 +1,8 @@
 import * as React from 'react';
 
 
-export default function TextArea({text, width, height, fontsize, line_height, marginBottom}) {
+export default function TextArea({text, width, height, fontsize, line_height}) {
     const textRef = React.useRef(null);
-    const [margin, setMargin] = React.useState(0);
-
-    React.useEffect(() => {
-        if (textRef.current) {
-            if (textRef.current.scrollHeight > textRef.current.clientHeight) {
-                setMargin(6);
-            } else {
-                setMargin(0);
-            }
-        }
-    }, [text]);
 
     return (
         <div style={
@@ -22,8 +11,7 @@ export default function TextArea({text, width, height, fontsize, line_height, ma
                 flexDirection: 'column',
                 alignItems: 'center',
                 borderRadius: '10px',
-                maxHeight: height,
-                marginBottom: marginBottom + 'px',
+                maxHeight: height + 'px',
                 width: width + 'px',
                 pointerEvents: "auto",
                 backgroundColor: "rgb(49 49 52 / 1)"
@@ -35,16 +23,17 @@ export default function TextArea({text, width, height, fontsize, line_height, ma
                         pointerEvents: "auto",
                         backgroundColor: "transparent",
                         fontFamily: 'Roboto Slab, serif',
-                        fontSize: fontsize + 'px',
+                        fontSize: fontsize,
                         lineHeight: line_height,
                         hyphens: "auto",
                         textAlign: "justify",
                         hyphenateLimitChars: "2 1 1",
                         whiteSpace: "pre-wrap",
-                        paddingRight: margin + 'px',
                         width: width + 'px',
-                        overflow: "auto",
+                        overflowX: "hidden",
+                        overflowY: "auto",
                         height: 'auto',
+                        scrollbarWidth: "none"
                     }
                 }>
                 {text}

@@ -67,17 +67,17 @@ const ProgressiveImg = ({placeholderSrc, src, width, height, margin, image, host
     }, []);
 
     useEffect(() => {
+        // Set the imgSrc to placeholderSrc initially
+        setImgSrc(placeholderSrc);
+        // Create a new image object
         const img = new Image();
-        // noinspection all
+        // Set the src of the image object to the src of the main image
         img.src = src;
+        // When the main image finishes loading, set the imgSrc to the src of the main image
         img.onload = () => {
             setImgSrc(src);
         };
-    }, [src]);
-
-    useEffect(() => {
-        setImgSrc(placeholderSrc);
-    }, [placeholderSrc]);
+    }, [placeholderSrc, src]);
 
     return (
         <div id="main-image" style={{

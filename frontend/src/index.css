@@ -40,13 +40,11 @@
     --h-item-1024: 44px;
     --h-item-1200: 48px;
 
-
     --button-size: 20px;
     --carousel-container-margin-top: 5px;
-    --carousel-container-margin-bottom-320: 5px;
-    --carousel-container-margin-bottom-640: 10px;
-    --carousel-container-margin-bottom-900: 15px;
-
+    --carousel-container-margin-bottom-320: 20px;
+    --carousel-container-margin-bottom-640: 20px;
+    --carousel-container-margin-bottom-900: 20px;
 
     --margin-between-images: 20px;
     --h-carousel-320: 160px;
