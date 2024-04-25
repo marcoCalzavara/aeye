@@ -92,13 +92,13 @@ function getFontSize(height) {
     }
 }
 
-function getStyle(heightAndWidth, factor, marginFactor) {
+function getStyle(heightAndWidth, factor, marginFactor, hasText) {
     return {
         backgroundColor: "transparent",
         color: 'white',
         cursor: 'pointer',
         maxHeight: factor !== 1 ? (getMaxHeightMainImage() - heightAndWidth.height * factor - 3 * MARGIN * marginFactor) + 'px' : 0,
-        marginBottom: MARGIN * marginFactor + 'px',
+        marginBottom: hasText ? MARGIN * marginFactor + 'px' : 0,
     }
 }
 
@@ -187,7 +187,7 @@ export default function MainImageCard({image, placeholderSrc, src, host, selecte
                         setOnGoingRequest={setOnGoingRequest}
                         setStageIsInteractive={setStageIsInteractive}
                     />
-                    <div style={getStyle(heightAndWidth, factor, marginFactorRef.current)}>
+                    <div style={getStyle(heightAndWidth, factor, marginFactorRef.current, text !== "")}>
                         <TextArea
                             text={text}
                             width={heightAndWidth.width - 2 * MARGIN * marginFactorRef.current}

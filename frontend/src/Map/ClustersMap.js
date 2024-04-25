@@ -27,7 +27,7 @@ const BLUR_RADIUS_CAROUSEL = 3;
 const QUALITY = 5;
 // Define constant for transition steps and depth steps
 const PIXEL_STEP = 20;
-const DEPTH_STEP = 0.025;
+const DEPTH_STEP = 0.03;
 const NUM_OF_VELOCITIES = 5;
 const UNAVAILABLE_TILES_THRESHOLD = 15;
 const ROUND = false;
@@ -1881,7 +1881,7 @@ const ClustersMap = (props) => {
         // Check if the event is a trackpad event
         const trackPadEvent = event.deltaY % 1 !== 0;
         // Define delta
-        let delta = -event.deltaY / 1000;
+        let delta = Math.max(Math.min(-event.deltaY / 1000, 0.12), -0.12);
         // Get mouse position with respect to container
         const position = event.data.getLocalPosition(containerForeground.current);
         // Zoom in/out

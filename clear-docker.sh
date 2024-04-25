@@ -32,7 +32,11 @@ read -r answer
 if [ "$answer" = "y" ]; then
   echo "Pruning unused entities..."
   docker system prune -a
-else
+fi
+
+echo -n "Do you want to remove the volume folder of Milvus? (y/n) "
+read -r answer
+if [ "$answer" = "y" ]; then
   cd milvus || exit
   rm -rf volumes
   cd ..
