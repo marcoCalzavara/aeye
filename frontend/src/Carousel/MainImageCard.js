@@ -36,7 +36,7 @@ const generateText = (image) => {
     let text = "";
     if (image.author !== undefined) {
         const author = image.author.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-        text += "Author: " + author + ".\n";
+        text += "Artist: " + author + ".\n";
     }
     if (image.title !== undefined) {
         // Capitalize first letter of each word
@@ -51,7 +51,7 @@ const generateText = (image) => {
             text += "Date: " + image.date + ".\n";
         }
     if (image.caption !== undefined)
-        text += "Caption: " + image.caption;
+        text += "AI Caption: " + image.caption;
 
     return text;
 }
