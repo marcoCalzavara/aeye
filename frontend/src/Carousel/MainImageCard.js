@@ -92,6 +92,24 @@ function getFontSize(height) {
     }
 }
 
+function getMinWidth(text) {
+    // Change behavior of min width depending on device width
+    if (text === "")
+        return 0;
+    switch (true) {
+        case document.documentElement.clientWidth <= 480:
+            return "70%";
+        case document.documentElement.clientWidth > 480 && document.documentElement.clientWidth <= 768:
+            return "60%";
+        case document.documentElement.clientWidth > 768 && document.documentElement.clientWidth <= 1024:
+            return "45%";
+        case document.documentElement.clientWidth > 1024 && document.documentElement.clientWidth <= 1200:
+            return "35%";
+        case document.documentElement.clientWidth > 1200:
+            return "30%";
+    }
+}
+
 function getStyle(heightAndWidth, factor, marginFactor, hasText) {
     return {
         backgroundColor: "transparent",
@@ -103,9 +121,20 @@ function getStyle(heightAndWidth, factor, marginFactor, hasText) {
 }
 
 
-export default function MainImageCard({image, placeholderSrc, src, host, selectedDataset,setSearchData, setShowCarousel,
-                                          onGoingRequest, setOnGoingRequest, setStageIsInteractive, noText=false,
-                                          marginFactor=1}) {
+export default function MainImageCard({
+                                          image,
+                                          placeholderSrc,
+                                          src,
+                                          host,
+                                          selectedDataset,
+                                          setSearchData,
+                                          setShowCarousel,
+                                          onGoingRequest,
+                                          setOnGoingRequest,
+                                          setStageIsInteractive,
+                                          noText = false,
+                                          marginFactor = 1
+                                      }) {
     const [heightAndWidth, setHeightAndWidth] = React.useState({height: 0, width: 0});
     const [height, setHeight] = React.useState(window.innerHeight);
     const noTextRef = useRef(noText);
@@ -131,7 +160,10 @@ export default function MainImageCard({image, placeholderSrc, src, host, selecte
         // Check if there is text
         const has_text = t !== "";
         // Get height and width of the main image
-        const {height, width} = getHeightAndWidthOfMainImage(image.height, image.width, has_text, marginFactorRef.current);
+        const {
+            height,
+            width
+        } = getHeightAndWidthOfMainImage(image.height, image.width, has_text, marginFactorRef.current);
         setHeightAndWidth({height: height, width: width});
         // Set factor to 1 if there is no text, otherwise set it to 0.9
         setFactor(has_text ? 0.9 : 1);
@@ -155,11 +187,12 @@ export default function MainImageCard({image, placeholderSrc, src, host, selecte
                 justifyContent: 'start',
                 alignItems: 'center',
                 borderRadius: '10px',
-                minHeight: (heightAndWidth.height * factor + 2 * MARGIN * marginFactorRef.current)  + "px",
+                minHeight: (heightAndWidth.height * factor + 2 * MARGIN * marginFactorRef.current) + "px",
                 maxHeight: factor === 1 ? (heightAndWidth.height + 2 * MARGIN * marginFactorRef.current) + "px" : getMaxHeightMainImage() + "px",
                 overflowY: "auto",
                 scrollbarWidth: "none",
                 width: heightAndWidth.width,
+                minWidth: getMinWidth(text),
                 backgroundColor: "rgb(49 49 52 / 1)",
                 zIndex: 100,
                 pointerEvents: "auto",
@@ -190,7 +223,7 @@ export default function MainImageCard({image, placeholderSrc, src, host, selecte
                     <div style={getStyle(heightAndWidth, factor, marginFactorRef.current, text !== "")}>
                         <TextArea
                             text={text}
-                            width={heightAndWidth.width - 2 * MARGIN * marginFactorRef.current}
+                            margin={MARGIN * marginFactorRef.current}
                             height={factor !== 1 ? (getMaxHeightMainImage() - heightAndWidth.height * factor - 3 * MARGIN * marginFactorRef.current) : 0}
                             fontsize={getFontSize(factor !== 1 ? (getMaxHeightMainImage() - heightAndWidth.height * factor - MARGIN * marginFactorRef.current) : 0)}
                             line_height={LINE_HEIGHT}/>

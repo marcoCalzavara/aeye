@@ -30,7 +30,7 @@ const PIXEL_STEP = 20;
 const DEPTH_STEP = 0.03;
 const NUM_OF_VELOCITIES = 5;
 const UNAVAILABLE_TILES_THRESHOLD = 15;
-const ROUND = false;
+const ROUND = true;
 const MAX_VELOCITY = 4;
 const MULTIPLICATIVE_FACTOR = 11;
 
@@ -517,25 +517,6 @@ const ClustersMap = (props) => {
         textureLoaded.current.set(index, false);
         sprite.zIndex = 10 + (maxZoomLevel.current - zoom);
 
-        // Add sprite to foreground or background container
-        const zoom_level = Math.min(depth.current >= 0 ? zoomLevel.current + 1 : zoomLevel.current, maxZoomLevel.current);
-        if (zoom >= zoom_level && !(zoomLevel.current === maxZoomLevel.current && depth.current === 0)) {
-            // Add sprite to background container
-            containerBackground.current.addChild(sprite);
-            spriteIsInForeground.current.set(index, false);
-        } else {
-            // Add sprite to foreground container
-            containerForeground.current.addChild(sprite);
-            spriteIsInForeground.current.set(index, true);
-        }
-
-        // Set sprite handlers
-        setSpriteHandlers(sprite, index);
-        // Make sprite interactive
-        sprite.interactive = true;
-        sprite.interactiveChildren = false;
-        sprite.cursor = 'pointer';
-
         // Add texture to the sprite if the sprite is either in the visible area or in its immediate vicinity
         if (sprite.x >= -2 * maxWidth.current && sprite.x <= stageWidth.current + maxWidth.current
             && sprite.y >= -2 * maxHeight.current && sprite.y <= stageHeight.current + maxHeight.current) {
@@ -548,7 +529,7 @@ const ClustersMap = (props) => {
             const options = {
                 signal: controller.signal,
                 method: 'GET',
-                priority: "low"
+                priority: 'low'
             }
             fetch(getUrlForImage(path, selectedDataset.current, props.host), options)
                 .then((response) => {
@@ -575,6 +556,25 @@ const ClustersMap = (props) => {
                         console.error('Error loading texture:', error);
                 });
         }
+
+        // Add sprite to foreground or background container
+        const zoom_level = Math.min(depth.current >= 0 ? zoomLevel.current + 1 : zoomLevel.current, maxZoomLevel.current);
+        if (zoom >= zoom_level && !(zoomLevel.current === maxZoomLevel.current && depth.current === 0)) {
+            // Add sprite to background container
+            containerBackground.current.addChild(sprite);
+            spriteIsInForeground.current.set(index, false);
+        } else {
+            // Add sprite to foreground container
+            containerForeground.current.addChild(sprite);
+            spriteIsInForeground.current.set(index, true);
+        }
+
+        // Set sprite handlers
+        setSpriteHandlers(sprite, index);
+        // Make sprite interactive
+        sprite.interactive = true;
+        sprite.interactiveChildren = false;
+        sprite.cursor = 'pointer';
     }
 
     const stopMomentumTranslationTicker = () => {
@@ -1296,19 +1296,11 @@ const ClustersMap = (props) => {
                 const diffWidth = originalWidth * scaleFactor - originalWidth;
                 const diffHeight = originalHeight * scaleFactor - originalHeight;
                 // Adjust the x and y coordinates of the sprite by half of the difference in size
-                if (ROUND) {
-                    sprite.x = Math.round(originalX - diffWidth / 2);
-                    sprite.y = Math.round(originalY - diffHeight / 2);
-                    // Increase size of sprite from the center
-                    sprite.width = Math.round(originalWidth * scaleFactor);
-                    sprite.height = Math.round(originalHeight * scaleFactor);
-                } else {
-                    sprite.x = originalX - diffWidth / 2;
-                    sprite.y = originalY - diffHeight / 2;
-                    // Increase size of sprite from the center
-                    sprite.width = originalWidth * scaleFactor;
-                    sprite.height = originalHeight * scaleFactor;
-                }
+                sprite.x = originalX - diffWidth / 2;
+                sprite.y = originalY - diffHeight / 2;
+                // Increase size of sprite from the center
+                sprite.width = originalWidth * scaleFactor;
+                sprite.height = originalHeight * scaleFactor;
             }
         });
         ticker.start();
@@ -1646,7 +1638,7 @@ const ClustersMap = (props) => {
     }
 
     const momentumTranslation = (averageVelocityX, averageVelocityY, multiplicativeFactor) => {
-        const frames = 40;
+        const frames = 60;
         if (Math.abs(averageVelocityX) < 0.4 && Math.abs(averageVelocityY) < 0.4)
             return;
 
@@ -1659,6 +1651,7 @@ const ClustersMap = (props) => {
 
         // Create ticker for momentum translation
         momentum_translation_ticker.current = new PIXI.Ticker();
+        momentum_translation_ticker.current.maxFPS = 120;
         // Define counter for number of steps
         let counter = 0;
         momentum_translation_ticker.current.add(() => {
@@ -1761,14 +1754,10 @@ const ClustersMap = (props) => {
     const handleMove = (event) => {
         // Update velocities
         updateVelocities(event);
-        // Get mouse position. Transform movement of the mouse to movement in the embedding space.
-        const mouse_x = ((-event.movementX) * effectiveWidth.current) / (width.current - maxWidth.current);
-        const mouse_y = ((-event.movementY) * effectiveHeight.current) / (height.current - maxHeight.current);
 
         // Compute shift
-        let shift_x = Math.round((mouse_x * (width.current - maxWidth.current)) / effectiveWidth.current);
-        let shift_y = Math.round((mouse_y * (height.current - maxHeight.current)) / effectiveHeight.current);
-
+        let shift_x = -event.movementX;
+        let shift_y = -event.movementY;
         // Compute the new x and y position
         let new_x = effectivePosition.current.x + (shift_x * effectiveWidth.current) / (width.current - maxWidth.current);
         let new_y = effectivePosition.current.y + (shift_y * effectiveHeight.current) / (height.current - maxHeight.current);
