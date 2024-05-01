@@ -1,5 +1,5 @@
 import getopt
-import getpass
+import json
 import os
 import sys
 import warnings
@@ -10,11 +10,13 @@ from umap import UMAP
 
 from ..CONSTANTS import *
 from ..db_utilities.collections import EMBEDDING_VECTOR_FIELD_NAME, umap_collection
-from ..db_utilities.datasets import DatasetOptions
 from ..db_utilities.utils import create_connection
 
 
 def parsing():
+    # Load dataset options from datasets.json
+    with open(os.path.join(os.getenv(HOME), DATASETS_JSON_NAME), "r") as f:
+        datasets = json.load(f)["datasets"]
     # Remove 1st argument from the list of command line arguments
     arguments = sys.argv[1:]
     # Options
@@ -22,7 +24,7 @@ def parsing():
     # Long options
     long_options = ["help"]
     # Prepare flags
-    flags = {"dataset": DatasetOptions.BEST_ARTWORKS.value["name"], "database": DEFAULT_DATABASE_NAME}
+    flags = {"dataset": datasets[1]["name"], "database": DEFAULT_DATABASE_NAME}
 
     # Parsing argument
     arguments, values = getopt.getopt(arguments, options, long_options)
@@ -30,7 +32,7 @@ def parsing():
     if len(arguments) > 0 and arguments[0][0] in ("-h", "--help"):
         print(
             f'This script generates scatter plots of low dimensional embeddings for '
-            f'{DatasetOptions.BEST_ARTWORKS.value["name"]} dataset.')
+            f'{datasets[1]["name"]} dataset.')
         sys.exit(0)
 
     return flags
@@ -101,12 +103,10 @@ def generate_scatter_plots(collection: Collection):
 if __name__ == "__main__":
     if ENV_FILE_LOCATION not in os.environ:
         # Try to load /.env file
-        choice = input("Do you want to load /.env file? (y/n) ")
-        if choice.lower() == "y" and os.path.exists("/.env"):
+        if os.path.exists("/.env"):
             load_dotenv("/.env")
         else:
-            print("export .env file location as ENV_FILE_LOCATION. Export $HOME/image-viz/.env if running outside "
-                  "of docker container, export /.env if running inside docker container backend.")
+            print("export .env file location as ENV_FILE_LOCATION.")
             sys.exit(1)
     else:
         # Load environment variables
@@ -115,24 +115,12 @@ if __name__ == "__main__":
     # Get arguments
     flags = parsing()
 
-    choice = input("Use root user? (y/n) ")
-    if choice == "y":
-        user = ROOT_USER
-        passwd = ROOT_PASSWD
-    elif choice.lower() == "n":
-        user = input("Username: ")
-        passwd = getpass.getpass("Password: ")
-    else:
-        print("Wrong choice.")
-        sys.exit(1)
-
     # Try creating a connection and selecting a database. If it fails, exit.
     try:
-        create_connection(user, passwd)
+        create_connection(ROOT_USER, ROOT_PASSWD, False)
         db.using_database(flags["database"])
     except Exception as e:
-        print(e.__str__())
-        print("Error in main. Connection failed!")
+        print("Error in main. Connection failed. Error: ", e)
         sys.exit(1)
 
     # Get the collection object
