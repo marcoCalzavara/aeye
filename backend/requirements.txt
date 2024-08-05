@@ -7,7 +7,7 @@ torchvision
 umap-learn
 numpy
 scipy
-Pillow==9.0.1
+Pillow
 tqdm
 fastapi
 uvicorn[standard]

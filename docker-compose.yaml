@@ -104,11 +104,13 @@ services:
     environment:
       - BACKEND_PORT=${BACKEND_PORT}
       - DOLLAR=$
+      - SSL_FULL_CHAIN_PATH=${SSL_FULL_CHAIN_PATH}
+      - SSL_PRIVATE_KEY_PATH=${SSL_PRIVATE_KEY_PATH}
     volumes:
       - ./frontend/build:/frontend/build
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template
-      - /etc/letsencrypt/live/aeye.ethz.ch/fullchain.pem:/etc/letsencrypt/live/aeye.ethz.ch/fullchain.pem
-      - /etc/letsencrypt/live/aeye.ethz.ch/privkey.pem:/etc/letsencrypt/live/aeye.ethz.ch/privkey.pem
+      - ${SSL_FULL_CHAIN_PATH}:${SSL_FULL_CHAIN_PATH}
+      - ${SSL_PRIVATE_KEY_PATH}:${SSL_PRIVATE_KEY_PATH}
       - ../best_artworks:/usr/share/nginx/best_artworks
       - ../wikiart:/usr/share/nginx/wikiart
       - ../celebahq:/usr/share/nginx/celebahq

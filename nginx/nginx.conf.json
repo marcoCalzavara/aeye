@@ -28,8 +28,8 @@
             "listen": "443 ssl",
             "access_log": "/logs/reverse-proxy.log  time",
             "server_name": "aeye.ethz.ch www.aeye.ethz.ch",
-            "ssl_certificate": "/etc/letsencrypt/live/aeye.ethz.ch/fullchain.pem",
-            "ssl_certificate_key": "/etc/letsencrypt/live/aeye.ethz.ch/privkey.pem",
+            "ssl_certificate": "${SSL_FULL_CHAIN_PATH}",
+            "ssl_certificate_key": "${SSL_PRIVATE_KEY_PATH}",
             "locations": {
                 "/": {
                     "proxy_pass": "http://frontend:3000"
