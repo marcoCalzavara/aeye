@@ -47,7 +47,7 @@ const SelectDataset = (props) => {
                 borderRadius: "5px",
                 padding: "6px",
                 height: props.datasets !== undefined ? itemsStyle.height.replace("px", "") * props.datasets.length + "px" : "auto",
-                width: itemsStyle.fontSize.replace("px", "") * 5 + "px",
+                width: itemsStyle.fontSize.replace("px", "") * 5.5 + "px",
                 zIndex: 100
             }}>
                 <div id="div-dataset" className="flex flex-col justify-start items-start w-full h-full">
