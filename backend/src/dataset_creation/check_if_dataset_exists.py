@@ -50,7 +50,7 @@ if __name__ == "__main__":
         # Create connection and select database
         create_connection(ROOT_USER, ROOT_PASSWD)
         # Create the database if it does not exist
-        if not DEFAULT_DATABASE_NAME not in db.list_database():
+        if DEFAULT_DATABASE_NAME not in db.list_database():
             print(f"Database {DEFAULT_DATABASE_NAME} does not exist. Creating it...")
             db.create_database(DEFAULT_DATABASE_NAME)
             print("Database created.")
