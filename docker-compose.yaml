@@ -40,7 +40,7 @@ services:
 
   standalone:
     container_name: milvus-standalone
-    image: milvusdb/milvus:v2.3.2
+    image: milvusdb/milvus:v2.4.12
     command: ["milvus", "run", "standalone"]
     security_opt:
       - seccomp:unconfined
@@ -111,13 +111,6 @@ services:
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template
       - ${SSL_FULL_CHAIN_PATH}:${SSL_FULL_CHAIN_PATH}
       - ${SSL_PRIVATE_KEY_PATH}:${SSL_PRIVATE_KEY_PATH}
-      - ../best_artworks:/usr/share/nginx/best_artworks
-      - ../wikiart:/usr/share/nginx/wikiart
-      - ../celebahq:/usr/share/nginx/celebahq
-      - ../MNIST:/usr/share/nginx/MNIST
-      - ../CIFAR-100:/usr/share/nginx/CIFAR-100
-      - ../Fashion-MNIST:/usr/share/nginx/Fashion-MNIST
-      - ../COCO-2017:/usr/share/nginx/COCO-2017
     ports:
       - "443:443"
       - "80:80"
