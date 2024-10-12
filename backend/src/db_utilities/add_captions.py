@@ -90,6 +90,9 @@ if __name__ == "__main__":
     # Get the collection object
     collection = Collection(flags["collection"])
 
+    # Load collection
+    collection.load()
+
     # Fetch vectors
     entities = []
     try:
@@ -105,6 +108,9 @@ if __name__ == "__main__":
     except Exception as e:
         print("Error in update_metadata. Update failed. Error message: ", e)
         sys.exit(1)
+
+    # Unload collection
+    collection.release()
 
     # Order entities by index
     entities = sorted(entities, key=lambda x: x["index"])

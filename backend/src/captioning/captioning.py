@@ -2,18 +2,18 @@
 # accelerate launch captioning.py --start *start* --end *end* --batch_size *batch_size* --dataset *dataset*
 
 import argparse
-import os
 import csv
-from tqdm import tqdm
+import os
 
 from PIL import Image
-from torch.utils.data import DataLoader, SequentialSampler
-from torch.utils.data import Dataset as TorchDataset
-from torch import bfloat16
-
-from transformers import AutoProcessor, LlavaForConditionalGeneration, BitsAndBytesConfig
-from accelerate.utils import gather_object
 from accelerate import Accelerator
+from accelerate.utils import gather_object
+from torch import bfloat16
+from torch.utils.data import DataLoader
+from torchvision.transforms import ToTensor
+from torch.utils.data import Dataset as TorchDataset
+from tqdm import tqdm
+from transformers import AutoProcessor, LlavaForConditionalGeneration, BitsAndBytesConfig
 
 # Variables
 MAX_TOKENS_LLAVA = 128
@@ -28,34 +28,30 @@ Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 
 
 class DatasetForImages(TorchDataset):
-    def __init__(self, root_dir, separator="-"):
+    def __init__(self, root_dir, idx_to_path_file):
         self.root_dir = root_dir
         self.start = 0
         self.file_list = []
 
-        for file in os.listdir(root_dir):
-            if not os.path.isdir(os.path.join(self.root_dir, file)):
-                self.file_list.append(file)
+        # Open csv file with index to path mapping and save each mapping in self.file_list
+        with open(idx_to_path_file, "r") as file:
+            for i, line in enumerate(file):
+                if i == 0:
+                    continue  # Skip the first line
+                idx, path = line.strip().split(",")
+                self.file_list.append([idx, path])
 
-        # Check that filenames start with a number
-        for file in self.file_list:
-            if not file.split(separator)[0].isdigit():
-                raise Exception("Filenames must start with a number.")
-
-        # Sort file list by index
-        self.file_list.sort(key=lambda x: int(x.split(separator)[0]))
-        self.transform = None
+        self.transform = ToTensor()
 
     def __len__(self):
         return len(self.file_list)
 
     def __getitem__(self, idx):
-        img_name = os.path.join(self.root_dir, self.file_list[idx])
         # Get image height and width
-        image = Image.open(img_name).convert('RGB')
-        index = idx + self.start
+        image = Image.open(os.path.join(self.root_dir, self.file_list[idx][1])).convert('RGB')
+        index = self.file_list[idx][0]
         if self.transform:
-            image = self.transform(image, return_tensors="pt")
+            image = self.transform(image)
 
         return {
             'images': image,
@@ -103,8 +99,7 @@ def inference(args):
     # Wait for everyone to be ready
     accelerator.wait_for_everyone()
     # Create dataset, sampler and dataloader
-    dataset = DatasetForImages(f"{DATA}best_artworks", separator="-") if args.dataset == "best_artworks" else \
-        DatasetForImages(f"{DATA}wikiart", separator="_")
+    dataset = DatasetForImages(f"{DATA}{args.dataset}", f"{DATA}index_to_path_{args.dataset}.csv")
 
     # Define start and end indices
     if args.start >= len(dataset):
@@ -119,13 +114,12 @@ def inference(args):
     # Slice dataset and create sampler and dataloader
     accelerator.print(f"The dataset has {len(dataset)} images. Keeping images from {args.start} to {args.end}.")
     dataset.do_slicing(args.start, args.end)
-    sampler = SequentialSampler(dataset)
     dataloader = DataLoader(
         dataset,
         batch_size=args.batch_size,
-        num_workers=0,
+        num_workers=4,
         collate_fn=collate_fn,
-        sampler=sampler
+        shuffle=False
     )
     # Pass all pytorch objects to the accelerator prepare method
     # model, processor, dataloader = accelerator.prepare(model, processor, dataloader)
@@ -137,34 +131,39 @@ def inference(args):
         writer = csv.writer(file)
         writer.writerow(["index", "caption"])
         # Process the dataset
-        for i, data in enumerate(tqdm(dataloader, desc="Processing", ncols=100,
-                                      bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]")):
-            if data is not None:
-                # Split data across devices
-                # noinspection all
-                with accelerator.split_between_processes(data["images"]) as images:
-                    # Generate input
-                    if len(images) != 0:
-                        # noinspection all
-                        inputs = processor([QUERY_LLAVA for _ in images], images=images,
-                                           return_tensors="pt").to(bfloat16).to(accelerator.device)
-                        # Generate outputs
-                        outputs = model.generate(**inputs, max_new_tokens=MAX_TOKENS_LLAVA, do_sample=False)
-                        # Get captions
-                        captions = processor.batch_decode(outputs, skip_special_tokens=True)
-                    else:
-                        captions = []
-
-                gathered_captions = gather_object(captions)
-                # noinspection all
-                assert len(gathered_captions) == len(data["index"])
-                # Write captions to csv file
-                # noinspection all
-                for j in range(len(data["index"])):
+        for i, data in enumerate(
+                tqdm(
+                    dataloader,
+                    desc="Processing",
+                    ncols=100,
+                    bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]"
+                )
+        ):
+            # Split data across devices
+            # noinspection all
+            with accelerator.split_between_processes(data["images"]) as images:
+                # Generate input
+                if len(images) != 0:
                     # noinspection all
-                    writer.writerow([data["index"][j], gathered_captions[j]])
-            else:
-                accelerator.print("Data is empty...moving on to next batch.")
+                    inputs = processor([QUERY_LLAVA for _ in images], images=images,
+                                       return_tensors="pt").to(bfloat16).to(accelerator.device)
+                    # Generate outputs
+                    outputs = model.generate(**inputs, max_new_tokens=MAX_TOKENS_LLAVA, do_sample=False)
+                    # Get captions
+                    captions = processor.batch_decode(outputs, skip_special_tokens=True)
+                else:
+                    captions = []
+
+            gathered_captions = gather_object(captions)
+            # noinspection all
+            assert len(gathered_captions) == len(data["index"])
+            # Write captions to csv file
+            # noinspection all
+            for j in range(len(data["index"])):
+                # noinspection all
+                writer.writerow([data["index"][j], gathered_captions[j]])
+        else:
+            accelerator.print("Data is empty...moving on to next batch.")
 
     accelerator.print("Process finished!")
 
